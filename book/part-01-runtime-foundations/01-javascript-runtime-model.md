@@ -1,7 +1,5 @@
 # Chapter 1 — JavaScript Runtime Model
 
-**Status:** Complete
-
 ## Learning objectives
 
 After completing this chapter, you should be able to:

@@ -1,7 +1,5 @@
 # Chapter 3 — The Call Stack
 
-**Status:** Complete
-
 ## Learning objectives
 
 After completing this chapter, you should be able to:
