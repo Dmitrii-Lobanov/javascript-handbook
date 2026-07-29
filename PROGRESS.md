@@ -23,7 +23,7 @@
 
 | Part | Chapters | Current state | Review gate |
 | --- | ---: | --- | --- |
-| I — Runtime Foundations | 1–8 | Chapter 1 outlined; 2–8 not started | Complete and review Chapter 1 before drafting Chapter 2 |
+| I — Runtime Foundations | 1–8 | Chapter 1 complete; 2–8 not started | Chapter 2 may be outlined after Chapter 1 handoff |
 | II — Values and Objects | 9–16 | Not started | Finish Part I |
 | III — Functions and Abstractions | 17–24 | Not started | Finish Part II |
 | IV — Asynchronous JavaScript | 25–34 | Not started | Finish Part III |
@@ -38,15 +38,21 @@
 - [x] Define scope and boundaries
 - [x] Define learning objectives
 - [x] Map applicable chapter-template sections
-- [ ] Draft the core mental and formal models
-- [ ] Write and run progressive examples
-- [ ] Add and validate the runtime diagram
-- [ ] Draft React, performance, and debugging connections
-- [ ] Write model answers and exercises
-- [ ] Verify claims against primary sources
-- [ ] Complete technical review
-- [ ] Complete editorial review
+- [x] Draft the core mental and formal models
+- [x] Write and run progressive examples
+- [x] Add and validate the runtime diagram
+- [x] Draft React, performance, and debugging connections
+- [x] Write model answers and exercises
+- [x] Verify claims against primary sources
+- [x] Complete technical review
+- [x] Complete editorial review
 
 ## Review record
 
 Add dated review entries here with the chapter, reviewer role, findings, and disposition. A chapter moves to **Complete** only after its outstanding technical and editorial findings are resolved.
+
+### 2026-07-29 — Chapter 1 internal review
+
+- **Technical:** Checked layer boundaries and terminology against ECMA-262, the WHATWG HTML and DOM standards, current Node.js documentation, React documentation, and V8 documentation. Executed the three environment-compatible ordering examples and confirmed their documented output.
+- **Editorial:** Checked the chapter against the required template, senior-interview answer pattern, scope boundaries, and repetition standard. Kept detailed event-loop algorithms, execution contexts, and React scheduling for their dedicated chapters.
+- **Disposition:** Complete. No outstanding findings.

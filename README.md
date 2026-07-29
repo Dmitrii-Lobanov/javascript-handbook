@@ -56,4 +56,4 @@ Markdown is the source of truth so the manuscript can later feed PDF, EPUB, or d
 
 ## Project status
 
-The handbook is in its initial editorial phase. The structure and standards are established, and Chapter 1 is outlined but not yet drafted. Track chapter state and review gates in [PROGRESS.md](PROGRESS.md).
+The handbook is being written incrementally. The editorial foundation and Chapter 1 are complete; later chapters have not yet been drafted. Track chapter state and review gates in [PROGRESS.md](PROGRESS.md).
