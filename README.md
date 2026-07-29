@@ -56,4 +56,4 @@ Markdown is the source of truth so the manuscript can later feed PDF, EPUB, or d
 
 ## Project status
 
-The handbook is being written incrementally. The editorial foundation and Chapters 1–2 are complete; later chapters have not yet been drafted. Track chapter state and review gates in [PROGRESS.md](PROGRESS.md).
+The handbook is being written incrementally. The editorial foundation and Chapters 1–3 are complete; later chapters have not yet been drafted. Track chapter state and review gates in [PROGRESS.md](PROGRESS.md).

@@ -23,7 +23,7 @@
 
 | Part | Chapters | Current state | Review gate |
 | --- | ---: | --- | --- |
-| I — Runtime Foundations | 1–8 | Chapters 1–2 complete; 3–8 not started | Review Chapter 2 before drafting Chapter 3 |
+| I — Runtime Foundations | 1–8 | Chapters 1–3 complete; 4–8 not started | Review Chapter 3 before drafting Chapter 4 |
 | II — Values and Objects | 9–16 | Not started | Finish Part I |
 | III — Functions and Abstractions | 17–24 | Not started | Finish Part II |
 | IV — Asynchronous JavaScript | 25–34 | Not started | Finish Part III |
@@ -33,7 +33,7 @@
 | VIII — React Connections | 59–68 | Not started | Finish Part VII |
 | IX — Interview Preparation | 69–76 | Not started | Finish the conceptual chapters |
 
-## Current milestone: Chapter 2
+## Current milestone: Chapter 3
 
 - [x] Define scope and boundaries
 - [x] Define learning objectives
@@ -61,4 +61,10 @@ Add dated review entries here with the chapter, reviewer role, findings, and dis
 
 - **Technical:** Checked execution-context state, context-stack transitions, ordinary function-call preparation, declaration instantiation, and suspension terminology against ECMA-262. Executed the JavaScript output examples and checked React claims against current React documentation.
 - **Editorial:** Kept detailed environment-record mechanics, call-stack limits, closures, and asynchronous scheduling in their dedicated chapters. Rejected the informal “creation phase / execution phase” model as normative terminology.
+- **Disposition:** Complete. No outstanding findings.
+
+### 2026-07-29 — Chapter 3 internal review
+
+- **Technical:** Checked execution-context stack behavior, completion propagation, `throw` and `try` semantics against ECMA-262. Checked stack-trace qualifications against V8 and Chrome DevTools documentation and React error-boundary behavior against current React documentation.
+- **Editorial:** Kept execution-context fields in Chapter 2, recursion techniques in Chapter 22, event-loop scheduling in Chapters 25–26, and detailed React error behavior in Part VIII. Focused this chapter on dynamic call paths and debugging.
 - **Disposition:** Complete. No outstanding findings.
