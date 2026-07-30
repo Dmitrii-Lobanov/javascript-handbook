@@ -11,6 +11,17 @@ After completing this chapter, you should be able to:
 - connect main-thread availability to React responsiveness;
 - select the right specification, documentation, or profiler for a runtime question.
 
+## Quick Refresher
+
+- A JavaScript runtime combines the ECMAScript language, an engine, and a host environment.
+- ECMAScript defines language semantics; it does not define one universal event loop.
+- Browsers and Node.js expose different APIs and scheduling behavior while implementing the same language.
+- An engine may optimize execution, but its strategies are not generally ECMAScript guarantees.
+- Promise reactions are ECMAScript jobs; browsers integrate them with the microtask queue.
+- A DOM mutation does not guarantee immediate paint. Rendering requires the main thread to yield and a rendering opportunity to occur.
+- Promises and `async` functions do not move CPU-intensive JavaScript to another thread.
+- React schedules work within host constraints and cannot preempt an arbitrary synchronous callback.
+
 ## Why This Matters
 
 Many weak answers about promises, timers, rendering, and React share the same flaw: they treat the “JavaScript runtime” as one machine with one universal event loop. That model cannot explain why `document` exists in a browser but not in ECMAScript, why Node.js has `process.nextTick`, why a fulfilled promise still invokes its handler later, or why React can interrupt some render work but cannot interrupt arbitrary synchronous JavaScript.

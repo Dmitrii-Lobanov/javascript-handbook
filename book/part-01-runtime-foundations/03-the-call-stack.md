@@ -12,6 +12,17 @@ After completing this chapter, you should be able to:
 - use browser stack traces, source maps, and breakpoints effectively;
 - connect blocking call chains and render errors to React applications.
 
+## Quick Refresher
+
+- The call stack represents unfinished synchronous function calls.
+- Calls complete in last-in, first-out order: the most recent callee finishes before its caller.
+- ECMAScript formally defines an execution-context stack; engine stack frames are implementation details.
+- A thrown value propagates through active calls until a matching `catch` handles it.
+- A later asynchronous callback does not retain the scheduling function's synchronous stack.
+- Async stack traces show reconstructed causality, not continuously active frames.
+- Stack depth does not measure execution time, and ECMAScript defines no universal recursion limit.
+- JavaScript call stacks and React component stacks describe different structures.
+
 ## Why This Matters
 
 Stack questions test more than whether you can draw boxes. A senior frontend engineer must reconstruct the path to a failure, distinguish synchronous callers from asynchronous origins, identify why a handler blocks rendering, and understand why an error is—or is not—caught.

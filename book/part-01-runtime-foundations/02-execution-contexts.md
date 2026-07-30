@@ -11,6 +11,17 @@ After completing this chapter, you should be able to:
 - reason about suspended async functions and generators;
 - connect fresh function invocations to React render behavior.
 
+## Quick Refresher
+
+- An execution context is ECMAScript's internal model for an active or suspended evaluation.
+- The running execution context is normally the top entry of an agent's execution-context stack.
+- Calling a function normally creates and pushes a new context; completion removes it and resumes the caller.
+- Each invocation of a function has distinct runtime state and local bindings.
+- Execution contexts, lexical environments, and physical engine stack frames are related but different models.
+- Scope follows lexical structure, not the dynamic chain of callers.
+- Declaration-instantiation algorithms explain initialization more precisely than a universal “creation phase.”
+- Every React component render is a fresh function invocation with fresh local bindings.
+
 ## Why This Matters
 
 Execution contexts sit underneath function calls, `this`, scope resolution, closures, generators, and async functions. Interviewers rarely need a recitation of specification fields. They want to know whether you can trace which code is running, which invocation owns its local state, and what is suspended or resumed when control moves.
