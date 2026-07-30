@@ -2,6 +2,14 @@
 
 > **Editorial note:** Remove sections that would create an artificial connection. Add subsections when the concept requires them, but preserve the learning sequence.
 
+## Learning objectives
+
+List the concrete explanations and runtime reasoning the reader should be able to perform after completing the chapter.
+
+## Quick Refresher
+
+Provide five to eight concise bullets covering the central model, critical distinctions, practical consequence, and most important misconception. The section should take less than one minute to review and must not introduce unexplained concepts.
+
 ## Why This Matters
 
 State the production relevance, why interviewers ask about the topic, and the deeper reasoning skill being tested. Keep this brief.
