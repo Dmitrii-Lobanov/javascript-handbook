@@ -1,6 +1,6 @@
 # JavaScript Interview Handbook app
 
-A statically generated reading app for the Markdown handbook in the repository's `book/` directory.
+A statically generated Next.js reading app for the Markdown handbook in the repository's `book/` directory, ready for Vercel.
 
 ## Development
 
@@ -22,3 +22,7 @@ npm test
 ```
 
 The app includes full-text chapter search, a complete handbook roadmap, local reading progress, adjustable reading size, dark mode, Mermaid diagrams, and static parameters for every published chapter.
+
+## Vercel
+
+Set the Vercel project's root directory to `site`. Each push to the connected GitHub repository will then create a deployment automatically.

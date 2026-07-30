@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { AppHeader } from "./components/AppHeader";
 import "./globals.css";
 
+const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+const metadataBase = new URL(deploymentHost ? `https://${deploymentHost}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase,
   title: {
     default: "JavaScript Interview Handbook",
     template: "%s · JavaScript Interview Handbook",

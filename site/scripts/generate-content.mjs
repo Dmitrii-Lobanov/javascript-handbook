@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,6 +6,14 @@ const siteRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(siteRoot, "..");
 const bookRoot = join(repositoryRoot, "book");
 const outputFile = join(siteRoot, "generated", "content.ts");
+
+if (!existsSync(bookRoot)) {
+  if (!existsSync(outputFile)) {
+    throw new Error("The handbook source and generated content are both missing.");
+  }
+  console.log("Using committed generated handbook content.");
+  process.exit(0);
+}
 
 function walk(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
