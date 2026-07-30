@@ -1,0 +1,40 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+export function AppHeader() {
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("handbook-theme");
+    const shouldUseDark = saved
+      ? saved === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setDark(shouldUseDark);
+    document.documentElement.dataset.theme = shouldUseDark ? "dark" : "light";
+  }, []);
+
+  function toggleTheme() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.dataset.theme = next ? "dark" : "light";
+    localStorage.setItem("handbook-theme", next ? "dark" : "light");
+  }
+
+  return (
+    <header className="site-header">
+      <Link className="brand" href="/" aria-label="JavaScript Interview Handbook home">
+        <span className="brand-mark">JS</span>
+        <span className="brand-copy"><strong>Interview Handbook</strong><small>Senior frontend edition</small></span>
+      </Link>
+      <nav className="header-actions" aria-label="Primary navigation">
+        <Link href="/#library">Library</Link>
+        <a href="https://github.com/Dmitrii-Lobanov/javascript-handbook" target="_blank" rel="noreferrer">GitHub</a>
+        <button className="icon-button" onClick={toggleTheme} aria-label={`Use ${dark ? "light" : "dark"} theme`}>
+          {dark ? "☀" : "◐"}
+        </button>
+      </nav>
+    </header>
+  );
+}
