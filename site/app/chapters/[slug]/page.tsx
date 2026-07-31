@@ -30,7 +30,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
     <main className="reader-shell">
       <aside className="chapter-sidebar">
         <Link className="back-link" href="/#library">← All chapters</Link>
-        <span className="sidebar-label">Part {chapter.partNumber}</span>
+        <span className="sidebar-label"> Part {chapter.partNumber}</span>
         <h2>{chapter.partName}</h2>
         <nav aria-label="Chapter table of contents">
           <span>On this page</span>
@@ -46,10 +46,14 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
           <div className="chapter-meta"><span>Chapter {String(chapter.number).padStart(2, "0")}</span><span>{chapter.readingMinutes} min read</span></div>
           <h1>{chapter.title}</h1>
           <p>{chapter.excerpt}</p>
-          <ReaderControls slug={chapter.slug} />
         </header>
 
         <div className="prose"><MarkdownContent markdown={chapter.markdown} /></div>
+
+        <div className="chapter-completion">
+          <p>Finished this chapter?</p>
+          <ReaderControls slug={chapter.slug} />
+        </div>
 
         <nav className="chapter-pagination" aria-label="Chapter navigation">
           {previous ? <Link href={`/chapters/${previous.slug}`}><span>Previous</span><strong>← {previous.title}</strong></Link> : <span />}
