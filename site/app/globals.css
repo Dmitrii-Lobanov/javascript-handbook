@@ -629,6 +629,41 @@ button {
 .prose li {
   color: color-mix(in srgb, var(--ink) 88%, var(--muted));
 }
+.prose p {
+  margin: 0 0 1.25em;
+}
+.prose ul,
+.prose ol {
+  margin: 1em 0 1.5em;
+  padding-left: 1.6em;
+}
+.prose ul {
+  list-style: disc;
+}
+.prose ol {
+  list-style: decimal;
+}
+.prose li {
+  margin: 0.35em 0;
+  padding-left: 0.25em;
+}
+.prose li > p {
+  margin: 0.35em 0;
+}
+.prose li::marker {
+  color: var(--teal);
+  font-weight: 800;
+}
+.prose li > ul,
+.prose li > ol {
+  margin: 0.45em 0;
+}
+.prose ul ul {
+  list-style: circle;
+}
+.prose ul ul ul {
+  list-style: square;
+}
 .prose a {
   color: var(--teal);
   text-underline-offset: 3px;
