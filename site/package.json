@@ -8,7 +8,7 @@
   "scripts": {
     "generate:content": "node scripts/generate-content.mjs",
     "predev": "npm run generate:content",
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS=--max-old-space-size=1536 next dev --webpack",
     "prebuild": "npm run generate:content",
     "build": "next build",
     "start": "next start",
