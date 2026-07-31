@@ -2,6 +2,16 @@ import type { Metadata } from "next";
 import { AppHeader } from "./components/AppHeader";
 import "./globals.css";
 
+const themeInitializationScript = `
+  try {
+    const savedTheme = localStorage.getItem("handbook-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = savedTheme ?? (prefersDark ? "dark" : "light");
+  } catch {
+    document.documentElement.dataset.theme = "light";
+  }
+`;
+
 const deploymentHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
 const metadataBase = new URL(
   deploymentHost ? `https://${deploymentHost}` : "http://localhost:3000",
@@ -39,6 +49,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
+      </head>
       <body>
         <AppHeader />
         {children}
