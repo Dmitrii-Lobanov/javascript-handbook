@@ -6,7 +6,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "generate:content": "node scripts/generate-content.mjs",
+    "generate:content": "node scripts/generate-content.mjs && prettier --write generated/content.ts",
     "predev": "npm run generate:content",
     "dev": "NODE_OPTIONS=--max-old-space-size=1536 next dev --webpack",
     "prebuild": "npm run generate:content",

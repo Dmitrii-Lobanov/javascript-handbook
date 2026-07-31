@@ -692,6 +692,7 @@ button {
 }
 .prose pre {
   overflow: auto;
+  margin: 1.5em 0;
   padding: 1.25rem;
   background: var(--code);
   color: #e9e4d7;
@@ -736,15 +737,80 @@ button {
 }
 .mermaid-diagram {
   display: block;
-  padding: 1rem;
-  background: var(--surface);
+  padding: clamp(1rem, 3vw, 2rem);
+  background:
+    radial-gradient(
+      circle at 12% 8%,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 88% 92%,
+      color-mix(in srgb, var(--teal) 10%, transparent),
+      transparent 34%
+    ),
+    var(--surface);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: auto;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--ink) 8%, transparent);
+  overflow: hidden;
 }
 .mermaid-diagram svg {
+  display: block;
+  width: 100%;
   max-width: 100%;
   height: auto;
+  margin: 0 auto;
+}
+.mermaid-diagram .nodeLabel {
+  font-size: 16px !important;
+  line-height: 1.4;
+}
+.mermaid-diagram .nodeLabel b {
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+.mermaid-diagram .nodeLabel p,
+.mermaid-diagram .edgeLabel p {
+  margin: 0;
+  color: inherit;
+}
+.mermaid-diagram .node rect,
+.mermaid-diagram .node polygon {
+  filter: drop-shadow(0 6px 9px rgba(0, 0, 0, 0.2));
+}
+.mermaid-diagram .cluster rect {
+  rx: 16px;
+  ry: 16px;
+}
+.mermaid-diagram .task .nodeLabel,
+.mermaid-diagram .decision .nodeLabel {
+  color: #27200a !important;
+}
+.mermaid-diagram .microtask .nodeLabel,
+.mermaid-diagram .complete .nodeLabel {
+  color: #123c39 !important;
+}
+.mermaid-diagram .execution .nodeLabel {
+  color: #262238 !important;
+}
+.mermaid-diagram .rendering .nodeLabel {
+  color: #17384f !important;
+}
+.mermaid-diagram .edgeLabel {
+  font-size: 13px !important;
+  background: transparent !important;
+}
+.mermaid-diagram .edgeLabel p {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a9a8b0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mermaid-diagram .labelBkg {
+  fill: transparent !important;
 }
 .diagram-loading,
 .diagram-fallback {
