@@ -26,17 +26,43 @@ export function AppHeader() {
     <header className="site-header">
       <Link className="brand" href="/" aria-label="JavaScript Interview Handbook home">
         <span className="brand-mark">JS</span>
-        <span className="brand-copy"><strong>Interview Handbook</strong><small>Senior frontend edition</small></span>
+        <span className="brand-copy">
+          <strong>Interview Handbook</strong>
+          <small>Senior frontend edition</small>
+        </span>
       </Link>
       <nav className="header-actions" aria-label="Primary navigation">
-        <a className="nav-author" href="https://github.com/Dmitrii-Lobanov" target="_blank" rel="noreferrer" aria-label="Created by Dmitrii Lobanov — GitHub profile">
-          <span className="nav-author-avatar" aria-hidden="true">DL</span>
-          <span className="nav-author-name"><small>Handbook author</small><strong>Dmitrii Lobanov</strong></span>
-          <span className="nav-author-arrow" aria-hidden="true">↗</span>
+        <a
+          className="nav-author"
+          href="https://github.com/Dmitrii-Lobanov"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Created by Dmitrii Lobanov — GitHub profile"
+        >
+          <span className="nav-author-avatar" aria-hidden="true">
+            DL
+          </span>
+          <span className="nav-author-name">
+            <small>Handbook author</small>
+            <strong>Dmitrii Lobanov</strong>
+          </span>
+          <span className="nav-author-arrow" aria-hidden="true">
+            ↗
+          </span>
         </a>
         <Link href="/#library">Library</Link>
-        <a href="https://github.com/Dmitrii-Lobanov/javascript-handbook" target="_blank" rel="noreferrer">GitHub</a>
-        <button className="icon-button" onClick={toggleTheme} aria-label={`Use ${dark ? "light" : "dark"} theme`}>
+        <a
+          href="https://github.com/Dmitrii-Lobanov/javascript-handbook"
+          target="_blank"
+          rel="noreferrer"
+        >
+          GitHub
+        </a>
+        <button
+          className="icon-button"
+          onClick={toggleTheme}
+          aria-label={`Use ${dark ? "light" : "dark"} theme`}
+        >
           {dark ? "☀" : "◐"}
         </button>
       </nav>

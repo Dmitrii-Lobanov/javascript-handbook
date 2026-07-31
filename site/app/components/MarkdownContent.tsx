@@ -23,7 +23,11 @@ export function MarkdownContent({ markdown }: { markdown: string }) {
           if (className === "language-mermaid") {
             return <MermaidDiagram chart={String(children).trim()} />;
           }
-          return <code className={className} {...props}>{children}</code>;
+          return (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
         },
       }}
     >

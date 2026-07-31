@@ -20,17 +20,24 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) return { published: chapters, planned: [] };
 
-    const matches = (text: string) => terms.every(term => text.includes(term));
-    const published = chapters.filter(chapter => matches([
-      chapter.title,
-      chapter.quickRefresher,
-      chapter.headings.join(" "),
-      chapter.searchText,
-    ].join(" ").toLowerCase()));
-    const publishedNumbers = new Set(published.map(chapter => chapter.number));
-    const planned = roadmap.flatMap(part => part.chapters
-      .filter(chapter => !publishedNumbers.has(chapter.number) && matches(`${part.title} ${chapter.title}`.toLowerCase()))
-      .map(chapter => ({ ...chapter, part: part.title })));
+    const matches = (text: string) => terms.every((term) => text.includes(term));
+    const published = chapters.filter((chapter) =>
+      matches(
+        [chapter.title, chapter.quickRefresher, chapter.headings.join(" "), chapter.searchText]
+          .join(" ")
+          .toLowerCase(),
+      ),
+    );
+    const publishedNumbers = new Set(published.map((chapter) => chapter.number));
+    const planned = roadmap.flatMap((part) =>
+      part.chapters
+        .filter(
+          (chapter) =>
+            !publishedNumbers.has(chapter.number) &&
+            matches(`${part.title} ${chapter.title}`.toLowerCase()),
+        )
+        .map((chapter) => ({ ...chapter, part: part.title })),
+    );
 
     return { published, planned };
   }, [chapters, query, roadmap]);
@@ -39,7 +46,11 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
   const resultCount = search.published.length + search.planned.length;
 
   const percent = chapters.length
-    ? Math.round((completed.filter(slug => chapters.some(chapter => chapter.slug === slug)).length / chapters.length) * 100)
+    ? Math.round(
+        (completed.filter((slug) => chapters.some((chapter) => chapter.slug === slug)).length /
+          chapters.length) *
+          100,
+      )
     : 0;
 
   return (
@@ -51,8 +62,13 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
           <p>Start in order, or search for the concept you need to refresh.</p>
         </div>
         <div className="progress-card" aria-label={`${percent}% of available chapters complete`}>
-          <div className="progress-label"><span>Reading progress</span><strong>{percent}%</strong></div>
-          <div className="progress-track"><span style={{ width: `${percent}%` }} /></div>
+          <div className="progress-label">
+            <span>Reading progress</span>
+            <strong>{percent}%</strong>
+          </div>
+          <div className="progress-track">
+            <span style={{ width: `${percent}%` }} />
+          </div>
         </div>
       </div>
 
@@ -62,31 +78,40 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
         <input
           type="search"
           value={query}
-          onChange={event => setQuery(event.target.value)}
+          onChange={(event) => setQuery(event.target.value)}
           placeholder="Search closures, microtasks, scope…"
           autoComplete="off"
         />
-        {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search">×</button>}
+        {query && (
+          <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
+            ×
+          </button>
+        )}
       </label>
 
       {isSearching && (
         <p className="search-summary" role="status" aria-live="polite">
-          {resultCount} {resultCount === 1 ? "result" : "results"} for <strong>“{query.trim()}”</strong>
+          {resultCount} {resultCount === 1 ? "result" : "results"} for{" "}
+          <strong>“{query.trim()}”</strong>
         </p>
       )}
 
       <div className="chapter-grid">
-        {search.published.map(chapter => {
+        {search.published.map((chapter) => {
           const isComplete = completed.includes(chapter.slug);
           return (
             <Link className="chapter-card" href={`/chapters/${chapter.slug}`} key={chapter.slug}>
               <div className="chapter-card-top">
                 <span className="chapter-number">{String(chapter.number).padStart(2, "0")}</span>
-                <span className={isComplete ? "complete-pill done" : "complete-pill"}>{isComplete ? "Completed" : `${chapter.readingMinutes} min`}</span>
+                <span className={isComplete ? "complete-pill done" : "complete-pill"}>
+                  {isComplete ? "Completed" : `${chapter.readingMinutes} min`}
+                </span>
               </div>
               <h3>{chapter.title}</h3>
               <p>{chapter.excerpt}</p>
-              <span className="card-link">Read chapter <span aria-hidden="true">→</span></span>
+              <span className="card-link">
+                Read chapter <span aria-hidden="true">→</span>
+              </span>
             </Link>
           );
         })}
@@ -95,13 +120,18 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
       {isSearching && search.planned.length > 0 && (
         <div className="planned-results">
           <h3>Planned chapters</h3>
-          <ul>{search.planned.map(chapter => (
-            <li key={chapter.number}>
-              <span>{String(chapter.number).padStart(2, "0")}</span>
-              <div><strong>{chapter.title}</strong><small>{chapter.part}</small></div>
-              {chapter.slug && <Link href={`/chapters/${chapter.slug}`}>Read →</Link>}
-            </li>
-          ))}</ul>
+          <ul>
+            {search.planned.map((chapter) => (
+              <li key={chapter.number}>
+                <span>{String(chapter.number).padStart(2, "0")}</span>
+                <div>
+                  <strong>{chapter.title}</strong>
+                  <small>{chapter.part}</small>
+                </div>
+                {chapter.slug && <Link href={`/chapters/${chapter.slug}`}>Read →</Link>}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -116,14 +146,18 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
         <details className="roadmap">
           <summary>View the complete 76-chapter roadmap</summary>
           <div className="roadmap-grid">
-            {roadmap.map(part => (
+            {roadmap.map((part) => (
               <section key={part.label}>
                 <span>{part.label}</span>
                 <h3>{part.title}</h3>
                 <ol>
-                  {part.chapters.map(chapter => (
+                  {part.chapters.map((chapter) => (
                     <li key={chapter.number} className={chapter.slug ? "available" : "planned"}>
-                      {chapter.slug ? <Link href={`/chapters/${chapter.slug}`}>{chapter.title}</Link> : chapter.title}
+                      {chapter.slug ? (
+                        <Link href={`/chapters/${chapter.slug}`}>{chapter.title}</Link>
+                      ) : (
+                        chapter.title
+                      )}
                     </li>
                   ))}
                 </ol>

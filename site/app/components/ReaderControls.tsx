@@ -19,8 +19,11 @@ export function ReaderControls({ slug }: { slug: string }) {
   }, [slug]);
 
   function toggleComplete() {
-    const completed = new Set<string>(JSON.parse(localStorage.getItem("handbook-completed") ?? "[]"));
-    if (complete) completed.delete(slug); else completed.add(slug);
+    const completed = new Set<string>(
+      JSON.parse(localStorage.getItem("handbook-completed") ?? "[]"),
+    );
+    if (complete) completed.delete(slug);
+    else completed.add(slug);
     localStorage.setItem("handbook-completed", JSON.stringify([...completed]));
     setComplete(!complete);
   }
@@ -35,10 +38,17 @@ export function ReaderControls({ slug }: { slug: string }) {
   return (
     <div className="reader-controls" aria-label="Reading controls">
       <div className="type-controls">
-        <button onClick={() => changeScale(-0.05)} aria-label="Decrease text size">A−</button>
-        <button onClick={() => changeScale(0.05)} aria-label="Increase text size">A+</button>
+        <button onClick={() => changeScale(-0.05)} aria-label="Decrease text size">
+          A−
+        </button>
+        <button onClick={() => changeScale(0.05)} aria-label="Increase text size">
+          A+
+        </button>
       </div>
-      <button className={complete ? "completion-button complete" : "completion-button"} onClick={toggleComplete}>
+      <button
+        className={complete ? "completion-button complete" : "completion-button"}
+        onClick={toggleComplete}
+      >
         {complete ? "✓ Completed" : "Mark complete"}
       </button>
     </div>

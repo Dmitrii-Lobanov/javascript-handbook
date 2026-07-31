@@ -26,7 +26,9 @@ export function MermaidDiagram({ chart }: { chart: string }) {
       }
     });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [chart, reactId]);
 
   if (failed) return <span className="diagram-fallback">{chart}</span>;
