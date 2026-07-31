@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { chapters } from "@/generated/content";
 import { MarkdownContent } from "../../components/MarkdownContent";
-import { ReaderControls } from "../../components/ReaderControls";
+import { CompletionControl, TextSizeControls } from "../../components/ReaderControls";
 
 export const dynamicParams = false;
 
@@ -64,6 +64,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
           </div>
           <h1>{chapter.title}</h1>
           <p>{chapter.excerpt}</p>
+          <TextSizeControls />
         </header>
 
         <div className="prose">
@@ -72,7 +73,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
 
         <div className="chapter-completion">
           <p>Finished this chapter?</p>
-          <ReaderControls slug={chapter.slug} />
+          <CompletionControl slug={chapter.slug} />
         </div>
 
         <nav className="chapter-pagination" aria-label="Chapter navigation">

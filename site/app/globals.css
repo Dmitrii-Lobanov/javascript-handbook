@@ -10,6 +10,14 @@
   --accent-ink: #27200a;
   --teal: #0b756f;
   --code: #151821;
+  --syntax-comment: #8b93a7;
+  --syntax-keyword: #c792ea;
+  --syntax-string: #8bd5ca;
+  --syntax-number: #82aaff;
+  --syntax-title: #ffc777;
+  --syntax-variable: #f4f0e7;
+  --syntax-built-in: #ff966c;
+  --syntax-meta: #7dcfff;
   --reader-scale: 1;
   color-scheme: light;
 }
@@ -23,6 +31,14 @@
   --accent-ink: #27200a;
   --teal: #58cfc4;
   --code: #0b0d12;
+  --syntax-comment: #8b949e;
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-number: #79c0ff;
+  --syntax-title: #d2a8ff;
+  --syntax-variable: #f4f0e7;
+  --syntax-built-in: #ffa657;
+  --syntax-meta: #7ee787;
   color-scheme: dark;
 }
 * {
@@ -700,9 +716,59 @@ button {
   line-height: 1.55;
 }
 .prose pre code {
+  display: block;
   padding: 0;
   background: none;
   color: inherit;
+}
+.prose .hljs-comment,
+.prose .hljs-quote {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+.prose .hljs-keyword,
+.prose .hljs-selector-tag,
+.prose .hljs-literal,
+.prose .hljs-type {
+  color: var(--syntax-keyword);
+}
+.prose .hljs-string,
+.prose .hljs-regexp,
+.prose .hljs-attribute {
+  color: var(--syntax-string);
+}
+.prose .hljs-number,
+.prose .hljs-symbol,
+.prose .hljs-bullet {
+  color: var(--syntax-number);
+}
+.prose .hljs-title,
+.prose .hljs-section,
+.prose .hljs-selector-id,
+.prose .hljs-selector-class {
+  color: var(--syntax-title);
+}
+.prose .hljs-variable,
+.prose .hljs-template-variable,
+.prose .hljs-params,
+.prose .hljs-property {
+  color: var(--syntax-variable);
+}
+.prose .hljs-built_in,
+.prose .hljs-builtin-name {
+  color: var(--syntax-built-in);
+}
+.prose .hljs-meta,
+.prose .hljs-meta .hljs-keyword {
+  color: var(--syntax-meta);
+}
+.prose .hljs-addition {
+  color: var(--syntax-string);
+  background: color-mix(in srgb, var(--syntax-string) 12%, transparent);
+}
+.prose .hljs-deletion {
+  color: #ff7b72;
+  background: color-mix(in srgb, #ff7b72 12%, transparent);
 }
 .prose table {
   width: 100%;
@@ -784,17 +850,21 @@ button {
   ry: 16px;
 }
 .mermaid-diagram .task .nodeLabel,
+.mermaid-diagram .script .nodeLabel,
 .mermaid-diagram .decision .nodeLabel {
   color: #27200a !important;
 }
 .mermaid-diagram .microtask .nodeLabel,
-.mermaid-diagram .complete .nodeLabel {
+.mermaid-diagram .complete .nodeLabel,
+.mermaid-diagram .completion .nodeLabel {
   color: #123c39 !important;
 }
-.mermaid-diagram .execution .nodeLabel {
+.mermaid-diagram .execution .nodeLabel,
+.mermaid-diagram .running .nodeLabel {
   color: #262238 !important;
 }
-.mermaid-diagram .rendering .nodeLabel {
+.mermaid-diagram .rendering .nodeLabel,
+.mermaid-diagram .transition .nodeLabel {
   color: #17384f !important;
 }
 .mermaid-diagram .edgeLabel {

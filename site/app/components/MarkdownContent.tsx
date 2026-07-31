@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
@@ -8,7 +9,7 @@ export function MarkdownContent({ markdown }: { markdown: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, rehypeSlug]}
+      rehypePlugins={[rehypeRaw, rehypeSlug, [rehypeHighlight, { plainText: ["mermaid"] }]]}
       components={{
         a: ({ href = "", children, ...props }) => (
           <a
@@ -20,7 +21,7 @@ export function MarkdownContent({ markdown }: { markdown: string }) {
           </a>
         ),
         code: ({ className, children, ...props }) => {
-          if (className === "language-mermaid") {
+          if (className?.split(" ").includes("language-mermaid")) {
             return <MermaidDiagram chart={String(children).trim()} />;
           }
           return (

@@ -2,31 +2,18 @@
 
 import { useEffect, useState } from "react";
 
-export function ReaderControls({ slug }: { slug: string }) {
-  const [complete, setComplete] = useState(false);
+export function TextSizeControls() {
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
     try {
-      const completed = JSON.parse(localStorage.getItem("handbook-completed") ?? "[]") as string[];
-      setComplete(completed.includes(slug));
       const savedScale = Number(localStorage.getItem("handbook-font-scale") ?? 1);
       setScale(savedScale);
       document.documentElement.style.setProperty("--reader-scale", String(savedScale));
     } catch {
-      setComplete(false);
+      setScale(1);
     }
-  }, [slug]);
-
-  function toggleComplete() {
-    const completed = new Set<string>(
-      JSON.parse(localStorage.getItem("handbook-completed") ?? "[]"),
-    );
-    if (complete) completed.delete(slug);
-    else completed.add(slug);
-    localStorage.setItem("handbook-completed", JSON.stringify([...completed]));
-    setComplete(!complete);
-  }
+  }, []);
 
   function changeScale(delta: number) {
     const next = Math.min(1.18, Math.max(0.9, Number((scale + delta).toFixed(2))));
@@ -45,6 +32,34 @@ export function ReaderControls({ slug }: { slug: string }) {
           A+
         </button>
       </div>
+    </div>
+  );
+}
+
+export function CompletionControl({ slug }: { slug: string }) {
+  const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    try {
+      const completed = JSON.parse(localStorage.getItem("handbook-completed") ?? "[]") as string[];
+      setComplete(completed.includes(slug));
+    } catch {
+      setComplete(false);
+    }
+  }, [slug]);
+
+  function toggleComplete() {
+    const completed = new Set<string>(
+      JSON.parse(localStorage.getItem("handbook-completed") ?? "[]"),
+    );
+    if (complete) completed.delete(slug);
+    else completed.add(slug);
+    localStorage.setItem("handbook-completed", JSON.stringify([...completed]));
+    setComplete(!complete);
+  }
+
+  return (
+    <div className="reader-controls">
       <button
         className={complete ? "completion-button complete" : "completion-button"}
         onClick={toggleComplete}
