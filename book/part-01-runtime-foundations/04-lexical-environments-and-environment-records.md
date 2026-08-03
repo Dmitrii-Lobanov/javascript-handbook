@@ -4,123 +4,118 @@
 
 After completing this chapter, you should be able to:
 
-- explain bindings without treating scopes as ordinary JavaScript objects;
-- describe how environment records and `[[OuterEnv]]` links model lexical nesting;
-- distinguish declarative, function, module, object, and global environment records;
-- explain binding creation, initialization, mutation, and deletion;
-- reason about the temporal dead zone as an uninitialized-binding state;
-- connect fresh render environments and retained bindings to React behavior.
+- explain bindings without describing scope as a JavaScript object;
+- trace lexical lookup through `[[OuterEnv]]` links;
+- distinguish binding creation from initialization;
+- explain temporal dead zone, global bindings, and live imports;
+- connect retained environments to closures and React renders.
 
 ## Quick Refresher
 
-- Environment records are specification mechanisms that associate identifier names with bindings.
-- A binding has lifecycle rules; it is not necessarily a property on an object.
-- Each environment record has an `[[OuterEnv]]` link to its lexically enclosing record or `null`.
-- Declarative records back language declarations; function and module records add specialized behavior.
-- Object environment records expose object properties as bindings in specific language mechanisms.
-- A global environment record combines declarative and object-backed behavior.
-- `let`, `const`, and `class` bindings can exist while uninitialized; access then throws instead of searching outward.
-- Closures retain reachable environments or bindings, not an entire active call stack.
+- An environment record associates identifier names with bindings.
+- A binding has behavior and state; it is not necessarily an object property.
+- `[[OuterEnv]]` points to the lexically enclosing environment record.
+- Lookup stops at the first record containing the name.
+- An uninitialized binding throws when read; lookup does not continue outward.
+- Closures retain access to bindings from their creation environment, not an active call stack.
 
 ## Why This Matters
 
-“JavaScript looks for variables in outer scopes” is useful but incomplete. Senior interviews probe what a scope contains, why shadowing can throw before a declaration, why top-level `let` differs from top-level `var`, how module imports stay live, and what a closure actually retains.
+“JavaScript searches outer scopes” predicts simple examples, but senior interviews go further: Why can an inner `let` throw before its declaration instead of reading an outer variable? Why does top-level `let` differ from top-level `var`? Why do imports update when an exporter changes?
 
-Environment records provide one model for all of these behaviors. They also prevent misleading explanations such as “local variables are properties on the execution context” or “the temporal dead zone means the variable does not exist yet.”
+Environment records provide one model for all of these behaviors. They also prevent two common mistakes: treating local variables as properties of an execution context and treating the temporal dead zone as a period in which a variable does not exist.
 
 ## Core Mental Model
 
-Think of an environment record as a specification-level **binding table with an outer link**:
+Think of an environment record as a specification-level **set of bindings plus an outer link**:
 
-- the table answers whether this environment contains a name and how its binding behaves;
-- `[[OuterEnv]]` points to the lexically enclosing environment;
-- different record types implement different binding rules.
+- the record answers whether it contains a name and how that binding behaves;
+- `[[OuterEnv]]` leads to the lexically enclosing record;
+- different record types support different language constructs.
 
-Do not take “table” literally. Environment records are not ECMAScript objects, and engines do not have to allocate one dictionary for every source-level scope. The model describes observable name-binding semantics.
+A binding is more than a name/value pair. It can be mutable or immutable, initialized or uninitialized, deletable or non-deletable, and direct or linked to an exported binding.
 
-A binding is more than a name/value pair. Depending on its origin, it may be mutable or immutable, initialized or uninitialized, deletable or non-deletable, direct or an indirect live import binding.
+Environment records are not ordinary JavaScript objects. Engines may keep values in registers, stack storage, or optimized internal structures as long as observable behavior matches the specification.
 
 ## Formal Model
 
-### Environment records
+### Binding lifecycle
 
-ECMA-262 defines Environment Record as a specification type used to associate identifiers with variables and functions according to lexical nesting. JavaScript code cannot directly access an environment record.
+The specification separates the important binding operations:
 
-Environment records expose abstract operations such as:
+1. **Create** the binding.
+2. **Initialize** it with a value.
+3. **Read or update** it according to its rules.
+4. **Delete** it only when that binding kind permits deletion.
 
-- `HasBinding(name)`;
-- `CreateMutableBinding(name, deletable)`;
-- `CreateImmutableBinding(name, strict)`;
-- `InitializeBinding(name, value)`;
-- `SetMutableBinding(name, value, strict)`;
-- `GetBindingValue(name, strict)`;
-- `DeleteBinding(name)`.
+This separation explains the temporal dead zone. A lexical binding may already exist and shadow an outer name while still being uninitialized.
 
-These operations make binding lifecycle explicit. Creation and initialization are separate. A newly created lexical binding can therefore exist but remain uninitialized.
+```js
+const status = "outer";
+
+{
+  console.log(status); // ReferenceError
+  const status = "inner";
+}
+```
+
+Before the block body runs, its own `status` binding is created. Lookup finds that binding and stops. Reading it before initialization throws; JavaScript does not fall back to the outer `status`.
 
 ### Outer environment links
 
-Every environment record has an `[[OuterEnv]]` field containing another environment record or `null`. When code evaluates a nested lexical construct, the new record normally points to the record for the surrounding lexical structure.
+When a name is needed, resolution starts in the current environment record:
 
-One outer environment can be shared by many inner environments. For example, separate calls to two nested functions can create different function environments whose outer links refer to the same retained outer environment.
+1. If the record contains the name, use that binding.
+2. Otherwise, follow `[[OuterEnv]]`.
+3. Repeat until a binding is found or the chain reaches `null`.
 
-Chapter 5 follows the complete identifier-resolution algorithm. For now, the essential rule is that failure to find a binding in one record leads resolution to its `[[OuterEnv]]`; finding an uninitialized binding is different and produces an error when its value is requested.
+The chain follows **where code was defined**, not who called it. That distinction is the foundation of lexical scope and closures. Chapter 5 develops the identifier-resolution algorithm in detail.
 
-### Record types
+### Record types worth knowing
 
-| Environment record | Primary role | Important behavior |
-| --- | --- | --- |
-| Declarative | Bindings created directly by declarations | Supports mutable and immutable bindings without using object properties |
-| Function | One ordinary function invocation | Adds `this`, `super`, `new.target`, and function-specific state where applicable |
-| Module | Top-level module bindings | Represents imports as indirect live bindings and operates under strict-mode rules |
-| Object | Object properties exposed as bindings | Used by mechanisms such as `with`; also participates in global environments |
-| Global | Top-level script and host global bindings | Combines an object record with a declarative record |
+| Record type | Main role                                            | Interview-relevant behavior                                  |
+| ----------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| Declarative | `let`, `const`, `class`, and other language bindings | Bindings are not object properties                           |
+| Function    | One function invocation                              | Adds function-specific state such as `this` where applicable |
+| Module      | Module-local and imported bindings                   | Imports are indirect, live, and read-only to the importer    |
+| Object      | Exposes object properties as bindings                | Used by mechanisms such as `with`                            |
+| Global      | Top-level classic-script bindings                    | Combines declarative and object-backed records               |
 
-Function and module environment records are specialized declarative records. A global environment is more complex than “the global object.”
+Function and module records specialize declarative behavior. “One call creates one function environment” is a useful default model, although parameters, direct `eval`, and other edge cases can require additional environments.
 
-### Function environments
+### Global bindings are split
 
-Calling an ECMAScript function establishes a function environment for that invocation. It contains parameter and local bindings according to the function-declaration-instantiation algorithms and can provide `this`, `super`, and `new.target` semantics.
+A classic script's global environment combines two sides:
 
-Edge cases such as default parameter initializers, direct `eval`, and non-simple parameter lists can require additional environments. Therefore, “one function call always equals exactly one environment record” is a useful diagram simplification, not a universal specification rule.
+- eligible top-level `var` and function declarations use an object-backed record and may become properties of `globalThis`;
+- top-level `let`, `const`, and `class` use a declarative record and do not become global-object properties.
 
-### Block environments and initialization
+```js
+var legacyMode = true;
+let modernMode = true;
 
-Evaluating a block containing lexical declarations creates a new declarative environment. `BlockDeclarationInstantiation` creates bindings for its `let`, `const`, `class`, and block-level function declarations before the block's statements execute.
+console.log(globalThis.legacyMode); // true in a browser classic script
+console.log(globalThis.modernMode); // undefined
+```
 
-For `let`, `const`, and `class`, the binding initially exists but is uninitialized. Access before initialization throws a `ReferenceError`. This interval is commonly called the **temporal dead zone**. It is not a separate storage area and does not mean resolution should continue to an outer binding with the same name.
+Modules use module environment records instead. Their top-level declarations do not become properties of the global object.
 
-### Global environments
+### Module imports are live bindings
 
-A global environment record contains:
-
-- an **object record** associated with the global object, used for built-ins and eligible top-level `var` and function declarations in script code;
-- a **declarative record** used for top-level lexical declarations such as `let`, `const`, and `class`.
-
-This is why a top-level lexical binding can be globally scoped without being a property of `globalThis`. Modules use module environment records instead and do not turn top-level declarations into global-object properties.
-
-### Module environments and live imports
-
-A module environment contains module-local bindings and import bindings. An import binding gives indirect access to a binding exported by another module. It is **live**: when the exporter updates a mutable exported binding, importers observe its current value. The importer cannot reassign the import binding itself.
+An import does not receive a one-time copy. It indirectly refers to the exporter's binding, so an importer observes later updates made by the exporter. The importer cannot reassign the imported name.
 
 Detailed module linking and evaluation belong to Chapters 35–38.
 
-### Private environments
-
-ECMAScript models class private names with PrivateEnvironment Records, which are similar to but distinct from ordinary Environment Records. They form their own outer-private-environment chain. Private names such as `#balance` are not string-keyed lexical bindings and are not object properties accessible through `['#balance']`.
-
 ## Step-by-Step Runtime Walkthrough
 
-Predict the output:
-
 ```js
-const currency = 'USD';
+const currency = "USD";
 
 function formatPrice(amount) {
   const precision = 2;
 
   if (amount === 0) {
-    const label = 'Free';
+    const label = "Free";
     return label;
   }
 
@@ -131,61 +126,24 @@ console.log(formatPrice(12));
 console.log(formatPrice(0));
 ```
 
-Expected output:
+The output is:
 
 ```text
 USD 12.00
 Free
 ```
 
-The relevant environment behavior is:
+Trace the environments:
 
-1. Script evaluation establishes the global lexical binding `currency`.
-2. Calling `formatPrice(12)` creates invocation-specific function bindings for `amount` and `precision`. Its outer environment is the environment captured when `formatPrice` was created—the global environment in this example.
-3. The condition is false, so no `label` value is initialized for this path.
-4. `currency` is not present in the function's local environment, so lookup can continue through its outer link to the global environment.
-5. Calling `formatPrice(0)` creates a different function environment with new `amount` and `precision` bindings.
-6. Entering the `if` block establishes a nested declarative environment. Its `label` binding is created and then initialized to `'Free'` when the declaration is evaluated.
-7. Returning exits the block and function evaluations. Their active contexts finish, although an environment could outlive a call if reachable through a closure.
+1. Script evaluation creates the outer `currency` binding.
+2. Each call creates fresh function bindings for `amount` and `precision`.
+3. `currency` is absent locally, so lookup follows the function's outer link.
+4. On the zero path, entering the block creates a nested `label` binding.
+5. Returning finishes the active evaluations. An environment can still remain reachable if a closure needs one of its bindings.
 
-## Visual Model
+## Important Examples
 
-For the `amount === 0` path:
-
-```mermaid
-flowchart LR
-    B["Block environment<br/>label = 'Free'"] -->|"[[OuterEnv]]"| F["Function environment<br/>amount = 0<br/>precision = 2"]
-    F -->|"[[OuterEnv]]"| G["Global environment<br/>currency = 'USD'<br/>formatPrice"]
-    G -->|"[[OuterEnv]]"| N["null"]
-```
-
-The arrows show lexical nesting, not the dynamic call stack and not object prototype links.
-
-## Progressive Examples
-
-### Foundational: block bindings are distinct
-
-```js
-const status = 'outer';
-
-{
-  const status = 'inner';
-  console.log(status);
-}
-
-console.log(status);
-```
-
-Expected output:
-
-```text
-inner
-outer
-```
-
-The block environment has its own `status` binding and an outer link to the surrounding environment. Leaving the block restores the surrounding lexical environment for subsequent evaluation.
-
-### Production-oriented: per-iteration bindings
+### Per-iteration bindings
 
 ```js
 const handlers = [];
@@ -194,122 +152,96 @@ for (let index = 0; index < 3; index += 1) {
   handlers.push(() => index);
 }
 
-console.log(handlers.map(handler => handler()));
+console.log(handlers.map((handler) => handler())); // [0, 1, 2]
 ```
 
-Expected output:
+A `for` loop with a lexical declaration creates a distinct per-iteration binding. Each callback closes over a different binding. With `var`, the callbacks normally share one function- or global-scoped binding and produce `[3, 3, 3]`.
 
-```text
-[0, 1, 2]
-```
-
-For a `for` loop with a lexical declaration, ECMAScript creates per-iteration bindings. Each function captures the binding for its own iteration. Replacing `let` with `var` changes the binding model: the callbacks share one function- or global-scoped binding and typically produce `[3, 3, 3]`.
-
-This behavior is not caused by `let` copying a primitive into each callback. Each closure refers to a distinct binding.
-
-### Interview-level edge case: shadowing starts before initialization
-
-Predict the result:
+### `const` protects the binding, not the object
 
 ```js
-const message = 'outside';
+const settings = { theme: "dark" };
 
-{
-  console.log(message);
-  const message = 'inside';
-}
+settings.theme = "light"; // allowed
+settings = {}; // TypeError
 ```
 
-The first `console.log` throws a `ReferenceError`. Before block statements execute, the block environment already contains its own uninitialized `message` binding. Resolution finds that binding and does not fall back to the outer `message`. Reading its value before initialization triggers the temporal dead zone error.
+The binding cannot be reassigned after initialization. That rule does not freeze the referenced object.
+
+### Closures observe bindings, not copied values
+
+```js
+function createCounter() {
+  let count = 0;
+  return () => ++count;
+}
+
+const next = createCounter();
+console.log(next()); // 1
+console.log(next()); // 2
+```
+
+The returned function retains access to the `count` binding. The completed call does not remain on the call stack.
 
 ## Common Misconceptions
 
-### “A lexical environment is a normal object”
-
-Environment records are specification types. Object-like diagrams explain associations but do not expose a runtime object available to application code.
-
-### “Every variable is a property of some scope object”
-
-Declarative bindings are not specified as object properties. Object environment records are a specialized case, and even the global environment combines object-backed and declarative bindings.
-
-### “The temporal dead zone means the variable does not exist”
-
-The binding exists but is uninitialized. This is why it shadows an outer binding and throws when accessed instead of allowing lookup to continue.
-
-### “`const` makes a value immutable”
-
-`const` creates an immutable binding: the binding cannot be reassigned after initialization. If it contains an object, the object's own mutable properties can still change.
-
-### “A closure copies outer values”
-
-A function retains access to its creation environment. It can observe later changes to a captured mutable binding. Engines may optimize representation, but value copying is not the general semantic model.
-
-### “Top-level means property of `window`”
-
-Top-level `let`, `const`, and `class` in a classic browser script use the declarative part of the global environment and do not become `window` properties. Module top-level bindings are module-scoped.
+| Claim                                                | Better explanation                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| “Scope is an object containing variables.”           | Environment records are inaccessible specification mechanisms; only some records are object-backed. |
+| “The TDZ means the variable does not exist.”         | The binding exists but is uninitialized, so it shadows outer bindings and throws when read.         |
+| “`const` makes a value immutable.”                   | It prevents reassignment of the binding; referenced objects may remain mutable.                     |
+| “A closure copies outer values.”                     | A closure retains access to bindings from its creation environment.                                 |
+| “Top-level declarations are properties of `window`.” | Top-level lexical and module bindings are not global-object properties.                             |
 
 ## React Connection
 
-Every function-component invocation establishes fresh function-local bindings:
+Every component render is a fresh function invocation with fresh bindings:
 
 ```jsx
 function SearchResults({ query, items }) {
   const normalizedQuery = query.trim().toLowerCase();
-  const visibleItems = items.filter(item =>
-    item.name.toLowerCase().includes(normalizedQuery),
-  );
 
   function handleReport() {
-    console.log(normalizedQuery, visibleItems.length);
+    console.log(normalizedQuery);
   }
 
-  return <button onClick={handleReport}>Report visible results</button>;
+  return <button onClick={handleReport}>Report query</button>;
 }
 ```
 
-Each render creates new `normalizedQuery`, `visibleItems`, and `handleReport` bindings. The handler retains access to the environment of the render in which it was created. This is the language foundation for React's “state as a snapshot” explanation and for stale-closure bugs.
+`handleReport` retains access to the `normalizedQuery` binding from the render in which that function was created. A later render creates a new binding and usually a new callback; it does not rewrite the environment captured by the old callback. This is the language basis of stale-closure bugs and React's “state as a snapshot” explanation.
 
-Do not store persistent component state in ordinary local bindings: a later render is a new invocation with new bindings. React state and refs persist because React stores their associated data outside a particular function invocation.
-
-The environment model also clarifies dependency arrays. An effect callback created during one render refers to bindings from that render; React cannot change which lexical environment an already-created function captured.
+Ordinary locals cannot persist component state across renders. State and refs persist because React stores their data outside any one component invocation.
 
 ## Performance and Memory Implications
 
-ECMAScript specifies binding behavior, not one allocation strategy. Engines can keep uncaptured locals in registers or stack storage, optimize environments away, or materialize them when debugging and deoptimization require it. Counting source scopes does not predict heap allocation.
+Source-level scopes do not map directly to heap allocations. Engines can keep uncaptured values in registers or stack storage and materialize environments only when semantics, debugging, or deoptimization require them.
 
-When a closure remains reachable, its creation environment—or an optimized representation of the required bindings—can remain reachable too. Capturing one binding does not normatively require retaining every local variable, but real retention must be measured rather than inferred from source alone.
+A closure is not automatically a leak. Retention becomes a problem when an unwanted long-lived reference—often an event listener, subscription, timer, or cache—keeps the closure and its captured data reachable.
 
-Practical memory investigations should identify:
+When debugging memory, inspect the retaining path and ask:
 
-- which function or listener remains reachable;
-- which environment or context appears in the retaining path;
-- which captured value dominates retained memory;
-- whether removing a subscription or reference releases the path.
-
-The presence of a closure is not itself a leak. A leak is unwanted retention relative to the application's intended lifetime.
+- Which function remains reachable?
+- What keeps that function alive?
+- Which captured value accounts for the retained memory?
+- Does removing the listener, subscription, timer, or cache entry release it?
 
 ## Debugging Techniques
 
-### Inspect scope separately from calls
+### Compare Scope and Call Stack
 
-Pause inside a nested function in Chrome DevTools. The **Call Stack** pane shows dynamic callers; the **Scope** pane groups visible bindings into categories such as Local, Block, Closure, Script, and Global. Those labels are debugger presentation, not names of a universal engine object layout.
+Pause inside a nested function in DevTools. **Call Stack** shows dynamic callers; **Scope** shows visible local, block, closure, script, and global bindings. The panels answer different questions and should not be treated as the same chain.
 
-Select different call frames and observe that each invocation has different local bindings while closure and global bindings can be shared.
+### Diagnose a TDZ error
 
-### Diagnose temporal dead zone errors
+When you see “Cannot access before initialization”:
 
-When “Cannot access before initialization” appears:
+1. Find the nearest lexical declaration with the same name.
+2. Identify the environment that owns it.
+3. Check whether evaluation reads it before initialization.
+4. For modules, also consider circular evaluation order.
 
-1. find the nearest lexical declaration with the same name;
-2. identify the block, function, or module environment that owns it;
-3. check whether evaluation reads the binding before its declaration initializes it;
-4. include circular module evaluation as a possibility for imported or exported bindings.
-
-Do not “fix” every case by changing `let` to `var`; that changes binding semantics and can conceal an ordering defect.
-
-### Inspect closure retention
-
-Use a heap snapshot and follow retaining paths from an unexpectedly retained object. DevTools may label a retaining node as a closure, context, or environment. Verify the actual application reference—often an event listener, subscription, timer, or cache—that keeps the function reachable.
+Changing `let` to `var` changes semantics and may only hide the ordering defect.
 
 ## Interview Questions
 
@@ -317,46 +249,36 @@ Use a heap snapshot and follow retaining paths from an unexpectedly retained obj
 
 **Question:** What is a lexical environment?
 
-**Model answer:**
-
-In current specification terms, identifier bindings are represented by Environment Records linked through `[[OuterEnv]]`. “Lexical environment” commonly refers to the current record and that outer chain for a piece of code. A record knows which names it binds and how those bindings are created, initialized, read, or changed. It is a specification mechanism, not a JavaScript object. The chain follows lexical nesting, which is why a function resolves names according to where it was created rather than who called it.
+**Model answer:** JavaScript models identifier bindings with environment records connected through `[[OuterEnv]]`. A record knows which names it contains and how those bindings behave. Resolution follows the lexical chain determined by where code was defined. These records are specification mechanisms, not ordinary JavaScript objects.
 
 ### Level 2 — Applied understanding
 
-**Question:** Why does accessing a shadowed `let` before its declaration throw instead of reading the outer variable?
+**Question:** Why does a shadowed `let` throw before its declaration instead of reading the outer variable?
 
-**Model answer:**
-
-Before the block's statements run, block declaration instantiation creates the inner `let` binding, but it remains uninitialized until evaluation reaches the declaration. Identifier resolution therefore finds the inner binding and stops; it does not continue to the outer environment. Reading the uninitialized binding throws a `ReferenceError`. That interval is the temporal dead zone, and it is more precise to describe it as binding state than as a place in source code.
+**Model answer:** Block setup creates the inner binding before the statements run, but the declaration initializes it later. Resolution finds the inner binding and stops. Reading that uninitialized binding throws a `ReferenceError`, so the outer name is never considered.
 
 ### Level 3 — Senior reasoning
 
-**Question:** Why can three callbacks created in a `for (let ...)` loop observe three different indices?
+**Question:** Why do callbacks created by `for (let ...)` observe different indices?
 
-**Model answer:**
-
-The loop semantics create a distinct per-iteration binding for the lexical loop variable. Each callback is created with access to the environment for that iteration, so the callbacks refer to different `index` bindings. With `var`, the callbacks normally share one function- or global-scoped binding and see its final value. I would describe this as binding identity, not as JavaScript copying the number into each closure.
+**Model answer:** The loop creates a distinct binding for each iteration. Each callback closes over its iteration's binding. With `var`, the callbacks normally share one function- or global-scoped binding and therefore observe its final value.
 
 ### Level 4 — Deep follow-up
 
 **Question:** Is a top-level binding always a property of `globalThis`?
 
-**Model answer:**
-
-No. In classic script code, eligible top-level `var` and function declarations use the object-record side of the global environment and often create global-object properties. Top-level `let`, `const`, and `class` use its declarative record and are not properties of `globalThis`. Modules have module environment records, so their top-level declarations are module-scoped. I would also qualify console experiments because developer consoles can use host-specific evaluation behavior.
+**Model answer:** No. In classic scripts, eligible `var` and function declarations use the object-backed side of the global environment, while top-level `let`, `const`, and `class` use its declarative side. Modules use module environments. Only the object-backed case normally appears as a `globalThis` property.
 
 ## Exercises
 
-### 1. Predict shadowing output
+### 1. Predict shadowing behavior
 
 ```js
 const value = 1;
 
 {
   const value = 2;
-  {
-    console.log(value);
-  }
+  console.log(value);
 }
 
 console.log(value);
@@ -365,7 +287,7 @@ console.log(value);
 <details>
 <summary>Solution</summary>
 
-The output is `2` and then `1`. The innermost block has no `value`, so lookup reaches the immediately enclosing block binding. After both blocks finish, the final log resolves the outer binding.
+The output is `2` and then `1`. The block owns a distinct binding; after the block finishes, lookup starts in the outer environment again.
 
 </details>
 
@@ -385,63 +307,38 @@ check();
 <details>
 <summary>Solution</summary>
 
-The function's lexical environment contains a local `enabled` binding before body evaluation reaches the declaration. That binding is uninitialized at the log, so reading it throws a `ReferenceError`. The outer `enabled` is shadowed and is not used.
+The function's local `enabled` binding exists before body evaluation reaches its declaration, but it is uninitialized. It shadows the outer binding, so the read throws a `ReferenceError`.
 
 </details>
 
-### 3. Compare global bindings
+### 3. Diagnose a React callback
 
-In a normal browser classic script, predict:
-
-```js
-var legacyMode = true;
-let modernMode = true;
-
-console.log(globalThis.legacyMode);
-console.log(globalThis.modernMode);
-```
+A callback created during an old render reads an old `query` after state changes. Why can React not update the callback's existing environment?
 
 <details>
 <summary>Solution</summary>
 
-The expected output is `true` and `undefined`. The `var` binding uses the object-record side of the global environment, while the `let` binding uses its declarative record. This example is environment-sensitive: a module, Node.js module wrapper, or developer console does not necessarily behave like a browser classic script.
+The function retains the environment from the render that created it. A later render creates new bindings; it cannot change which environment the existing function captured. The application must use the newer callback, correct dependencies, a functional update, or deliberately current mutable data through a ref.
 
 </details>
-
-### 4. Diagnose a React callback
-
-A callback created during an old render reads an old `query` value even after state changes. Why can React not update the callback's existing environment?
-
-<details>
-<summary>Solution</summary>
-
-The callback is a function created during a particular component invocation and retains access to that render's environment. A later render creates new bindings and usually a new callback; it does not mutate which environment the old function captured. The application must arrange for the latest callback to be used, declare dependencies correctly, use a functional state update where appropriate, or deliberately read mutable current data through a ref.
-
-</details>
-
-### 5. Explain the model aloud
-
-In 45 seconds, distinguish a binding, an environment record, an outer-environment link, and an ordinary object property.
 
 ## Chapter Summary
 
-- **Essential model:** environment records associate names with bindings and link to lexically enclosing records through `[[OuterEnv]]`.
-- **Important distinctions:** binding versus property, creation versus initialization, lexical environment versus execution context, and outer-environment link versus call stack.
-- **Mistakes to avoid:** treating scopes as objects, claiming the temporal dead zone means absence, assuming `const` freezes objects, or saying closures copy values.
-- **React consequence:** every render creates fresh bindings, and callbacks retain access to the environment of their creation render.
+- Environment records associate names with bindings and link outward through `[[OuterEnv]]`.
+- Lookup follows lexical nesting and stops at the first record containing the name.
+- Binding creation and initialization are separate, which explains temporal dead zone behavior.
+- Global lexical bindings, global object properties, and module bindings are not interchangeable.
+- Closures retain access to bindings; React callbacks therefore retain values from a particular render.
 
 ### Interview-ready explanation
 
-JavaScript models lexical bindings with Environment Records. Each record knows which identifiers it binds and links to its lexically enclosing record through `[[OuterEnv]]`. Different record types support functions, modules, global code, and object-backed bindings. Creation and initialization are separate, which explains the temporal dead zone: an inner binding can already shadow an outer one while still being unreadable. These are specification mechanisms rather than ordinary objects, and engines may optimize their storage. In React, each component invocation establishes fresh bindings, while callbacks can keep a particular render's environment reachable.
+JavaScript models lexical scope with environment records. Each record contains bindings and points to its lexically enclosing record through `[[OuterEnv]]`. Lookup stops at the first record containing a name. Because creation and initialization are separate, an inner lexical binding can shadow an outer name while still throwing in the temporal dead zone. Closures keep access to bindings from the environment where they were created, which also explains why React callbacks can observe values from an older render.
 
 ## Further Reading
 
 - [ECMA-262: Environment Records](https://tc39.es/ecma262/#sec-environment-records)
-- [ECMA-262: Declarative Environment Records](https://tc39.es/ecma262/#sec-declarative-environment-records)
-- [ECMA-262: Function Environment Records](https://tc39.es/ecma262/#sec-function-environment-records)
 - [ECMA-262: Global Environment Records](https://tc39.es/ecma262/#sec-global-environment-records)
 - [ECMA-262: Module Environment Records](https://tc39.es/ecma262/#sec-module-environment-records)
 - [ECMA-262: BlockDeclarationInstantiation](https://tc39.es/ecma262/#sec-blockdeclarationinstantiation)
-- [ECMA-262: PrivateEnvironment Records](https://tc39.es/ecma262/#sec-privateenvironment-records)
 - [React: State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)
 - [Chrome DevTools: JavaScript Debugging Reference](https://developer.chrome.com/docs/devtools/javascript/reference)
