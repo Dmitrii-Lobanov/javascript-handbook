@@ -648,6 +648,15 @@ button {
 .prose p {
   margin: 0 0 1.25em;
 }
+.prose img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2rem auto 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--ink) 13%, transparent);
+}
 .prose ul,
 .prose ol {
   margin: 1em 0 1.5em;

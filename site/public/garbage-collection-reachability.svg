@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1060" role="img" aria-labelledby="title description">
+  <title id="title">Garbage collection follows reachability from roots</title>
+  <desc id="description">Runtime roots strongly reach a registry, callback, model, and detached DOM node, so those values remain alive. A separate pair of objects reference each other but have no path from a root, so their cycle is eligible for garbage collection.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11151d"/>
+      <stop offset="1" stop-color="#1e2930"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdc6a"/>
+      <stop offset="1" stop-color="#f3c542"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9f7f3"/>
+      <stop offset="1" stop-color="#b7ebe5"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ece9f8"/>
+      <stop offset="1" stop-color="#d9d4ed"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#deeffb"/>
+      <stop offset="1" stop-color="#c3e2f5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#000" flood-opacity=".24"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12Z" fill="#67d5cc"/>
+    </marker>
+    <marker id="faded-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12Z" fill="#747c88"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .eyebrow { fill: #67d5cc; font-size: 18px; font-weight: 800; letter-spacing: 2.5px; }
+      .heading { fill: #f8f5ed; font-size: 36px; font-weight: 800; }
+      .subhead { fill: #adb4c0; font-size: 21px; }
+      .column { fill: #adb4c0; font-size: 17px; font-weight: 800; letter-spacing: 1.8px; }
+      .root-title { fill: #292315; font-size: 25px; font-weight: 800; }
+      .root-detail { fill: #514722; font-size: 18px; }
+      .live-title-teal { fill: #123c39; font-size: 24px; font-weight: 800; }
+      .live-detail-teal { fill: #315e5a; font-size: 18px; }
+      .live-title-purple { fill: #29253d; font-size: 24px; font-weight: 800; }
+      .live-detail-purple { fill: #514b6e; font-size: 18px; }
+      .live-title-blue { fill: #17384f; font-size: 24px; font-weight: 800; }
+      .live-detail-blue { fill: #31546d; font-size: 18px; }
+      .faded-title { fill: #9aa1ad; font-size: 23px; font-weight: 800; }
+      .faded-detail { fill: #777f8c; font-size: 18px; }
+      .edge { fill: #9bded8; font-size: 16px; font-weight: 750; }
+      .badge { fill: #173b38; font-size: 15px; font-weight: 900; letter-spacing: 1.3px; }
+      .collect { fill: #e3a198; font-size: 16px; font-weight: 900; letter-spacing: 1.2px; }
+      .footer { fill: #e6e2d9; font-size: 20px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1060" rx="34" fill="url(#bg)"/>
+  <text x="70" y="64" class="eyebrow">REACHABILITY GRAPH</text>
+  <text x="70" y="112" class="heading">Garbage collection starts from roots</text>
+  <text x="70" y="151" class="subhead">A strong path keeps an object alive. No path means the object may be reclaimed.</text>
+
+  <text x="75" y="218" class="column">ROOTS</text>
+  <text x="363" y="218" class="column">STRONGLY REACHABLE</text>
+  <text x="762" y="218" class="column">UNREACHABLE</text>
+
+  <rect x="65" y="250" width="240" height="132" rx="23" fill="url(#yellow)" stroke="#aa8527" stroke-width="3" filter="url(#shadow)"/>
+  <text x="100" y="300" class="root-title">Module scope</text>
+  <text x="100" y="341" class="root-detail">Long-lived registry</text>
+
+  <rect x="65" y="425" width="240" height="132" rx="23" fill="url(#yellow)" stroke="#aa8527" stroke-width="3" filter="url(#shadow)"/>
+  <text x="100" y="475" class="root-title">Browser host</text>
+  <text x="100" y="516" class="root-detail">Listener registration</text>
+
+  <path d="M305 316H368" stroke="#67d5cc" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="320" y="298" class="edge">strong</text>
+  <path d="M305 491H368" stroke="#67d5cc" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="320" y="473" class="edge">strong</text>
+
+  <rect x="382" y="250" width="285" height="132" rx="23" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <text x="420" y="300" class="live-title-teal">Map entry</text>
+  <text x="420" y="341" class="live-detail-teal">retains view model</text>
+
+  <rect x="382" y="425" width="285" height="132" rx="23" fill="url(#purple)" stroke="#8a82ab" stroke-width="3" filter="url(#shadow)"/>
+  <text x="420" y="475" class="live-title-purple">Callback</text>
+  <text x="420" y="516" class="live-detail-purple">saved environment</text>
+
+  <path d="M525 382V412" stroke="#67d5cc" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M525 557V603" stroke="#67d5cc" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="382" y="616" width="285" height="132" rx="23" fill="url(#blue)" stroke="#5594bb" stroke-width="3" filter="url(#shadow)"/>
+  <text x="420" y="666" class="live-title-blue">Detached DOM tree</text>
+  <text x="420" y="707" class="live-detail-blue">still reachable from callback</text>
+
+  <rect x="418" y="779" width="213" height="42" rx="21" fill="#8ddbd4"/>
+  <text x="524" y="806" text-anchor="middle" class="badge">MUST STAY ALIVE</text>
+
+  <g opacity=".5">
+    <circle cx="800" cy="345" r="88" fill="#2a3039" stroke="#737b87" stroke-width="3" stroke-dasharray="9 8"/>
+    <text x="800" y="337" text-anchor="middle" class="faded-title">Object A</text>
+    <text x="800" y="371" text-anchor="middle" class="faded-detail">references B</text>
+
+    <circle cx="800" cy="590" r="88" fill="#2a3039" stroke="#737b87" stroke-width="3" stroke-dasharray="9 8"/>
+    <text x="800" y="582" text-anchor="middle" class="faded-title">Object B</text>
+    <text x="800" y="616" text-anchor="middle" class="faded-detail">references A</text>
+
+    <path d="M774 430C740 472 740 505 774 505" fill="none" stroke="#747c88" stroke-width="4" marker-end="url(#faded-arrow)"/>
+    <path d="M826 505C860 472 860 439 826 430" fill="none" stroke="#747c88" stroke-width="4" marker-end="url(#faded-arrow)"/>
+  </g>
+
+  <rect x="706" y="720" width="188" height="42" rx="21" fill="#4a3030" stroke="#a65e56"/>
+  <text x="800" y="747" text-anchor="middle" class="collect">ELIGIBLE FOR GC</text>
+  <text x="800" y="798" text-anchor="middle" class="faded-detail">The cycle has no path from a root</text>
+
+  <line x1="70" y1="865" x2="930" y2="865" stroke="#37414b" stroke-width="2"/>
+  <rect x="95" y="903" width="810" height="92" rx="23" fill="#252b35" stroke="#505866" stroke-width="2"/>
+  <text x="135" y="942" class="footer">Leak question: which unwanted strong path still reaches this object?</text>
+  <text x="135" y="975" class="subhead">Remove the retaining path—not random local variables.</text>
+
+  <rect x="175" y="1020" width="650" height="25" rx="12" fill="#2c333d"/>
+  <text x="500" y="1041" text-anchor="middle" class="footer">Reachability determines eligibility · collection timing is not guaranteed</text>
+</svg>

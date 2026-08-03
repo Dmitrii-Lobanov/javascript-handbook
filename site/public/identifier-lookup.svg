@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1040" role="img" aria-labelledby="title description">
+  <title id="title">Lexical lookup for the identifier timeout</title>
+  <desc id="description">Lookup starts where timeout is used, finds no binding in the current block, moves outward, finds timeout equal to 5000 in the function scope, and stops before reaching the module binding.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11151d"/>
+      <stop offset="1" stop-color="#1e2930"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdc6a"/>
+      <stop offset="1" stop-color="#f3c542"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9f7f3"/>
+      <stop offset="1" stop-color="#b7ebe5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#000" flood-opacity=".24"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12Z" fill="#aeb5c1"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .eyebrow { fill: #67d5cc; font-size: 18px; font-weight: 800; letter-spacing: 2.5px; }
+      .heading { fill: #f8f5ed; font-size: 36px; font-weight: 800; }
+      .subhead { fill: #adb4c0; font-size: 21px; }
+      .code { fill: #292315; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 32px; font-weight: 850; }
+      .card-title { fill: #f8f5ed; font-size: 27px; font-weight: 800; }
+      .card-detail { fill: #b8bec9; font-size: 21px; }
+      .found-title { fill: #123c39; font-size: 28px; font-weight: 850; }
+      .found-detail { fill: #315e5a; font-size: 22px; }
+      .faded-title { fill: #969daa; font-size: 27px; font-weight: 800; }
+      .faded-detail { fill: #7d8491; font-size: 21px; }
+      .arrow-label { fill: #b8bec9; font-size: 18px; font-weight: 750; }
+      .stop { fill: #173b38; font-size: 15px; font-weight: 900; letter-spacing: 1.4px; }
+      .result { fill: #f8f5ed; font-size: 23px; font-weight: 750; }
+      .footer { fill: #e6e2d9; font-size: 20px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1040" rx="34" fill="url(#bg)"/>
+  <text x="70" y="64" class="eyebrow">NEAREST BINDING WINS</text>
+  <text x="70" y="112" class="heading">Start where the identifier is used</text>
+  <text x="70" y="151" class="subhead">Move outward only when the current environment does not contain the name.</text>
+
+  <rect x="245" y="188" width="510" height="92" rx="22" fill="url(#yellow)" stroke="#aa8527" stroke-width="3" filter="url(#shadow)"/>
+  <text x="500" y="246" text-anchor="middle" class="code">read timeout</text>
+
+  <path d="M500 280V337" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="135" y="350" width="730" height="130" rx="24" fill="#252b35" stroke="#505866" stroke-width="2"/>
+  <circle cx="190" cy="405" r="28" fill="#3b424e"/>
+  <text x="190" y="414" text-anchor="middle" fill="#f8f5ed" font-size="22" font-weight="900">1</text>
+  <text x="240" y="405" class="card-title">Current block</text>
+  <text x="240" y="448" class="card-detail">No “timeout” binding</text>
+
+  <path d="M500 480V551" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="382" y="500" width="236" height="38" rx="19" fill="#303743"/>
+  <text x="500" y="526" text-anchor="middle" class="arrow-label">follow [[OuterEnv]]</text>
+
+  <rect x="135" y="564" width="730" height="158" rx="24" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="190" cy="619" r="28" fill="#48bfb6"/>
+  <text x="190" y="628" text-anchor="middle" fill="#173b38" font-size="22" font-weight="900">2</text>
+  <text x="240" y="614" class="found-title">Function scope</text>
+  <text x="240" y="660" class="found-detail">timeout = 5000</text>
+  <text x="240" y="695" class="found-detail">Create a reference to this binding</text>
+  <rect x="678" y="596" width="140" height="42" rx="21" fill="#8ddbd4"/>
+  <text x="748" y="623" text-anchor="middle" class="stop">FOUND · STOP</text>
+
+  <path d="M500 722V794" stroke="#666e7a" stroke-width="3" stroke-dasharray="9 9"/>
+  <text x="522" y="768" class="arrow-label" fill="#7d8491">not searched</text>
+
+  <g opacity=".45">
+    <rect x="175" y="802" width="650" height="118" rx="23" fill="#252b35" stroke="#505866" stroke-width="2"/>
+    <text x="220" y="852" class="faded-title">Module scope</text>
+    <text x="220" y="894" class="faded-detail">timeout = 1000</text>
+  </g>
+
+  <rect x="300" y="949" width="400" height="52" rx="26" fill="#303743"/>
+  <text x="500" y="982" text-anchor="middle" class="result">GetValue(reference) → 5000</text>
+
+  <text x="500" y="1028" text-anchor="middle" class="footer">Lexical nesting chooses the path · the runtime caller does not</text>
+</svg>

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1110" role="img" aria-labelledby="title description">
+  <title id="title">Closure lifetime after an outer function returns</title>
+  <desc id="description">createCounter creates a count binding and an increment function. The outer call then leaves the stack, while the returned function remains reachable and keeps access to the count binding through its saved environment.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11151d"/>
+      <stop offset="1" stop-color="#1e2930"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdc6a"/>
+      <stop offset="1" stop-color="#f3c542"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ece9f8"/>
+      <stop offset="1" stop-color="#d9d4ed"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9f7f3"/>
+      <stop offset="1" stop-color="#b7ebe5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#000" flood-opacity=".24"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12Z" fill="#aeb5c1"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .eyebrow { fill: #67d5cc; font-size: 18px; font-weight: 800; letter-spacing: 2.5px; }
+      .heading { fill: #f8f5ed; font-size: 36px; font-weight: 800; }
+      .subhead { fill: #adb4c0; font-size: 21px; }
+      .stage { fill: #adb4c0; font-size: 17px; font-weight: 800; letter-spacing: 1.6px; }
+      .yellow-title { fill: #292315; font-size: 28px; font-weight: 800; }
+      .yellow-detail { fill: #514722; font-size: 20px; }
+      .purple-title { fill: #29253d; font-size: 28px; font-weight: 800; }
+      .purple-detail { fill: #514b6e; font-size: 20px; }
+      .teal-title { fill: #123c39; font-size: 28px; font-weight: 800; }
+      .teal-detail { fill: #315e5a; font-size: 20px; }
+      .dark-title { fill: #f8f5ed; font-size: 26px; font-weight: 800; }
+      .dark-detail { fill: #adb4c0; font-size: 20px; }
+      .arrow-label { fill: #c3c8d1; font-size: 18px; font-weight: 750; }
+      .gone { fill: #969daa; font-size: 23px; font-weight: 800; }
+      .gone-detail { fill: #777f8c; font-size: 18px; }
+      .number { fill: #f8f5ed; font-size: 21px; font-weight: 900; }
+      .footer { fill: #e6e2d9; font-size: 20px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1110" rx="34" fill="url(#bg)"/>
+  <text x="70" y="64" class="eyebrow">BINDING LIFETIME</text>
+  <text x="70" y="112" class="heading">The call ends. The captured binding can remain.</text>
+  <text x="70" y="151" class="subhead">A closure retains a path to a binding—not an active outer stack frame.</text>
+
+  <text x="90" y="211" class="stage">1 · CREATE</text>
+  <rect x="90" y="230" width="820" height="245" rx="26" fill="#191d25" stroke="#39414e" stroke-width="2"/>
+
+  <rect x="125" y="267" width="330" height="168" rx="22" fill="url(#yellow)" stroke="#aa8527" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="170" cy="311" r="25" fill="#292820"/>
+  <text x="170" y="319" text-anchor="middle" class="number">1</text>
+  <text x="210" y="314" class="yellow-title">createCounter()</text>
+  <text x="160" y="361" class="yellow-detail">Outer call is active</text>
+  <text x="160" y="397" class="yellow-detail">Creates count and increment</text>
+
+  <path d="M455 351H521" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="535" y="267" width="330" height="168" rx="22" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <text x="575" y="316" class="teal-title">Saved environment</text>
+  <text x="575" y="363" class="teal-detail">count = 0</text>
+  <text x="575" y="399" class="teal-detail">One mutable binding</text>
+
+  <path d="M500 475V544" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="380" y="495" width="240" height="38" rx="19" fill="#303743"/>
+  <text x="500" y="521" text-anchor="middle" class="arrow-label">return increment</text>
+
+  <text x="90" y="586" class="stage">2 · AFTER RETURN</text>
+  <rect x="90" y="605" width="820" height="240" rx="26" fill="#191d25" stroke="#39414e" stroke-width="2"/>
+
+  <g opacity=".45">
+    <rect x="125" y="641" width="330" height="164" rx="22" fill="#252b35" stroke="#505866" stroke-width="2" stroke-dasharray="9 8"/>
+    <text x="165" y="693" class="gone">createCounter frame</text>
+    <text x="165" y="735" class="gone-detail">Removed from the call stack</text>
+    <line x1="160" y1="765" x2="420" y2="667" stroke="#c36e63" stroke-width="4"/>
+  </g>
+
+  <rect x="535" y="641" width="330" height="164" rx="22" fill="url(#purple)" stroke="#8a82ab" stroke-width="3" filter="url(#shadow)"/>
+  <text x="575" y="691" class="purple-title">next → increment</text>
+  <text x="575" y="735" class="purple-detail">Returned function is reachable</text>
+  <text x="575" y="771" class="purple-detail">[[Environment]] is preserved</text>
+
+  <path d="M700 805V879" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="583" y="826" width="234" height="38" rx="19" fill="#303743"/>
+  <text x="700" y="852" text-anchor="middle" class="arrow-label">call next() later</text>
+
+  <text x="90" y="919" class="stage">3 · READ AND MUTATE THE SAME BINDING</text>
+  <rect x="160" y="940" width="680" height="112" rx="24" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <text x="205" y="987" class="teal-title">Saved count binding</text>
+  <text x="205" y="1028" class="teal-detail">next() → count = 1 · next() → count = 2</text>
+
+  <rect x="125" y="1073" width="750" height="24" rx="12" fill="#2c333d"/>
+  <text x="500" y="1093" text-anchor="middle" class="footer">Call stack controls execution · reachability controls lifetime</text>
+</svg>

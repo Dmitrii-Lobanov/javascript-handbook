@@ -89,46 +89,7 @@ Chapters 2–4 develop execution contexts, stacks, realms, and environments in d
 
 ## Visual Model
 
-```mermaid
-flowchart TB
-    LANGUAGE("ECMAScript<br/><b>Language rules</b>")
-    ENGINE("JavaScript engine<br/><b>Executes the rules</b>")
-    HOST("Browser host<br/><b>APIs · scheduling · rendering</b>")
-
-    TASK("Task")
-    RUN("Run JavaScript<br/><b>to completion</b>")
-    MICRO("Drain microtasks")
-    RENDER("Possible rendering")
-    NEXT("Next task")
-
-    LANGUAGE --> ENGINE
-    ENGINE <--> HOST
-    HOST --> TASK
-    TASK --> RUN
-    RUN --> MICRO
-    MICRO --> RENDER
-    RENDER --> NEXT
-
-    classDef language fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-    classDef engine fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
-    classDef host fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
-    classDef task fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
-    classDef execution fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
-    classDef microtask fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-    classDef rendering fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
-    classDef next fill:#fffdf8,color:#27200a,stroke:#9b9385,stroke-width:2px
-
-    linkStyle default stroke:#a9a8b0,stroke-width:2px
-
-    class LANGUAGE language
-    class ENGINE engine
-    class HOST host
-    class TASK task
-    class RUN execution
-    class MICRO microtask
-    class RENDER rendering
-    class NEXT next
-```
+![JavaScript runtime responsibilities and browser scheduling flow](/javascript-runtime-model.svg)
 
 The upper path explains responsibility: ECMAScript defines the language rules, an engine executes them, and the browser host supplies APIs, scheduling, and rendering. The lower path explains browser order: select a task, run its JavaScript to completion, drain microtasks, possibly render, and continue with another task.
 

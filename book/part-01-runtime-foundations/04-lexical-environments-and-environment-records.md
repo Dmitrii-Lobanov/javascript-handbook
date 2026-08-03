@@ -37,6 +37,12 @@ A binding is more than a name/value pair. It can be mutable or immutable, initia
 
 Environment records are not ordinary JavaScript objects. Engines may keep values in registers, stack storage, or optimized internal structures as long as observable behavior matches the specification.
 
+## Visual Model
+
+![Environment record bindings, lifecycle states, and outer links](/environment-record-anatomy.svg)
+
+The current record owns bindings with distinct rules and states. Its `[[OuterEnv]]` link connects it to the lexically enclosing record. An uninitialized binding already exists and therefore shadows the same name outside, even though reading it throws.
+
 ## Formal Model
 
 ### Binding lifecycle

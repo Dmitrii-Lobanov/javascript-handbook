@@ -60,6 +60,12 @@ console.log(detached()); // TypeError: this is undefined
 
 The function did not change. The invocation changed from a property-reference call to a plain call, so the receiver was lost.
 
+## Visual Model
+
+![How different call sites select this for the same function](/this-call-site.svg)
+
+For an ordinary function, the invocation selects the receiver: a method call preserves the property base, a strict plain call has no receiver, `call` supplies one explicitly, and `new` creates one. Arrow functions follow a separate rule because they read `this` lexically instead of receiving it from the call site.
+
 ## Formal Model
 
 ### A method call preserves a reference base

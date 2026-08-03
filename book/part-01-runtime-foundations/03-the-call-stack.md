@@ -98,31 +98,7 @@ console.log(formatTotal({ subtotal: 100 }));
 
 The stack keeps unfinished calls below the function that is currently running:
 
-```mermaid
-flowchart TB
-    SCRIPT("Script<br/><b>Running at the top</b>")
-    GROW("Calls push frames<br/><b>formatTotal → addTax → readSubtotal</b>")
-    PEAK("Stack at maximum depth<br/><b>TOP · readSubtotal</b><br/>addTax waits<br/>formatTotal waits<br/>script waits")
-    UNWIND("Returns pop frames<br/><b>readSubtotal → addTax → formatTotal</b>")
-    RESUME("Script<br/><b>Running again</b>")
-
-    SCRIPT --> GROW
-    GROW --> PEAK
-    PEAK --> UNWIND
-    UNWIND --> RESUME
-
-    classDef script fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
-    classDef push fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
-    classDef peak fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
-    classDef pop fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-
-    linkStyle default stroke:#a9a8b0,stroke-width:2px
-
-    class SCRIPT,RESUME script
-    class GROW push
-    class PEAK peak
-    class UNWIND pop
-```
+![Call stack growth and last-in first-out unwinding](/call-stack-lifo.svg)
 
 Only the top frame runs. Every frame below it represents an unfinished caller. Calls push frames; returns or uncaught throws remove them in last-in, first-out order until an earlier caller can resume.
 

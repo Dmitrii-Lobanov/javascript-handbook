@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1120" role="img" aria-labelledby="title description">
+  <title id="title">The call site determines this for an ordinary function</title>
+  <desc id="description">The same read function receives account when called as a method, undefined in a strict plain call, admin through call, and a new object during construction. Arrow functions are shown separately as using lexical this.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11151d"/>
+      <stop offset="1" stop-color="#1e2930"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdc6a"/>
+      <stop offset="1" stop-color="#f3c542"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ece9f8"/>
+      <stop offset="1" stop-color="#d9d4ed"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9f7f3"/>
+      <stop offset="1" stop-color="#b7ebe5"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#deeffb"/>
+      <stop offset="1" stop-color="#c3e2f5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#000" flood-opacity=".24"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12Z" fill="#aeb5c1"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .eyebrow { fill: #67d5cc; font-size: 18px; font-weight: 800; letter-spacing: 2.5px; }
+      .heading { fill: #f8f5ed; font-size: 36px; font-weight: 800; }
+      .subhead { fill: #adb4c0; font-size: 21px; }
+      .hub-title { fill: #292315; font-size: 30px; font-weight: 850; }
+      .hub-detail { fill: #514722; font-size: 20px; }
+      .card-title-purple { fill: #29253d; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 800; }
+      .card-detail-purple { fill: #514b6e; font-size: 20px; }
+      .card-title-teal { fill: #123c39; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 800; }
+      .card-detail-teal { fill: #315e5a; font-size: 20px; }
+      .card-title-blue { fill: #17384f; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 800; }
+      .card-detail-blue { fill: #31546d; font-size: 20px; }
+      .card-title-dark { fill: #f8f5ed; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 800; }
+      .card-detail-dark { fill: #adb4c0; font-size: 20px; }
+      .arrow-title { fill: #123c39; font-size: 27px; font-weight: 800; }
+      .arrow-detail { fill: #315e5a; font-size: 20px; }
+      .label { fill: #c3c8d1; font-size: 17px; font-weight: 800; }
+      .footer { fill: #e6e2d9; font-size: 20px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1120" rx="34" fill="url(#bg)"/>
+  <text x="70" y="64" class="eyebrow">RECEIVER SELECTION</text>
+  <text x="70" y="112" class="heading">Same function. Different call site. Different this.</text>
+  <text x="70" y="151" class="subhead">For ordinary functions, read the invocation before reading the function body.</text>
+
+  <rect x="315" y="205" width="370" height="150" rx="75" fill="url(#yellow)" stroke="#aa8527" stroke-width="3" filter="url(#shadow)"/>
+  <text x="500" y="267" text-anchor="middle" class="hub-title">ordinary function read</text>
+  <text x="500" y="310" text-anchor="middle" class="hub-detail">The function value stays the same</text>
+
+  <path d="M410 355L278 433" stroke="#aeb5c1" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="311" y="389" class="label">method</text>
+  <path d="M590 355L722 433" stroke="#aeb5c1" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="643" y="389" class="label">plain</text>
+
+  <rect x="75" y="445" width="400" height="142" rx="24" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <text x="115" y="497" class="card-title-teal">account.read()</text>
+  <text x="115" y="542" class="card-detail-teal">this → account</text>
+  <text x="115" y="573" class="card-detail-teal">Property base becomes receiver</text>
+
+  <rect x="525" y="445" width="400" height="142" rx="24" fill="#252b35" stroke="#505866" stroke-width="2" filter="url(#shadow)"/>
+  <text x="565" y="497" class="card-title-dark">read()</text>
+  <text x="565" y="542" class="card-detail-dark">this → undefined</text>
+  <text x="565" y="573" class="card-detail-dark">Strict plain call has no receiver</text>
+
+  <path d="M275 587V652" stroke="#aeb5c1" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="295" y="626" class="label">explicit</text>
+  <path d="M725 587V652" stroke="#aeb5c1" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="745" y="626" class="label">construct</text>
+
+  <rect x="75" y="665" width="400" height="142" rx="24" fill="url(#purple)" stroke="#8a82ab" stroke-width="3" filter="url(#shadow)"/>
+  <text x="115" y="717" class="card-title-purple">read.call(admin)</text>
+  <text x="115" y="762" class="card-detail-purple">this → admin</text>
+  <text x="115" y="793" class="card-detail-purple">Caller supplies the receiver</text>
+
+  <rect x="525" y="665" width="400" height="142" rx="24" fill="url(#blue)" stroke="#5594bb" stroke-width="3" filter="url(#shadow)"/>
+  <text x="565" y="717" class="card-title-blue">new Account()</text>
+  <text x="565" y="762" class="card-detail-blue">this → new object</text>
+  <text x="565" y="793" class="card-detail-blue">Construction creates the receiver</text>
+
+  <line x1="75" y1="855" x2="925" y2="855" stroke="#37414b" stroke-width="2"/>
+  <text x="75" y="900" class="eyebrow">THE ARROW FUNCTION EXCEPTION</text>
+
+  <rect x="100" y="928" width="800" height="120" rx="24" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <text x="145" y="978" class="arrow-title">Arrow function: no own this binding</text>
+  <text x="145" y="1021" class="arrow-detail">Read the enclosing lexical this · call, apply, and bind cannot replace it</text>
+
+  <rect x="150" y="1073" width="700" height="26" rx="13" fill="#2c333d"/>
+  <text x="500" y="1094" text-anchor="middle" class="footer">Ordinary function → call site · arrow function → lexical environment</text>
+</svg>

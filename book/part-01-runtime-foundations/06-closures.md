@@ -65,6 +65,12 @@ Three structures must remain separate:
 
 A call can disappear from the stack while its environment remains reachable.
 
+## Visual Model
+
+![Closure retaining a binding after its outer call returns](/closure-lifetime.svg)
+
+`createCounter` creates the `count` binding and the `increment` function. After the outer call returns, its active frame is gone, but the returned function remains reachable through `next`. Its saved `[[Environment]]` path therefore keeps the same `count` binding available for later calls.
+
 ## Formal Model
 
 ### Function creation captures an environment

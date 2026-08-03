@@ -102,36 +102,7 @@ This distinction becomes visible with `await`: the async function starts synchro
 
 An ordinary function call follows one compact control cycle:
 
-```mermaid
-flowchart TB
-    CONTEXT("Execution context<br/><b>State for one evaluation</b>")
-    CALLER("Caller context<br/><b>Running at the top</b>")
-    CALL("Function call<br/><b>Suspend caller · push callee</b>")
-    CALLEE("Callee context<br/><b>Now running at the top</b>")
-    RETURN("Function completes<br/><b>Pop callee</b>")
-    RESUME("Caller context<br/><b>Resume after the call</b>")
-
-    CONTEXT --> CALLER
-    CALLER --> CALL
-    CALL --> CALLEE
-    CALLEE --> RETURN
-    RETURN --> RESUME
-
-    classDef model fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-    classDef caller fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
-    classDef transition fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
-    classDef running fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
-    classDef completion fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-
-    linkStyle default stroke:#a9a8b0,stroke-width:2px
-
-    class CONTEXT model
-    class CALLER caller
-    class CALL transition
-    class CALLEE running
-    class RETURN completion
-    class RESUME caller
-```
+![Execution context call, suspension, and return cycle](/execution-context-cycle.svg)
 
 Read it as a change in which context owns control. A call suspends the caller and makes a new callee context the running context. Completion removes the callee context and continues the caller immediately after the call.
 

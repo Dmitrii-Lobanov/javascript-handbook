@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1280" role="img" aria-labelledby="title description">
+  <title id="title">JavaScript runtime model</title>
+  <desc id="description">The diagram separates ECMAScript language rules, the JavaScript engine, and the browser host, then traces a browser turn from a task through JavaScript execution, microtasks, and a possible rendering opportunity.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11151d"/>
+      <stop offset="1" stop-color="#1d2930"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdc6a"/>
+      <stop offset="1" stop-color="#f3c542"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9f7f3"/>
+      <stop offset="1" stop-color="#b7ebe5"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#deeffb"/>
+      <stop offset="1" stop-color="#c3e2f5"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ece9f8"/>
+      <stop offset="1" stop-color="#dcd7f0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="13" flood-color="#000" flood-opacity=".24"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0 12 6 0 12Z" fill="#aeb5c1"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .section { fill: #67d5cc; font-size: 18px; font-weight: 800; letter-spacing: 2.5px; }
+      .heading { fill: #f8f5ed; font-size: 35px; font-weight: 800; }
+      .card-title-dark { fill: #1f261f; font-size: 29px; font-weight: 800; }
+      .card-title-teal { fill: #123c39; font-size: 29px; font-weight: 800; }
+      .card-title-blue { fill: #17384f; font-size: 29px; font-weight: 800; }
+      .card-title-purple { fill: #29253d; font-size: 29px; font-weight: 800; }
+      .detail-dark { fill: #4a421f; font-size: 21px; }
+      .detail-teal { fill: #315e5a; font-size: 21px; }
+      .detail-blue { fill: #31546d; font-size: 21px; }
+      .detail-purple { fill: #514b6e; font-size: 21px; }
+      .label { fill: #b8bec9; font-size: 18px; font-weight: 700; }
+      .number { fill: #171b22; font-size: 24px; font-weight: 900; }
+      .note { fill: #d6d9df; font-size: 19px; }
+      .footer { fill: #f8f5ed; font-size: 21px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1280" rx="34" fill="url(#bg)"/>
+
+  <text x="70" y="65" class="section">PART 1 · RESPONSIBILITY</text>
+  <text x="70" y="112" class="heading">A runtime is three cooperating layers</text>
+
+  <rect x="90" y="155" width="820" height="150" rx="24" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="145" cy="207" r="28" fill="#55c9c0"/>
+  <text x="145" y="216" text-anchor="middle" class="number">1</text>
+  <text x="195" y="207" class="card-title-teal">ECMAScript</text>
+  <text x="195" y="248" class="detail-teal">Defines language rules: values, functions, promises, jobs</text>
+  <rect x="730" y="189" width="145" height="36" rx="18" fill="#91ddd7"/>
+  <text x="802" y="213" text-anchor="middle" fill="#174a46" font-size="16" font-weight="800">THE CONTRACT</text>
+
+  <path d="M500 305V354" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="522" y="337" class="label">implemented by</text>
+
+  <rect x="90" y="366" width="820" height="150" rx="24" fill="url(#purple)" stroke="#8a82ab" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="145" cy="418" r="28" fill="#a29abe"/>
+  <text x="145" y="427" text-anchor="middle" class="number">2</text>
+  <text x="195" y="418" class="card-title-purple">JavaScript engine</text>
+  <text x="195" y="459" class="detail-purple">Parses, executes, optimizes, and manages JavaScript memory</text>
+  <rect x="700" y="400" width="175" height="36" rx="18" fill="#c5bfdd"/>
+  <text x="787" y="424" text-anchor="middle" fill="#39334e" font-size="16" font-weight="800">THE IMPLEMENTATION</text>
+
+  <path d="M500 516V565" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="522" y="548" class="label">embedded in</text>
+
+  <rect x="90" y="577" width="820" height="150" rx="24" fill="url(#blue)" stroke="#5594bb" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="145" cy="629" r="28" fill="#78b6da"/>
+  <text x="145" y="638" text-anchor="middle" class="number">3</text>
+  <text x="195" y="629" class="card-title-blue">Browser host</text>
+  <text x="195" y="670" class="detail-blue">Provides DOM, timers, networking, scheduling, and rendering</text>
+  <rect x="736" y="611" width="139" height="36" rx="18" fill="#a5cee8"/>
+  <text x="805" y="635" text-anchor="middle" fill="#21445b" font-size="16" font-weight="800">THE ENVIRONMENT</text>
+
+  <line x1="70" y1="774" x2="930" y2="774" stroke="#37414b" stroke-width="2"/>
+  <text x="70" y="825" class="section">PART 2 · SCHEDULING</text>
+  <text x="70" y="872" class="heading">One browser turn</text>
+
+  <rect x="112" y="920" width="172" height="178" rx="24" fill="url(#yellow)" stroke="#a98222" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="150" cy="960" r="24" fill="#2b2a22"/>
+  <text x="150" y="968" text-anchor="middle" fill="#f8f5ed" font-size="20" font-weight="900">1</text>
+  <text x="198" y="969" class="card-title-dark">Task</text>
+  <text x="140" y="1020" class="detail-dark">script</text>
+  <text x="140" y="1053" class="detail-dark">click</text>
+  <text x="140" y="1086" class="detail-dark">timer</text>
+
+  <path d="M284 1009H342" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="354" y="920" width="214" height="178" rx="24" fill="url(#purple)" stroke="#8a82ab" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="392" cy="960" r="24" fill="#706990"/>
+  <text x="392" y="968" text-anchor="middle" fill="#f8f5ed" font-size="20" font-weight="900">2</text>
+  <text x="430" y="969" class="card-title-purple">Run JS</text>
+  <text x="388" y="1020" class="detail-purple">One callback</text>
+  <text x="388" y="1053" class="detail-purple">runs to</text>
+  <text x="388" y="1086" class="detail-purple">completion</text>
+
+  <path d="M568 1009H626" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="638" y="920" width="250" height="178" rx="24" fill="url(#teal)" stroke="#48bfb6" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="676" cy="960" r="24" fill="#48bfb6"/>
+  <text x="676" y="968" text-anchor="middle" fill="#173b38" font-size="20" font-weight="900">3</text>
+  <text x="714" y="969" class="card-title-teal">Microtasks</text>
+  <text x="674" y="1020" class="detail-teal">Drain promise</text>
+  <text x="674" y="1053" class="detail-teal">reactions before</text>
+  <text x="674" y="1086" class="detail-teal">the next task</text>
+
+  <path d="M763 1098V1140" stroke="#aeb5c1" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="354" y="1152" width="534" height="82" rx="22" fill="url(#blue)" stroke="#5594bb" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="394" cy="1193" r="24" fill="#5594bb"/>
+  <text x="394" y="1201" text-anchor="middle" fill="#eff8fd" font-size="20" font-weight="900">4</text>
+  <text x="435" y="1186" class="card-title-blue">Rendering opportunity</text>
+  <text x="435" y="1217" class="detail-blue">The browser may update style, layout, and pixels</text>
+
+  <path d="M354 1193H235Q177 1193 177 1135V1110" fill="none" stroke="#6e7682" stroke-width="3" stroke-dasharray="9 9" marker-end="url(#arrow)"/>
+  <text x="103" y="1174" class="label">next task</text>
+</svg>

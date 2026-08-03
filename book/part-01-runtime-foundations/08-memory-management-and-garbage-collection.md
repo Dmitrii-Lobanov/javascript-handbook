@@ -55,6 +55,12 @@ The most useful debugging question is:
 
 Garbage collection answers whether memory **may** be reclaimed. It does not promise when reclamation will occur or whether the process will immediately return memory to the operating system.
 
+## Visual Model
+
+![Garbage collection reachability from roots and an unreachable object cycle](/garbage-collection-reachability.svg)
+
+The module registry and browser listener are roots for this investigation. Their strong paths keep the map entry, callback, and detached DOM tree alive. The separate object cycle has no path from a root, so the cycle itself does not prevent collection.
+
 ## Formal Model
 
 ### Allocation, retention, and reclamation

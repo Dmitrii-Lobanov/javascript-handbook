@@ -48,6 +48,12 @@ Finding a binding and reading its value are separate operations. Resolution can 
 
 The outer chain comes from lexical nesting—where code was created—not the sequence of functions that called it.
 
+## Visual Model
+
+![Lexical identifier lookup stops at the nearest binding](/identifier-lookup.svg)
+
+The lookup begins where `timeout` is used. Because the current block does not contain that name, resolution follows `[[OuterEnv]]`. It stops at the function binding, creates a reference to it, and never reaches the same name in module scope.
+
 ## Formal Model
 
 ### Resolve first, then read or write
