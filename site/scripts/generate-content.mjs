@@ -59,6 +59,8 @@ const chapters = chapterFiles.map((path) => {
   const partName = partFolder.replace(/^part-\d+-/, "").replaceAll("-", " ");
   const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]);
   const quickRefresher = section(markdown, "Quick Refresher");
+  const whyThisMatters = section(markdown, "Why This Matters");
+  const excerpt = whyThisMatters.split(/\n\s*\n/, 1)[0] ?? "";
   const plainText = stripMarkdown(markdown);
   const words = plainText.split(/\s+/).filter(Boolean).length;
 
@@ -71,7 +73,7 @@ const chapters = chapterFiles.map((path) => {
     markdown,
     headings,
     quickRefresher: stripMarkdown(quickRefresher),
-    excerpt: stripMarkdown(section(markdown, "Why This Matters")).slice(0, 240),
+    excerpt: stripMarkdown(excerpt),
     readingMinutes: Math.max(1, Math.ceil(words / 220)),
     searchText: plainText.toLowerCase(),
   };

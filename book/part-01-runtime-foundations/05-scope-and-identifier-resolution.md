@@ -149,39 +149,6 @@ Modules are always strict, so this mistake throws. Depending on implicit global 
 
 Module scope prevents global-name collisions, but it does not provide per-component or per-request state.
 
-## Visual Model
-
-Identifier resolution is a short, one-directional search:
-
-```mermaid
-flowchart TB
-    IDENTIFIER("Identifier<br/><b>Resolve this name</b>")
-    CURRENT("Current environment<br/><b>Does it contain the name?</b>")
-    OUTER("Outer environment<br/><b>Follow [[OuterEnv]]</b>")
-    FOUND("Binding found<br/><b>Stop searching</b>")
-    MISSING("End reached<br/><b>Unresolvable reference</b>")
-
-    IDENTIFIER --> CURRENT
-    CURRENT -->|"yes"| FOUND
-    CURRENT -->|"no"| OUTER
-    OUTER -->|"check again"| CURRENT
-    OUTER -->|"no outer environment"| MISSING
-
-    classDef identifier fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
-    classDef search fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
-    classDef outer fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
-    classDef result fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-
-    linkStyle default stroke:#a9a8b0,stroke-width:2px
-
-    class IDENTIFIER identifier
-    class CURRENT search
-    class OUTER outer
-    class FOUND,MISSING result
-```
-
-“Found” does not guarantee that reading succeeds. If the binding is uninitialized, obtaining its value still throws. The diagram describes lexical lookup, not callers or object properties.
-
 ## Step-by-Step Runtime Walkthrough
 
 ```js

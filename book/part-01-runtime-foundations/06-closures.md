@@ -11,7 +11,6 @@ After completing this chapter, you should be able to:
 - explain the difference between `var` and `let` in loop-created callbacks;
 - identify closure-related memory retention and clean up long-lived callbacks;
 - diagnose stale closures in React without treating every closure as a bug;
-- choose between closures, objects, classes, and module state for encapsulation.
 
 ## Quick Refresher
 
@@ -70,11 +69,9 @@ A call can disappear from the stack while its environment remains reachable.
 
 ### Function creation captures an environment
 
-The ECMAScript specification does not define a user-visible `Closure` object. For ordinary functions, `OrdinaryFunctionCreate` creates a function object and assigns the supplied lexical environment to its `[[Environment]]` internal slot.
+The specification does not define a user-visible `Closure` object. An ordinary function stores its creation environment in `[[Environment]]`. A later call uses that saved environment as its lexical outer environment, regardless of who calls the function.
 
-Calling that function later creates a new function Environment Record. Its outer environment is based on the function's saved `[[Environment]]`, not on the caller's local scope. This is the same lexical-scope rule developed in Chapter 5.
-
-The term **closure** is therefore a useful programming-language description of behavior produced by function objects, environment records, and lexical lookup. It should not be confused with the specification's separate **Abstract Closure** type, which is used internally by specification algorithms.
+“Closure” is therefore a programming-language description of behavior produced by functions, environment records, and lexical lookup—not an object that application code can inspect.
 
 ### Bindings are captured, not value snapshots
 
@@ -104,12 +101,12 @@ Both methods resolve `score` to the same mutable binding from one `createScorebo
 You can deliberately capture a snapshot by creating another binding:
 
 ```js
-let status = 'pending';
+let status = "pending";
 const snapshot = status;
 const readSnapshot = () => snapshot;
 const readCurrent = () => status;
 
-status = 'complete';
+status = "complete";
 
 console.log(readSnapshot()); // pending
 console.log(readCurrent()); // complete
@@ -119,42 +116,15 @@ The distinction is not “closure versus no closure.” Both functions are closu
 
 ### Lifetime follows reachability
 
-Returning from a function removes its execution context from the active stack. Garbage collection, however, is based on reachability rather than stack history. If a reachable function refers through `[[Environment]]` to an outer environment, the relevant reachable state cannot be reclaimed.
+Returning removes a call from the active stack. Garbage collection instead follows reachability: if a reachable function still needs an outer binding, the required state must remain available.
 
-This is a semantic model, not a required heap layout. Engines may avoid allocating unused bindings, store captured variables efficiently, or eliminate structures when the optimization cannot be observed. Code should reason from observable lexical behavior rather than assuming one environment object containing every local variable.
+This is a semantic rule, not a required heap layout. Engines may omit unused bindings or represent captured state differently. Reason about binding identity and reachability, not a literal scope object containing every local.
 
 ### Shared versus independent environments
 
-Closures created during one invocation can share an environment:
+Closures created during one factory invocation can share its bindings. A second invocation normally creates a new environment with independent bindings. Calling the same returned closure repeatedly therefore updates its existing state; calling another factory result updates different state.
 
-```js
-function createAccount(initialBalance) {
-  let balance = initialBalance;
-
-  return {
-    deposit(amount) {
-      balance += amount;
-    },
-    getBalance() {
-      return balance;
-    },
-  };
-}
-
-const personal = createAccount(100);
-const business = createAccount(500);
-
-personal.deposit(25);
-
-console.log(personal.getBalance()); // 125
-console.log(business.getBalance()); // 500
-```
-
-`deposit` and `getBalance` for `personal` share one `balance` binding. The `business` invocation created a different environment and a different binding.
-
-This gives a reliable interview rule:
-
-> Determine which function invocation created the captured binding, then determine which closures retain that invocation's environment.
+Use one reliable interview rule: determine which invocation created the binding, then determine which closures can still reach it.
 
 ## Step-by-Step Runtime Walkthrough
 
@@ -177,12 +147,12 @@ function createQueue(name) {
   };
 }
 
-const urgent = createQueue('urgent');
-const normal = createQueue('normal');
+const urgent = createQueue("urgent");
+const normal = createQueue("normal");
 
-urgent.enqueue('fix-login');
-normal.enqueue('update-copy');
-urgent.enqueue('restore-cache');
+urgent.enqueue("fix-login");
+normal.enqueue("update-copy");
+urgent.enqueue("restore-cache");
 
 console.log(urgent.flush());
 console.log(normal.flush());
@@ -208,42 +178,9 @@ Trace it precisely:
 6. `flush` copies the current array elements, then mutates the shared array's `length`.
 7. The two queue objects never share their captured arrays because they came from different factory invocations.
 
-## Visual Model
+## Important Examples
 
-```mermaid
-flowchart LR
-    U["urgent object"] --> UE["enqueue function"]
-    U --> UF["flush function"]
-    UE -->|"[[Environment]]"| UENV["createQueue invocation A<br/>name: urgent<br/>items: Array A"]
-    UF -->|"[[Environment]]"| UENV
-
-    N["normal object"] --> NE["enqueue function"]
-    N --> NF["flush function"]
-    NE -->|"[[Environment]]"| NENV["createQueue invocation B<br/>name: normal<br/>items: Array B"]
-    NF -->|"[[Environment]]"| NENV
-```
-
-The environment arrows describe lexical access. They do not imply that engines must allocate these exact boxes.
-
-## Progressive Examples
-
-### Foundational: a closure observes later mutation
-
-```js
-function createReader() {
-  let message = 'first';
-  const read = () => message;
-
-  message = 'second';
-  return read;
-}
-
-console.log(createReader()()); // second
-```
-
-The callback closes over the `message` binding. The assignment occurs before the callback is invoked, so the later read produces `second`.
-
-### Production-oriented: encapsulated mutable state
+### Encapsulated mutable state
 
 ```js
 export function createRequestDeduper() {
@@ -298,47 +235,19 @@ console.log(withLet.map((read) => read())); // [0, 1, 2]
 
 For a `for` loop with a lexical declaration, the specification creates per-iteration environments. Each callback closes over a different `i` binding.
 
-Before `let`, an additional function invocation was a common way to create a binding per iteration:
-
-```js
-for (var i = 0; i < 3; i += 1) {
-  ((index) => {
-    withVar.push(() => index);
-  })(i);
-}
-```
-
-The important difference is binding identity, not whether arrow functions “capture better.”
+The important difference is binding identity, not asynchronous timing or arrow-function syntax.
 
 ## Common Misconceptions
 
-### “A closure is only created when an inner function is returned”
-
-Returning a function makes closure behavior easy to observe, but it is not required. A callback passed to `map`, an event listener, a promise handler, and a nested function called immediately all use lexical environments.
-
-### “Closures capture values”
-
-Functions access bindings. Whether a later read appears snapshot-like depends on which binding was captured and whether that binding changes.
-
-### “The outer function stays on the call stack”
-
-The outer call completes normally and leaves the stack. Its environment may remain reachable independently of the execution context that created it.
-
-### “Every local variable is retained forever”
-
-Only reachable state matters, and engines can optimize unobservable bindings. Still, one captured object can lead to a large reachable graph. Measure actual retention rather than guessing from source text alone.
-
-### “Closures are memory leaks”
-
-Retaining data intentionally is not a leak. A leak occurs when data remains reachable longer than the application's intended lifetime. A long-lived event listener retaining an abandoned view is a lifecycle bug; a counter retaining its count is the feature.
-
-### “`let` fixes asynchronous timing”
-
-`let` supplies the intended per-iteration binding. It does not change when callbacks run. Scheduling and binding identity are separate concerns.
-
-### “React hooks cause stale closures”
-
-Closures follow ordinary JavaScript rules. React makes the issue visible because each render creates new bindings representing one state snapshot. Incorrect dependency or lifecycle logic lets an old callback remain in use.
+| Claim                                                | Better explanation                                                                                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| “A closure exists only when a function is returned.” | Event listeners, promise handlers, and immediately invoked nested functions also use their creation environments. |
+| “Closures capture values.”                           | Functions retain access to bindings; later reads observe the value currently held by that binding.                |
+| “The outer call stays on the stack.”                 | The call finishes; required bindings can remain reachable independently.                                          |
+| “Every local is retained forever.”                   | Only reachable, semantically required state matters, and engines can optimize its representation.                 |
+| “Closures are memory leaks.”                         | A leak requires unintended retention beyond the desired lifetime.                                                 |
+| “`let` changes when callbacks run.”                  | It changes binding identity in the loop, not scheduling.                                                          |
+| “React hooks cause stale closures.”                  | Ordinary closures expose a lifecycle mismatch when old callbacks remain connected.                                |
 
 ## React Connection
 
@@ -385,13 +294,11 @@ Removing a dependency merely to silence the linter does not make the callback cu
 - use a ref when mutable current data must not trigger a render;
 - separate event-specific logic from synchronization logic.
 
-Later chapters examine stale closures and dependency arrays in detail. For now, remember that the closure is behaving correctly; the surrounding lifecycle contract may be wrong.
+The closure is behaving correctly; stale behavior indicates that the surrounding lifecycle or synchronization contract is wrong.
 
-## Performance and Memory Implications
+## Memory and Debugging
 
-Creating small closures is normal and usually cheap enough that clarity should dominate. Do not replace readable callbacks with awkward shared state based on an assumed allocation cost.
-
-The more important performance question is retention. Suppose a listener closes over a view model containing a large cache:
+Creating small closures is normal. The more important question is whether a long-lived callback retains data beyond its intended lifetime:
 
 ```js
 function mountPanel(button, model) {
@@ -399,15 +306,15 @@ function mountPanel(button, model) {
     renderDetails(model.selectedItem);
   }
 
-  button.addEventListener('click', handleClick);
+  button.addEventListener("click", handleClick);
 
   return () => {
-    button.removeEventListener('click', handleClick);
+    button.removeEventListener("click", handleClick);
   };
 }
 ```
 
-As long as the button's listener registration retains `handleClick`, the callback can retain access to `model`, and `model` may retain a much larger graph. The returned cleanup function removes that retention path.
+The likely path is: event target → `handleClick` → saved environment → `model` → its object graph. The cleanup removes the listener at the root of that path.
 
 Common long-lived roots include:
 
@@ -418,36 +325,22 @@ Common long-lived roots include:
 - caches and module-level collections;
 - framework roots holding mounted component state.
 
-The existence of a closure does not prove which path retains an object. Use memory tooling.
+The existence of a closure does not prove which path retains an object. Confirm the actual path with memory tooling.
 
-## Debugging Techniques
-
-### Inspect the creation site
-
-When a callback reads an unexpected value, locate where that particular function object was created. The invocation site tells you when it ran; the creation site tells you which lexical environment it retained.
-
-### Distinguish identity from value
-
-Ask two separate questions:
+For incorrect values, inspect the callback's creation site: the invocation site explains when it ran, while the creation site explains which environment it retained. Ask separately:
 
 1. Is this the same callback function as before?
 2. Does it resolve the name to the same binding as before?
 
-Recreating a callback creates a new function identity and may capture new render bindings. Mutating a shared binding changes what multiple existing closures observe.
+Recreating a callback changes its identity and may capture new bindings. Mutating a shared binding instead changes what existing closures observe.
 
-### Use heap snapshots and retaining paths
-
-In browser memory tools:
+For suspected retention:
 
 1. create and then remove the UI or data expected to be released;
 2. force garbage collection when the tool supports it;
 3. compare heap snapshots;
 4. inspect retaining paths for unexpected listeners, timers, collections, or closures;
-5. fix the lifecycle root rather than deleting unrelated local variables.
-
-### Log render or factory identities
-
-For React stale-value problems, log a render sequence number alongside the values captured by a callback. For factory functions, tag each created instance. This reveals whether callbacks share one environment or come from different invocations.
+5. fix the lifecycle root rather than deleting unrelated locals.
 
 ## Interview Questions
 
@@ -477,7 +370,7 @@ For React stale-value problems, log a render sequence number alongside the value
 
 ## Exercises
 
-### 1. Predict shared state
+### 1. Compare shared and independent state
 
 ```js
 function pair() {
@@ -487,18 +380,7 @@ function pair() {
 
 const [up, down] = pair();
 console.log(up(), up(), down());
-```
 
-<details>
-<summary>Solution</summary>
-
-The output is `1 2 1`. Both functions share the same `value` binding created by one `pair` invocation.
-
-</details>
-
-### 2. Predict independent state
-
-```js
 function counter() {
   let value = 0;
   return () => ++value;
@@ -513,11 +395,11 @@ console.log(a(), a(), b());
 <details>
 <summary>Solution</summary>
 
-The output is `1 2 1`. Each `counter` invocation creates an independent `value` binding.
+Both lines output `1 2 1`, for different reasons. `up` and `down` share the binding created by one `pair` call. `a` and `b` use bindings created by separate `counter` calls.
 
 </details>
 
-### 3. Fix the loop
+### 2. Fix the loop
 
 Explain and fix this code without changing when the callbacks execute:
 
@@ -536,7 +418,7 @@ Use `let index`. The loop then creates per-iteration bindings, producing `0`, `1
 
 </details>
 
-### 4. Find the retention path
+### 3. Find the retention path
 
 A removed modal remains in a heap snapshot. Its close button registered a callback that references the modal's model. List the likely retention path and the cleanup you would verify.
 
@@ -546,10 +428,6 @@ A removed modal remains in a heap snapshot. Its close button registered a callba
 A likely path is an active event target or application registry → listener function → saved lexical environment → model → modal data. Verify that unmounting removes the listener and that no subscription, timer, or registry still stores the callback. Use the actual retaining path in memory tools rather than assuming the closure is the root.
 
 </details>
-
-### 5. React review
-
-Explain why a timer callback created during render 3 can log render 3's state after render 4 has committed. Then describe one case where that snapshot is correct and one where the design should instead synchronize with current state.
 
 ## Chapter Summary
 
@@ -561,7 +439,7 @@ Explain why a timer callback created during render 3 can log render 3's state af
 - **Memory rule:** leaks come from unintended long-lived reachability paths, not from closure syntax itself.
 - **React rule:** callbacks belong to render snapshots; stale behavior indicates a lifecycle or synchronization mismatch.
 
-## Interview-Ready Explanation
+### Interview-ready explanation
 
 A closure is a function that retains access to the lexical environment where it was created. Ordinary functions save that environment internally, so later identifier resolution follows the saved outer chain even after the creating call has returned. The function closes over bindings rather than frozen value copies, which explains shared mutable state and why separate factory invocations produce independent state. In loops, `var` callbacks share one binding, while `let` can create a binding per iteration. Closures affect memory only through reachability: a long-lived listener or timer can retain an environment and the object graph reachable from it. In React, each render creates new bindings, so a callback observes the state snapshot from the render that created it unless the design explicitly reconnects it to current data.
 
