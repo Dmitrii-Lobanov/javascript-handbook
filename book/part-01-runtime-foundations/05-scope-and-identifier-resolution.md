@@ -4,108 +4,112 @@
 
 After completing this chapter, you should be able to:
 
+- trace identifier resolution through lexical environments;
 - distinguish lexical scope from dynamic call order;
-- trace identifier resolution through environment-record links;
-- explain Reference Records without treating them as JavaScript values;
-- distinguish identifier lookup from object property lookup;
-- reason about shadowing, unresolvable references, and `typeof` edge cases;
-- compare script, module, function, and block scope;
-- diagnose scope-related bugs in React applications.
+- explain shadowing and unresolvable references;
+- distinguish binding lookup from object property lookup;
+- reason about `typeof`, modules, and accidental globals;
+- diagnose scope mistakes in React applications.
 
 ## Quick Refresher
 
-- JavaScript uses lexical scope: where code is written determines its outer environments.
-- Calling a function from another scope does not insert the caller's local bindings into the callee's lookup chain.
-- `ResolveBinding` searches the current environment and follows `[[OuterEnv]]` links.
-- Resolution produces an internal Reference Record; reading or assigning then uses that reference.
-- Shadowing stops lookup at the nearest matching binding, even when that binding is still uninitialized.
-- An unresolvable read normally throws `ReferenceError`; `typeof` has a special case for an unresolvable name.
-- `obj.name` performs property access after resolving `obj`; it does not search lexical environments for `name`.
-- Module scope prevents top-level declarations from becoming shared global bindings.
+- JavaScript is lexically scoped: where a function is defined determines its outer scope.
+- Resolution searches the current environment and then follows `[[OuterEnv]]` links.
+- The nearest matching binding wins.
+- A caller's local variables do not enter the callee's scope.
+- An unresolvable name and an uninitialized binding are different conditions.
+- In `obj.key`, only `obj` is resolved lexically; `key` is a property name.
+- Module bindings are isolated from global scope but shared by consumers of that module instance.
 
 ## Why This Matters
 
-Scope questions reveal whether a candidate can predict behavior rather than repeat “inner scope can access outer scope.” Senior interviews add shadowing, callbacks, modules, globals, temporal dead zones, and property access. Production scope mistakes cause implicit globals, cross-component shared state, stale callbacks, and code that changes behavior when moved between scripts and modules.
+Senior scope questions test more than “inner code can access outer variables.” They combine callbacks, shadowing, modules, temporal dead zones, globals, and property access. The core skill is identifying which lookup mechanism applies.
 
-The deeper skill is separating three structures: lexical environment chains, dynamic call stacks, and object prototype chains.
+Keep three structures separate:
+
+| Structure                 | Answers                                                   |
+| ------------------------- | --------------------------------------------------------- |
+| Lexical environment chain | Which binding does this identifier mean?                  |
+| Call stack                | Which function is running, and which callers are waiting? |
+| Prototype chain           | Where can this object property be found?                  |
+
+Confusing these structures produces plausible but incorrect explanations.
 
 ## Core Mental Model
 
-When JavaScript evaluates an identifier such as `timeout`, it starts from the current lexical environment:
+When JavaScript evaluates an identifier such as `timeout`:
 
-1. Ask the current environment whether it binds `timeout`.
-2. If yes, stop with a reference to that binding.
-3. If no, follow `[[OuterEnv]]` and repeat.
-4. If the chain ends at `null`, produce an unresolvable reference.
+1. Check the current environment for a `timeout` binding.
+2. If found, stop and create an internal reference to that binding.
+3. Otherwise, follow `[[OuterEnv]]` and repeat.
+4. If the chain reaches `null`, the reference is unresolvable.
 
-The chain is determined by lexical nesting. It does not change because a function is called by code containing a same-named local variable.
+Finding a binding and reading its value are separate operations. Resolution can therefore find an uninitialized binding and then throw when code tries to read it.
 
-Finding a binding and obtaining its value are separate steps. This is why resolution can find an uninitialized binding and then throw when code attempts to read it.
+The outer chain comes from lexical nesting—where code was created—not the sequence of functions that called it.
 
 ## Formal Model
 
-### IdentifierReference evaluation
+### Resolve first, then read or write
 
-For an `IdentifierReference`, ECMAScript calls `ResolveBinding(name)`. Unless an environment is explicitly provided, `ResolveBinding` begins with the running execution context's current lexical environment and delegates to `GetIdentifierReference`.
+Evaluating an identifier uses specification machinery commonly summarized as `ResolveBinding(name)`. The search produces an internal **Reference Record** describing the binding or the fact that no binding was found. JavaScript code cannot inspect or store this record directly.
 
-`GetIdentifierReference` behaves recursively:
+The next operation depends on context:
 
-1. If the environment is `null`, return an unresolvable Reference Record.
-2. Call `HasBinding(name)` on the current environment record.
-3. If it returns `true`, return a Reference Record whose base is that environment.
-4. Otherwise, continue with `[[OuterEnv]]`.
+- reading uses the reference to obtain a value;
+- assignment uses it as a destination;
+- a normal read through an unresolvable reference throws `ReferenceError`;
+- reading a resolved but uninitialized binding also throws `ReferenceError`.
 
-The result is a **Reference Record**, an internal specification type carrying information such as the base, referenced name, and strictness. It is not an object that JavaScript can store or inspect.
+These errors have different causes: one name was not found; the other was found but is not ready to be read.
 
-### Reading and writing through references
-
-Evaluating `count` does not immediately produce the binding's value. It first produces a Reference Record. `GetValue` then reads through that reference. If the reference is unresolvable, `GetValue` throws a `ReferenceError`. If the environment binding exists but is uninitialized, its `GetBindingValue` operation also throws.
-
-Assignment evaluates its left-hand side to a reference and applies `PutValue`. Assigning to an unresolvable reference in strict code throws. Legacy non-strict script semantics can create a property on the global object, which is one reason implicit assignment is dangerous. Modules are always strict, so the same mistake fails instead of silently creating shared global state.
-
-### Lexical scope versus dynamic scope
-
-JavaScript functions capture the environment in which they are created. Their outer lookup path does not become the environment of the caller.
+### Lexical scope is not dynamic scope
 
 ```js
-const mode = 'global';
+const mode = "global";
 
 function readMode() {
   return mode;
 }
 
 function callWithLocalMode() {
-  const mode = 'local';
+  const mode = "local";
   return readMode();
 }
 
 console.log(callWithLocalMode()); // global
 ```
 
-The dynamic call stack includes `callWithLocalMode` and then `readMode`. The lexical lookup chain for `readMode` starts from the environment captured where `readMode` was defined, so it reaches the global `mode` rather than the caller's local binding.
+`callWithLocalMode` is the runtime caller, but its local `mode` is not part of `readMode`'s lexical chain. `readMode` searches the environment captured where it was defined and finds the global binding.
 
-### Shadowing
+### Shadowing stops the search
 
-An inner declaration **shadows** an outer declaration with the same name. Once `HasBinding` succeeds, resolution stops. It does not compare values or prefer an initialized outer binding.
-
-This explains temporal-dead-zone shadowing:
+An inner declaration shadows an outer declaration with the same name. Resolution stops at the nearest environment containing the name, even if that binding is uninitialized.
 
 ```js
-const status = 'ready';
+const status = "ready";
 
 {
   console.log(status); // ReferenceError
-  const status = 'pending';
+  const status = "pending";
 }
 ```
 
-The block's `status` binding already exists but is uninitialized. Resolution finds it; reading it fails.
+The block's `status` exists before its declaration initializes it. The outer `status` is never considered.
 
-### Property references are different
+### Binding lookup is not property lookup
 
-In `settings.timeout`, `settings` is an identifier and is resolved lexically. `timeout` is a property key used with the resulting base value. JavaScript does not search outer lexical environments for a binding named `timeout`.
+```js
+const timeout = 1000;
+const settings = { timeout: 5000 };
 
-Similarly, destructuring can read a property and create a differently named binding:
+console.log(timeout); // lexical binding: 1000
+console.log(settings.timeout); // object property: 5000
+```
+
+In `settings.timeout`, JavaScript resolves only `settings` through lexical scope. It then looks up the `timeout` property on the resulting object, potentially using its prototype chain.
+
+Destructuring can connect the two mechanisms without making them identical:
 
 ```js
 const { timeout: requestTimeout } = settings;
@@ -113,30 +117,78 @@ const { timeout: requestTimeout } = settings;
 
 `timeout` is the property key; `requestTimeout` is the new lexical binding.
 
+### The two important `typeof` cases
+
+```js
+console.log(typeof missingName); // 'undefined'
+
+{
+  console.log(typeof pendingValue); // ReferenceError
+  let pendingValue = 1;
+}
+```
+
+`typeof` has special behavior for an **unresolvable** name and returns `'undefined'`. It does not suppress the error for a **resolved but uninitialized** lexical binding.
+
+### Assignment to an undeclared name
+
+Assigning through an unresolvable reference throws in strict code. Legacy non-strict script semantics may instead create a global-object property:
+
+```js
+result = 42;
+```
+
+Modules are always strict, so this mistake throws. Depending on implicit global creation is unsafe and environment-sensitive; declare the intended binding.
+
 ### Scope categories
 
-- **Block scope:** `let`, `const`, `class`, and applicable block-level function declarations bind within a block environment.
-- **Function scope:** parameters, `var`, and function-body declarations follow function-environment rules.
-- **Script global scope:** top-level declarations use the global environment, with different handling for `var`/functions and lexical declarations.
-- **Module scope:** top-level declarations belong to a module environment; module code is strict and imports are live indirect bindings.
+- **Block scope:** `let`, `const`, `class`, and applicable block functions.
+- **Function scope:** parameters, `var`, and function-body declarations.
+- **Script global scope:** top-level declarations stored through the global environment's declarative or object-backed side.
+- **Module scope:** module-local declarations and live import bindings; module code is strict.
 
-“Global scope” is realm- and host-related, not one universal namespace shared by every tab, worker, iframe, and Node.js module.
+Module scope prevents global-name collisions, but it does not provide per-component or per-request state.
 
-### `with` and direct `eval`
+## Visual Model
 
-Legacy `with` statements insert an Object Environment Record into the lookup chain, making identifier meaning depend on object properties at runtime. They are forbidden in strict mode and should not be used in modern code.
+Identifier resolution is a short, one-directional search:
 
-Direct `eval` can interact with the current environment under detailed strictness rules. It complicates static reasoning and engine optimization. This handbook treats it as a legacy boundary, not a normal metaprogramming tool.
+```mermaid
+flowchart TB
+    IDENTIFIER("Identifier<br/><b>Resolve this name</b>")
+    CURRENT("Current environment<br/><b>Does it contain the name?</b>")
+    OUTER("Outer environment<br/><b>Follow [[OuterEnv]]</b>")
+    FOUND("Binding found<br/><b>Stop searching</b>")
+    MISSING("End reached<br/><b>Unresolvable reference</b>")
+
+    IDENTIFIER --> CURRENT
+    CURRENT -->|"yes"| FOUND
+    CURRENT -->|"no"| OUTER
+    OUTER -->|"check again"| CURRENT
+    OUTER -->|"no outer environment"| MISSING
+
+    classDef identifier fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
+    classDef search fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
+    classDef outer fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
+    classDef result fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
+
+    linkStyle default stroke:#a9a8b0,stroke-width:2px
+
+    class IDENTIFIER identifier
+    class CURRENT search
+    class OUTER outer
+    class FOUND,MISSING result
+```
+
+“Found” does not guarantee that reading succeeds. If the binding is uninitialized, obtaining its value still throws. The diagram describes lexical lookup, not callers or object properties.
 
 ## Step-by-Step Runtime Walkthrough
 
-Predict the output:
-
 ```js
-const currency = 'USD';
+const currency = "USD";
 
 function formatOrder(order) {
-  const prefix = 'Order';
+  const prefix = "Order";
 
   function formatLine(item) {
     const total = item.price * item.quantity;
@@ -148,78 +200,32 @@ function formatOrder(order) {
 
 console.log(
   formatOrder({
-    id: 'A-17',
+    id: "A-17",
     items: [{ price: 5, quantity: 2 }],
   }),
 );
 ```
 
-Expected output:
+The output is:
 
 ```text
 [ 'Order A-17: USD 10' ]
 ```
 
-Inside `formatLine`, resolution proceeds by name:
+Resolve each name from inside `formatLine`:
 
-1. `item` and `total` resolve in the current `formatLine` environment.
-2. `prefix` is absent there, so resolution follows the outer link to the `formatOrder` environment.
-3. `order` also resolves in the `formatOrder` invocation environment.
-4. `currency` is absent from both function environments, so lookup reaches the module or script environment where the code was defined.
-5. The fact that `Array.prototype.map` invokes `formatLine` does not make `map`'s internal call environment part of the function's lexical scope.
-6. Property names such as `price`, `quantity`, `id`, and `items` are property lookups, not lexical identifier searches.
+1. `item` and `total` are found in the current function environment.
+2. `prefix` and `order` are found in the enclosing `formatOrder` environment.
+3. `currency` is found in the surrounding script or module environment.
+4. `price`, `quantity`, `id`, and `items` are property names, not lexical searches.
+5. `map` calling `formatLine` does not insert its own internals into `formatLine`'s lexical chain.
 
-## Visual Model
+## Important Examples
 
-```mermaid
-flowchart LR
-    L["formatLine environment<br/>item, total"] -->|"[[OuterEnv]]"| O["formatOrder environment<br/>order, prefix, formatLine"]
-    O -->|"[[OuterEnv]]"| M["Module or script environment<br/>currency, formatOrder"]
-    M -->|"[[OuterEnv]]"| G["Outer/global environment"]
-
-    L -. "item, total" .-> L
-    L -. "prefix, order" .-> O
-    L -. "currency" .-> M
-```
-
-The solid arrows are lexical outer links. They are not call-stack edges or prototype links.
-
-## Progressive Examples
-
-### Foundational: nearest binding wins
+### Module scope is shared scope
 
 ```js
-const theme = 'system';
-
-function renderPanel() {
-  const theme = 'dark';
-
-  if (true) {
-    const theme = 'contrast';
-    console.log(theme);
-  }
-
-  console.log(theme);
-}
-
-renderPanel();
-console.log(theme);
-```
-
-Expected output:
-
-```text
-contrast
-dark
-system
-```
-
-Each use resolves to the nearest environment containing a `theme` binding.
-
-### Production-oriented: module scope versus shared global state
-
-```js
-// request-id.js — ES module
+// request-id.js
 let nextRequestId = 0;
 
 export function createRequestId() {
@@ -228,58 +234,25 @@ export function createRequestId() {
 }
 ```
 
-`nextRequestId` is private to this module's environment unless exported. It is still shared by every importer instance of that evaluated module, so module scope prevents a global-name collision but does not provide per-component or per-request isolation.
-
-For server rendering, a mutable module binding can unintentionally share state between requests handled by the same process. For React, it can share state across every mounted component using the module. Scope isolation and lifecycle isolation are different properties.
-
-### Interview-level edge case: two meanings of `typeof`
-
-Predict both results:
-
-```js
-console.log(typeof missingName);
-
-{
-  console.log(typeof pendingValue);
-  let pendingValue = 1;
-}
-```
-
-The first expression produces `'undefined'`: `typeof` has special behavior for an unresolvable reference. The second throws a `ReferenceError`: `pendingValue` resolves successfully to the block's uninitialized binding, so this is a temporal-dead-zone access rather than an unresolvable name.
+The name is private to the module unless exported, but the binding is still shared by consumers of that evaluated module instance. In React it can be shared across components; in server code it can outlive a request. Name isolation and lifecycle isolation are different properties.
 
 ## Common Misconceptions
 
-### “JavaScript checks the caller's variables”
-
-JavaScript is lexically scoped. A caller appears on the dynamic call stack but does not become the callee's outer environment.
-
-### “If an inner binding has no value yet, lookup falls back outward”
-
-Resolution is based on whether a binding exists. An uninitialized lexical binding exists and shadows outer names; reading it throws.
-
-### “`obj.key` resolves `key` through scope”
-
-Only `obj` is an IdentifierReference. `key` is a property name. Property lookup follows object semantics, including prototypes, rather than environment links.
-
-### “`typeof` never throws for missing variables”
-
-It avoids throwing for an unresolvable reference. It still throws when the name resolves to an uninitialized lexical binding.
-
-### “Module scope means each importer gets a copy”
-
-An evaluated module normally has one environment per module instance in its realm/module graph. Importers share its bindings and observe live exports.
-
-### “No declaration means JavaScript creates a global variable”
-
-That legacy behavior is limited to assignment through an unresolvable reference in non-strict code. Strict code and modules throw. Relying on implicit globals is erroneous and environment-sensitive.
+| Claim                                              | Better explanation                                                            |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| “JavaScript checks the caller's variables.”        | Lookup follows lexical environments captured where the function was created.  |
+| “An unusable inner binding falls through outward.” | A matching uninitialized binding stops lookup and throws when read.           |
+| “`obj.key` resolves `key` through scope.”          | Only `obj` is resolved lexically; `key` is looked up as a property.           |
+| “`typeof` never throws for missing variables.”     | It handles unresolvable names specially but still throws for TDZ bindings.    |
+| “Module scope gives every importer a copy.”        | Importers normally share one evaluated module instance and its live bindings. |
 
 ## React Connection
 
-React applications commonly use three lexical layers:
+React code commonly uses three lexical layers:
 
-1. **Module scope:** imports, constants, helpers, caches, and any mutable module state shared by consumers.
-2. **Component invocation scope:** props, state snapshots, derived values, and callbacks created for one render.
-3. **Nested callback/block scope:** event parameters, effect-local variables, and temporary bindings.
+1. **Module scope:** imports, constants, helpers, and deliberately shared state.
+2. **Render scope:** props, state snapshots, derived values, and callbacks created during one component invocation.
+3. **Callback invocation scope:** event parameters and updater-function parameters created later.
 
 ```jsx
 const defaultLimit = 20;
@@ -299,40 +272,26 @@ function Results({ limit = defaultLimit }) {
 }
 ```
 
-`defaultLimit` resolves from module scope. `limit`, `page`, and `handleNextPage` belong to the current component invocation. `currentPage` is a parameter binding created when React later invokes the updater.
+`defaultLimit` comes from module scope. `limit`, `page`, and `handleNextPage` belong to this render. `currentPage` is created when React later invokes the updater.
 
-The functional updater does not make `page` dynamically scoped. It avoids depending on the captured `page` binding by receiving the latest queued state as an argument.
+The functional updater does not make `page` dynamically scoped. It avoids reading the captured `page` binding by accepting the latest queued state as an argument.
 
-Be cautious with mutable module bindings. They bypass React's state model, are shared across component instances, and do not trigger rendering when changed. Constants and stateless helpers are usually appropriate at module scope; user- or request-specific mutable data often is not.
+Mutable module bindings bypass React's state model, are shared across component instances, and do not trigger rendering. Use them only when that shared lifetime is intentional.
 
-## Performance and Memory Implications
+## Practical Implications
 
-The specification describes identifier resolution as walking environment links, but source nesting depth is not a reliable microbenchmark. Engines perform static scope analysis, allocate bindings efficiently, and can optimize repeated access. Do not flatten clean lexical structure to “speed up lookup” without measured evidence.
+At a breakpoint, **Call Stack** shows how execution arrived at the current function. **Scope** shows which bindings are visible from the selected frame. A caller's local variable can appear in another frame without belonging to the current function's lexical chain.
 
-Features that make scope dynamic—particularly `with` and some forms of `eval`—restrict static reasoning and can inhibit optimization. Their maintainability and security costs are already sufficient reasons to avoid them.
+When a name resolves unexpectedly:
 
-Scope affects lifetime more than lookup performance in many frontend systems. A callback can retain bindings from an outer environment, and mutable module state can remain reachable for the lifetime of the module instance. Chapter 6 develops closure retention in detail.
+1. Find every declaration with the same name.
+2. Start from the use site and identify the nearest environment.
+3. Include parameters, imports, catch bindings, and destructuring aliases.
+4. Distinguish an absent binding from an uninitialized one.
 
-## Debugging Techniques
+Reproduce top-level bugs in the correct environment. Browser console snippets, classic scripts, ES modules, CommonJS, and bundler wrappers can have different global behavior.
 
-### Separate Call Stack and Scope panes
-
-At a breakpoint, the Call Stack pane shows how execution arrived at the current function. The Scope pane shows which bindings are visible from the selected frame. Use them together to avoid confusing a caller's locals with a function's lexical outer scope.
-
-### Find shadowing deliberately
-
-When a value is not the one expected:
-
-1. locate every declaration with the same identifier;
-2. identify the nearest lexical environment at the use site;
-3. check parameter names, imports, catch parameters, and destructuring aliases;
-4. inspect whether a binding is uninitialized rather than absent.
-
-Static analysis rules such as `no-undef` and carefully configured `no-shadow` can catch mistakes, though intentional short local shadowing is not inherently wrong.
-
-### Reproduce in the correct source type
-
-Browser console snippets, classic scripts, ES modules, CommonJS modules, and bundler wrappers do not share identical top-level scope behavior. Reproduce a global-resolution bug in the same environment and build mode as production.
+Engines statically analyze and optimize lexical access, so scope depth is not a useful microbenchmark. Prefer clear structure, avoid `with` and direct `eval`, and investigate retained closures or module state as lifetime issues rather than lookup-speed issues.
 
 ## Interview Questions
 
@@ -340,44 +299,35 @@ Browser console snippets, classic scripts, ES modules, CommonJS modules, and bun
 
 **Question:** How does JavaScript resolve an identifier?
 
-**Model answer:**
-
-JavaScript evaluates an identifier by calling the specification's binding-resolution machinery. It checks the current environment record for the name and follows `[[OuterEnv]]` links until it finds a binding or reaches the end. The result is an internal Reference Record, and reading through an unresolvable reference throws. The chain follows lexical nesting—where the function was created—not the runtime caller.
+**Model answer:** It checks the current environment record and follows lexical `[[OuterEnv]]` links until it finds the name or reaches the end. The chain is determined by where code was defined, not who called it. Resolution creates an internal reference, which is then used to read or write the binding.
 
 ### Level 2 — Applied understanding
 
-**Question:** What is shadowing, and why can it cause a temporal-dead-zone error?
+**Question:** Why can shadowing cause a temporal-dead-zone error?
 
-**Model answer:**
-
-Shadowing occurs when a nearer lexical environment contains the same name as an outer environment. Resolution stops at the nearer binding. A `let`, `const`, or `class` binding is created before its declaration executes but remains uninitialized, so it can already shadow the outer binding. Reading it during that interval throws instead of falling back outward.
+**Model answer:** A lexical binding is created before its declaration initializes it. Resolution finds that nearer binding and stops, so an outer binding with the same name is not considered. Reading the uninitialized binding throws `ReferenceError`.
 
 ### Level 3 — Senior reasoning
 
-**Question:** Why is mutable module state risky in a React or server-rendered application?
+**Question:** Why is mutable module state risky in React or server rendering?
 
-**Model answer:**
-
-Module scope prevents names from leaking into the global environment, but an evaluated module's bindings are shared by its consumers. A mutable module binding can therefore share data across component instances and, on a server, potentially across requests handled by the same module instance. Mutating it also bypasses React's update system. I use module scope for constants and deliberate shared services, and choose component state, context, request-local data, or an external store when lifecycle and subscriptions matter.
+**Model answer:** Module scope isolates names from the global environment but normally shares one evaluated module's bindings among its consumers. State can therefore cross component instances or server requests, and mutation bypasses React's update mechanism. The correct storage depends on the intended lifecycle.
 
 ### Level 4 — Deep follow-up
 
 **Question:** Why does `typeof missingName` return `'undefined'`, while `typeof value` can throw before `let value`?
 
-**Model answer:**
-
-`missingName` resolves to an unresolvable Reference Record, and `typeof` has a specific exception that returns `'undefined'` for that case. A lexical `value` binding in the temporal dead zone is different: resolution succeeds and returns a reference to the inner binding, but reading that uninitialized binding throws a `ReferenceError`. The distinction is unresolvable versus resolved-but-uninitialized.
+**Model answer:** `missingName` is unresolvable, and `typeof` has a special case for that result. A TDZ name resolves successfully to an existing but uninitialized binding. Reading that binding still throws.
 
 ## Exercises
 
 ### 1. Trace lexical lookup
 
 ```js
-const value = 'module';
+const value = "module";
 
 function outer() {
-  const value = 'outer';
-
+  const value = "outer";
   return function inner() {
     return value;
   };
@@ -389,7 +339,7 @@ console.log(outer()());
 <details>
 <summary>Solution</summary>
 
-The output is `outer`. `inner` has no local `value`, so lookup follows its outer link to the retained `outer` invocation environment. It finds that binding before reaching module scope.
+The output is `outer`. `inner` follows its lexical outer link to the retained `outer` invocation environment and finds that binding before module scope.
 
 </details>
 
@@ -406,7 +356,7 @@ console.log(timeout);
 <details>
 <summary>Solution</summary>
 
-The output is `5000` and `1000`. The first expression resolves only `options` lexically, then reads its `timeout` property. The second resolves the lexical `timeout` binding. The same spelling does not connect the two lookup mechanisms.
+The output is `5000` and `1000`. The first expression resolves `options` and then performs property lookup. The second resolves the lexical `timeout` binding.
 
 </details>
 
@@ -426,35 +376,22 @@ try {
 <details>
 <summary>Solution</summary>
 
-The output is `undefined` followed by `ReferenceError`. `notDeclared` is unresolvable; `later` is resolved but uninitialized when read.
+The output is `undefined` followed by `ReferenceError`. `notDeclared` is unresolvable; `later` is resolved but uninitialized.
 
 </details>
-
-### 4. Diagnose implicit global behavior
-
-Why can `result = 42` appear to work in a legacy classic script but fail in an ES module?
-
-<details>
-<summary>Solution</summary>
-
-Without a declaration, the assignment produces an unresolvable reference. Legacy non-strict assignment can create a global-object property. Module code is always strict, and assigning through an unresolvable reference throws a `ReferenceError`. The fix is to declare the intended binding, not to depend on the legacy behavior.
-
-</details>
-
-### 5. React scope review
-
-Classify each binding in the `Results` example as module-scoped, render-scoped, or callback-invocation-scoped, then explain which ones are shared across component instances.
 
 ## Chapter Summary
 
-- **Essential model:** identifier resolution searches environment records along lexical `[[OuterEnv]]` links and produces an internal reference.
-- **Important distinctions:** lexical chain versus call stack, binding versus property, unresolvable versus uninitialized, and module isolation versus lifecycle isolation.
-- **Mistakes to avoid:** searching callers for variables, falling through a shadowing binding, assuming `typeof` never throws, or using mutable module state as implicit component state.
-- **React consequence:** module bindings are shared, render bindings are recreated, and callback parameters belong to later invocations.
+- Identifier resolution follows lexical environment links, not dynamic callers.
+- The nearest matching binding stops the search.
+- Unresolvable and resolved-but-uninitialized references fail for different reasons.
+- Identifier lookup and object property lookup are separate mechanisms.
+- Module scope isolates names but can still share mutable state across consumers.
+- React module, render, and callback scopes have different lifetimes.
 
 ### Interview-ready explanation
 
-JavaScript is lexically scoped. Resolving an identifier starts from the current environment record and follows `[[OuterEnv]]` links determined by where the code was defined. Resolution returns an internal Reference Record; reading an unresolvable reference normally throws, while a found but uninitialized binding throws because of temporal-dead-zone rules. Shadowing stops lookup at the nearest binding. Property access is separate: in `obj.key`, only `obj` is resolved lexically. In React, this distinction separates shared module bindings, per-render bindings, and parameters created when callbacks run later.
+JavaScript is lexically scoped. Resolving an identifier starts in the current environment and follows `[[OuterEnv]]` links determined by where the code was defined. The nearest matching binding wins, even if it is still uninitialized. An unresolvable name normally throws, although `typeof` handles that case specially. Property access is separate: in `obj.key`, only `obj` is resolved lexically. In React, this model separates shared module bindings, per-render bindings, and parameters created when callbacks run later.
 
 ## Further Reading
 
@@ -463,7 +400,6 @@ JavaScript is lexically scoped. Resolving an identifier starts from the current 
 - [ECMA-262: Reference Record Specification Type](https://tc39.es/ecma262/#sec-reference-record-specification-type)
 - [ECMA-262: GetValue](https://tc39.es/ecma262/#sec-getvalue)
 - [ECMA-262: PutValue](https://tc39.es/ecma262/#sec-putvalue)
-- [ECMA-262: Identifier Reference Evaluation](https://tc39.es/ecma262/#sec-identifiers-runtime-semantics-evaluation)
 - [ECMA-262: Strict Mode](https://tc39.es/ecma262/#sec-strict-mode-of-ecmascript)
 - [React: State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)
 - [Chrome DevTools: JavaScript Debugging Reference](https://developer.chrome.com/docs/devtools/javascript/reference)
