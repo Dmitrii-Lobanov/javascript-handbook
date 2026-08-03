@@ -91,48 +91,48 @@ Chapters 2–4 develop execution contexts, stacks, realms, and environments in d
 
 ```mermaid
 flowchart TB
-    CLICK("<b>1 · CLICK TASK STARTS</b><br/>The browser invokes the event handler")
+    LANGUAGE("ECMAScript<br/><b>Language rules</b>")
+    ENGINE("JavaScript engine<br/><b>Executes the rules</b>")
+    HOST("Browser host<br/><b>APIs · scheduling · rendering</b>")
 
-    SYNC("<b>2 · SYNCHRONOUS JAVASCRIPT</b><br/>log “handler: start”<br/>DOM → Saving…<br/>queue promise reaction<br/>schedule timer task<br/>log “handler: end”")
+    TASK("Task")
+    RUN("Run JavaScript<br/><b>to completion</b>")
+    MICRO("Drain microtasks")
+    RENDER("Possible rendering")
+    NEXT("Next task")
 
-    MICRO("<b>3 · MICROTASK CHECKPOINT</b><br/>run the promise reaction<br/>log “promise” · update data-status")
-
-    RENDER{"<b>4 · RENDERING OPPORTUNITY</b><br/>Is a visual update due?"}
-
-    PAINT("<b>Browser may paint</b><br/>The user can see Saving…")
-
-    TIMER("<b>5 · LATER TIMER TASK</b><br/>run the timer callback<br/>log “timer” · DOM → Saved")
-
-    FINAL("<b>6 · LATER RENDERING</b><br/>The user can see Saved")
-
-    CLICK --> SYNC
-    SYNC --> MICRO
+    LANGUAGE --> ENGINE
+    ENGINE <--> HOST
+    HOST --> TASK
+    TASK --> RUN
+    RUN --> MICRO
     MICRO --> RENDER
-    RENDER -->|"yes"| PAINT
-    RENDER -->|"not now"| TIMER
-    PAINT --> TIMER
-    TIMER --> FINAL
+    RENDER --> NEXT
 
+    classDef language fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
+    classDef engine fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
+    classDef host fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
     classDef task fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
     classDef execution fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
     classDef microtask fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
-    classDef decision fill:#f7e39a,color:#27200a,stroke:#9b7d1f,stroke-width:2px
     classDef rendering fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
-    classDef complete fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
+    classDef next fill:#fffdf8,color:#27200a,stroke:#9b9385,stroke-width:2px
 
     linkStyle default stroke:#a9a8b0,stroke-width:2px
 
-    class CLICK,TIMER task
-    class SYNC execution
+    class LANGUAGE language
+    class ENGINE engine
+    class HOST host
+    class TASK task
+    class RUN execution
     class MICRO microtask
-    class RENDER decision
-    class PAINT rendering
-    class FINAL complete
+    class RENDER rendering
+    class NEXT next
 ```
 
-Read from top to bottom. The current click task runs to completion before the promise reaction. The browser then reaches a possible rendering opportunity before running the timer in a later task. The “not now” path explains why the intermediate `Saving…` state is not guaranteed to appear.
+The upper path explains responsibility: ECMAScript defines the language rules, an engine executes them, and the browser host supplies APIs, scheduling, and rendering. The lower path explains browser order: select a task, run its JavaScript to completion, drain microtasks, possibly render, and continue with another task.
 
-This is a reasoning model, not a complete browser architecture. Networking, rasterization, garbage collection, and other browser work may involve additional threads.
+This is a reasoning model, not a complete browser architecture. The browser may perform networking, rasterization, garbage collection, and other work on additional threads.
 
 ## Step-by-Step Runtime Walkthrough
 

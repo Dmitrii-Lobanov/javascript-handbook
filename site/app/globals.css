@@ -851,21 +851,30 @@ button {
 }
 .mermaid-diagram .task .nodeLabel,
 .mermaid-diagram .script .nodeLabel,
+.mermaid-diagram .next .nodeLabel,
 .mermaid-diagram .decision .nodeLabel {
   color: #27200a !important;
 }
 .mermaid-diagram .microtask .nodeLabel,
+.mermaid-diagram .language .nodeLabel,
 .mermaid-diagram .complete .nodeLabel,
 .mermaid-diagram .completion .nodeLabel {
   color: #123c39 !important;
 }
 .mermaid-diagram .execution .nodeLabel,
-.mermaid-diagram .running .nodeLabel {
+.mermaid-diagram .engine .nodeLabel,
+.mermaid-diagram .running .nodeLabel,
+.mermaid-diagram .push .nodeLabel {
   color: #262238 !important;
 }
 .mermaid-diagram .rendering .nodeLabel,
-.mermaid-diagram .transition .nodeLabel {
+.mermaid-diagram .host .nodeLabel,
+.mermaid-diagram .transition .nodeLabel,
+.mermaid-diagram .peak .nodeLabel {
   color: #17384f !important;
+}
+.mermaid-diagram .pop .nodeLabel {
+  color: #123c39 !important;
 }
 .mermaid-diagram .edgeLabel {
   font-size: 13px !important;

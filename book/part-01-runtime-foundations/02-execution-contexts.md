@@ -100,57 +100,42 @@ This distinction becomes visible with `await`: the async function starts synchro
 
 ## Visual Model
 
-Consider:
-
-```js
-const taxRate = 0.2;
-
-function calculateTax(amount) {
-  return multiply(amount, taxRate);
-}
-
-function multiply(left, right) {
-  return left * right;
-}
-
-console.log(calculateTax(100));
-```
-
-The context transitions are:
+An ordinary function call follows one compact control cycle:
 
 ```mermaid
 flowchart TB
-    SCRIPT("<b>1 · SCRIPT CONTEXT RUNNING</b><br/>evaluate calculateTax(100)")
-    CALL_TAX("<b>2 · CALL calculateTax</b><br/>suspend script context<br/>push calculateTax context")
-    TAX("<b>3 · calculateTax RUNNING</b><br/>amount = 100<br/>resolve taxRate lexically")
-    CALL_MULTIPLY("<b>4 · CALL multiply</b><br/>suspend calculateTax context<br/>push multiply context")
-    MULTIPLY("<b>5 · multiply RUNNING</b><br/>left = 100 · right = 0.2<br/>produce 20")
-    RESUME_TAX("<b>6 · RETURN 20</b><br/>pop multiply context<br/>resume calculateTax")
-    RESUME_SCRIPT("<b>7 · RETURN 20</b><br/>pop calculateTax context<br/>resume script and log 20")
+    CONTEXT("Execution context<br/><b>State for one evaluation</b>")
+    CALLER("Caller context<br/><b>Running at the top</b>")
+    CALL("Function call<br/><b>Suspend caller · push callee</b>")
+    CALLEE("Callee context<br/><b>Now running at the top</b>")
+    RETURN("Function completes<br/><b>Pop callee</b>")
+    RESUME("Caller context<br/><b>Resume after the call</b>")
 
-    SCRIPT --> CALL_TAX
-    CALL_TAX --> TAX
-    TAX --> CALL_MULTIPLY
-    CALL_MULTIPLY --> MULTIPLY
-    MULTIPLY --> RESUME_TAX
-    RESUME_TAX --> RESUME_SCRIPT
+    CONTEXT --> CALLER
+    CALLER --> CALL
+    CALL --> CALLEE
+    CALLEE --> RETURN
+    RETURN --> RESUME
 
-    classDef script fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
+    classDef model fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
+    classDef caller fill:#f2c94c,color:#27200a,stroke:#9b7d1f,stroke-width:2px
     classDef transition fill:#dcecf9,color:#17384f,stroke:#39749b,stroke-width:2px
     classDef running fill:#e9e7f5,color:#262238,stroke:#706a91,stroke-width:2px
     classDef completion fill:#dff8f5,color:#123c39,stroke:#0b756f,stroke-width:2px
 
     linkStyle default stroke:#a9a8b0,stroke-width:2px
 
-    class SCRIPT script
-    class CALL_TAX,CALL_MULTIPLY transition
-    class TAX,MULTIPLY running
-    class RESUME_TAX,RESUME_SCRIPT completion
+    class CONTEXT model
+    class CALLER caller
+    class CALL transition
+    class CALLEE running
+    class RETURN completion
+    class RESUME caller
 ```
 
-The dynamic call sequence is script → `calculateTax` → `multiply`. The lexical lookup for `taxRate` is a different relationship: `calculateTax` finds it through the environment where the function was defined, not because the script context happens to be its caller.
+Read it as a change in which context owns control. A call suspends the caller and makes a new callee context the running context. Completion removes the callee context and continues the caller immediately after the call.
 
-The diagram represents specification-level control transfer. It does not guarantee three physical engine frames.
+This is a specification model, not a promise about physical engine frames. It also does not describe lexical scope: identifier lookup follows lexical environments, not the chain of callers.
 
 ## Step-by-Step Runtime Walkthrough
 
