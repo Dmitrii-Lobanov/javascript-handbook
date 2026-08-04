@@ -44,11 +44,13 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
 
   const isSearching = query.trim().length > 0;
   const resultCount = search.published.length + search.planned.length;
+  const availableChapters = chapters.filter((chapter) => chapter.kind === "chapter");
 
-  const percent = chapters.length
+  const percent = availableChapters.length
     ? Math.round(
-        (completed.filter((slug) => chapters.some((chapter) => chapter.slug === slug)).length /
-          chapters.length) *
+        (completed.filter((slug) => availableChapters.some((chapter) => chapter.slug === slug))
+          .length /
+          availableChapters.length) *
           100,
       )
     : 0;
@@ -102,7 +104,9 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
           return (
             <Link className="chapter-card" href={`/chapters/${chapter.slug}`} key={chapter.slug}>
               <div className="chapter-card-top">
-                <span className="chapter-number">{String(chapter.number).padStart(2, "0")}</span>
+                <span className="chapter-number">
+                  {chapter.kind === "summary" ? "Review" : String(chapter.number).padStart(2, "0")}
+                </span>
                 <span className={isComplete ? "complete-pill done" : "complete-pill"}>
                   {isComplete ? "Completed" : `${chapter.readingMinutes} min`}
                 </span>
@@ -110,7 +114,8 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
               <h3>{chapter.title}</h3>
               <p>{chapter.excerpt}</p>
               <span className="card-link">
-                Read chapter <span aria-hidden="true">→</span>
+                {chapter.kind === "summary" ? "Review Part I" : "Read chapter"}{" "}
+                <span aria-hidden="true">→</span>
               </span>
             </Link>
           );

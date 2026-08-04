@@ -16,6 +16,8 @@
 7. `this` Binding
 8. Memory Management and Garbage Collection
 
+- Part I Summary
+
 ## Part II — Values and Objects
 
 9. Primitive Values and Objects

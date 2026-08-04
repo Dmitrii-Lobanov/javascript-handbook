@@ -59,7 +59,11 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
       <article className="chapter-reader">
         <header className="chapter-hero">
           <div className="chapter-meta">
-            <span>Chapter {String(chapter.number).padStart(2, "0")}</span>
+            <span>
+              {chapter.kind === "summary"
+                ? `Part ${chapter.partNumber} Summary`
+                : `Chapter ${String(chapter.number).padStart(2, "0")}`}
+            </span>
             <span>{chapter.readingMinutes} min read</span>
           </div>
           <h1>{chapter.title}</h1>
@@ -71,10 +75,12 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
           <MarkdownContent markdown={chapter.markdown} />
         </div>
 
-        <div className="chapter-completion">
-          <p>Finished this chapter?</p>
-          <CompletionControl slug={chapter.slug} />
-        </div>
+        {chapter.kind === "chapter" && (
+          <div className="chapter-completion">
+            <p>Finished this chapter?</p>
+            <CompletionControl slug={chapter.slug} />
+          </div>
+        )}
 
         <nav className="chapter-pagination" aria-label="Chapter navigation">
           {previous ? (

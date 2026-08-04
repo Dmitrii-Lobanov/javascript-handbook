@@ -7,6 +7,8 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
+  const availableChapterCount = chapters.filter((chapter) => chapter.kind === "chapter").length;
+
   return (
     <main>
       <section className="hero">
@@ -22,7 +24,7 @@ export default function Home() {
         </p>
         <div className="hero-stats" aria-label="Handbook statistics">
           <div>
-            <strong>{chapters.length}</strong>
+            <strong>{availableChapterCount}</strong>
             <span>chapters available</span>
           </div>
           <div>

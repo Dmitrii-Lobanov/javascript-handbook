@@ -14,7 +14,7 @@ It is designed to be sufficient for a quick prep before a senior frontend discus
 ## What matters most
 
 - In a browser agent, one callback runs to completion.
-- After a task ends, the browser drains microtasks, then selects the next task.
+- After a task ends, the browser drains microtasks, may render, and then selects another task.
 - Promise reactions and `queueMicrotask` callbacks are microtasks.
 - Timer callbacks, event dispatch, and user input handlers arrive as later tasks.
 - A DOM mutation updates state; paint waits for a rendering opportunity.
@@ -31,11 +31,11 @@ It is designed to be sufficient for a quick prep before a senior frontend discus
 
 ## Execution and scope
 
-- A function call creates a fresh execution context with its own local bindings.
+- A function call normally creates a fresh execution context and invocation-specific bindings in associated environments.
 - The call stack is LIFO for synchronous calls; returns and throws unwind it.
 - Lexical scope follows where code is defined, not where it is called.
 - Identifier lookup walks lexical environment links to the nearest binding.
-- The temporal dead zone exists for `let`/`const` bindings before initialization.
+- The temporal dead zone applies to uninitialized `let`, `const`, and `class` bindings.
 
 ## Closures and React callbacks
 
@@ -59,7 +59,7 @@ It is designed to be sufficient for a quick prep before a senior frontend discus
 - Garbage collection is based on reachability from roots.
 - A leak is unwanted retention; removing one reference does not prove collectability.
 - Cycles can be collected when no roots reach them.
-- Weak collections hold non-owning references and are not a general cache solution.
+- Weak collections do not strongly retain their object keys and are not a general cache solution.
 - React effects should clean up subscriptions, listeners, and external registrations.
 
 ## Interview-ready checklist
@@ -87,3 +87,15 @@ No. It lowers the update priority and defers rendering, but the JavaScript still
 
 **What is the difference between lexical scope and the call stack?**
 Lexical scope is determined by where code is written; the call stack is determined by the order of function invocation.
+
+**What is an execution context?**
+It is specification state for one active or suspended evaluation. It is related to, but not identical to, a physical engine stack frame or a lexical environment.
+
+**What does a closure retain?**
+A closure retains access to bindings through the lexical environment where its function was created. The creating call can leave the stack while those bindings remain reachable.
+
+**How is `this` selected?**
+For an ordinary function, start with the invocation form: method, plain, explicit, bound, or constructor call. Arrow functions instead read `this` lexically.
+
+**When can an object be garbage-collected?**
+It becomes eligible when no strong path from a runtime or host root reaches it. Eligibility does not guarantee immediate collection.
