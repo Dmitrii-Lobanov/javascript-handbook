@@ -45,6 +45,13 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
   const isSearching = query.trim().length > 0;
   const resultCount = search.published.length + search.planned.length;
   const availableChapters = chapters.filter((chapter) => chapter.kind === "chapter");
+  const chaptersByPart = new Map<number, Chapter[]>();
+
+  chapters.forEach((chapter) => {
+    const partChapters = chaptersByPart.get(chapter.partNumber) ?? [];
+    partChapters.push(chapter);
+    chaptersByPart.set(chapter.partNumber, partChapters);
+  });
 
   const percent = availableChapters.length
     ? Math.round(
@@ -60,8 +67,8 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
       <div className="library-heading">
         <div>
           <span className="eyebrow">Your study library</span>
-          <h2>Runtime Foundations</h2>
-          <p>Start in order, or search for the concept you need to refresh.</p>
+          <h2>Handbook Parts</h2>
+          <p>Choose a part, then open the chapter you want to study.</p>
         </div>
         <div className="progress-card" aria-label={`${percent}% of available chapters complete`}>
           <div className="progress-label">
@@ -98,29 +105,73 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
         </p>
       )}
 
-      <div className="chapter-grid">
-        {search.published.map((chapter) => {
-          const isComplete = completed.includes(chapter.slug);
-          return (
-            <Link className="chapter-card" href={`/chapters/${chapter.slug}`} key={chapter.slug}>
-              <div className="chapter-card-top">
-                <span className="chapter-number">
-                  {chapter.kind === "summary" ? "Review" : String(chapter.number).padStart(2, "0")}
-                </span>
-                <span className={isComplete ? "complete-pill done" : "complete-pill"}>
-                  {isComplete ? "Completed" : `${chapter.readingMinutes} min`}
-                </span>
-              </div>
-              <h3>{chapter.title}</h3>
-              <p>{chapter.excerpt}</p>
-              <span className="card-link">
-                {chapter.kind === "summary" ? "Review Part I" : "Read chapter"}{" "}
-                <span aria-hidden="true">→</span>
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+      {isSearching ? (
+        <div className="chapter-grid">
+          {search.published.map((chapter) => (
+            <ChapterCard
+              chapter={chapter}
+              isComplete={completed.includes(chapter.slug)}
+              key={chapter.slug}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="part-list">
+          {roadmap.map((part, partIndex) => {
+            const published = chaptersByPart.get(partIndex + 1) ?? [];
+            const availableSlugs = new Set(published.map((chapter) => chapter.slug));
+            const planned = part.chapters.filter(
+              (chapter) => !chapter.slug || !availableSlugs.has(chapter.slug),
+            );
+
+            return (
+              <details className="part-panel" key={part.label} open={partIndex === 0}>
+                <summary>
+                  <span className="part-index">{part.label}</span>
+                  <span className="part-summary-copy">
+                    <strong>{part.title}</strong>
+                    <small>
+                      {published.length} {published.length === 1 ? "reading" : "readings"} available
+                      {planned.length ? ` · ${planned.length} planned` : ""}
+                    </small>
+                  </span>
+                  <span className="part-toggle" aria-hidden="true" />
+                </summary>
+
+                <div className="part-content">
+                  {published.length > 0 ? (
+                    <div className="chapter-grid">
+                      {published.map((chapter) => (
+                        <ChapterCard
+                          chapter={chapter}
+                          isComplete={completed.includes(chapter.slug)}
+                          key={chapter.slug}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="part-empty">Chapters for this part are being prepared.</p>
+                  )}
+
+                  {planned.length > 0 && (
+                    <details className="planned-chapters">
+                      <summary>View {planned.length} planned chapters</summary>
+                      <ol>
+                        {planned.map((chapter) => (
+                          <li key={chapter.number}>
+                            <span>{String(chapter.number).padStart(2, "0")}</span>
+                            {chapter.title}
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      )}
 
       {isSearching && search.planned.length > 0 && (
         <div className="planned-results">
@@ -146,31 +197,27 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
           <span>Try fewer words or search for a broader JavaScript concept.</span>
         </div>
       )}
-
-      {!isSearching && (
-        <details className="roadmap">
-          <summary>View the complete 76-chapter roadmap</summary>
-          <div className="roadmap-grid">
-            {roadmap.map((part) => (
-              <section key={part.label}>
-                <span>{part.label}</span>
-                <h3>{part.title}</h3>
-                <ol>
-                  {part.chapters.map((chapter) => (
-                    <li key={chapter.number} className={chapter.slug ? "available" : "planned"}>
-                      {chapter.slug ? (
-                        <Link href={`/chapters/${chapter.slug}`}>{chapter.title}</Link>
-                      ) : (
-                        chapter.title
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ))}
-          </div>
-        </details>
-      )}
     </section>
+  );
+}
+
+function ChapterCard({ chapter, isComplete }: { chapter: Chapter; isComplete: boolean }) {
+  return (
+    <Link className="chapter-card" href={`/chapters/${chapter.slug}`}>
+      <div className="chapter-card-top">
+        <span className="chapter-number">
+          {chapter.kind === "summary" ? "Review" : String(chapter.number).padStart(2, "0")}
+        </span>
+        <span className={isComplete ? "complete-pill done" : "complete-pill"}>
+          {isComplete ? "Completed" : `${chapter.readingMinutes} min`}
+        </span>
+      </div>
+      <h3>{chapter.title}</h3>
+      <p>{chapter.excerpt}</p>
+      <span className="card-link">
+        {chapter.kind === "summary" ? `Review Part ${chapter.partNumber}` : "Read chapter"}{" "}
+        <span aria-hidden="true">→</span>
+      </span>
+    </Link>
   );
 }
