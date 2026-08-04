@@ -12,19 +12,22 @@ After completing this chapter, you should be able to:
 
 ## Quick Refresher
 
-- A JavaScript runtime combines the ECMAScript language, an engine, and a host environment.
-- ECMAScript defines language semantics; it does not define one universal event loop.
-- A browser and Node.js implement the same language but provide different APIs and scheduling systems.
-- Code running in one typical browser agent runs to completion before another callback runs in that agent.
-- Browsers integrate promise reactions with the microtask queue; timer callbacks run as later tasks.
-- Changing the DOM does not mean pixels change immediately. The browser must reach a rendering opportunity.
-- Promises, `async` functions, and React transitions do not move CPU-heavy JavaScript to another thread.
+- A JavaScript runtime combines ECMAScript, an engine, and a host.
+- ECMAScript defines semantics; it does not define one universal event loop.
+- Browsers and Node.js implement the same language but expose different globals and scheduling.
+- React and other frameworks add scheduling policy on top of the host, not a new event loop.
+- In a browser agent, one callback runs to completion before another begins.
+- Promise reactions are microtasks; timers run in later tasks.
+- DOM updates do not guarantee paint; the browser waits for a rendering opportunity.
+- `Promise`, `async`, and React transitions do not make CPU-heavy work parallel.
 
 ## Why This Matters
 
-Many weak interview answers treat JavaScript, V8, browser APIs, the event loop, and React as one machine. That model cannot explain why `document` is available in a browser but absent from ECMAScript, why a fulfilled promise still invokes its handler later, or why a React update may change the DOM before the user sees new pixels.
+Many weak interview answers treat JavaScript, V8, browser APIs, the event loop, and React as one machine. That model cannot explain why `document` exists only in a browser, why promise reactions are delayed, or why a React DOM update may appear before paint.
 
-A senior engineer should be able to locate responsibility. When an interface freezes, the remedy depends on whether the application is executing JavaScript, waiting for a host operation, performing rendering work, or repeating framework work.
+A senior engineer locates responsibility fast: engine JavaScript, host scheduling, rendering, or framework work.
+
+A useful interview habit is to ask: **which layer owns this behavior, in which environment?**
 
 ## Core Mental Model
 
@@ -39,7 +42,7 @@ Treat a frontend application as four cooperating layers:
 
 The boundaries describe who owns a contract, not physically isolated software. Browsers and engines integrate closely, and React uses browser facilities. Still, the distinction prevents claims such as “JavaScript's event loop paints the page.”
 
-A useful interview habit is to ask: **specified by which layer, in which environment?**
+Ask: **which layer owns this behavior, in which environment?**
 
 ## Formal Model
 
@@ -51,6 +54,8 @@ ECMA-262 defines the language and provides hooks where a host must participate. 
 - `document`, browser timers, and browser rendering are host facilities.
 - `process`, `setImmediate`, and filesystem APIs are Node.js facilities.
 
+Example: `Promise.resolve().then(...)` is ECMAScript promise reaction work. `document.querySelector(...)` is a browser host operation provided by the DOM.
+
 An API appearing in several hosts does not make it part of ECMAScript. For example, browsers and modern Node.js versions both expose `fetch`, but each host supplies it.
 
 ### Agent and run-to-completion
@@ -61,7 +66,7 @@ This gives a precise version of “JavaScript is single-threaded”:
 
 > In a typical browser window agent, ordinary JavaScript callbacks do not execute concurrently with one another. The browser can still use other threads, and workers can execute JavaScript in separate agents.
 
-An agent is an abstract specification mechanism, not a promise of a one-to-one relationship with an operating-system thread.
+An agent is an abstract spec concept, not a promise of a one-to-one OS thread.
 
 ### Job, task, microtask, and rendering
 
@@ -76,9 +81,9 @@ These terms belong to different layers:
 
 **What about macrotasks?** “Macrotask” is a widely used informal name for a browser task, usually used to contrast tasks with microtasks. The HTML Standard uses **task**, not macrotask. In an interview, it is fine to say “macrotask” if you clarify that you mean an HTML task, such as event dispatch or a timer callback.
 
-When a promise reaction becomes runnable, ECMAScript asks the host to enqueue its job. A browser integrates that job into its microtask queue. After a task finishes, the browser performs a microtask checkpoint and drains runnable microtasks, including newly added ones, before selecting another task.
+When a promise reaction becomes runnable, ECMAScript asks the host to enqueue its job. A browser queues it as a microtask, drains microtasks after each task, then selects the next task.
 
-Rendering is separate. A DOM mutation changes browser-maintained state, but JavaScript normally must yield before the browser can present that change. Even then, a paint is not guaranteed after every task; rendering depends on browser scheduling and display timing.
+Rendering is separate. A DOM mutation updates browser state, but paint waits for a rendering opportunity. Browsers may also skip paint after a microtask checkpoint.
 
 Two additional terms appear throughout the handbook:
 
@@ -163,7 +168,7 @@ The user may never see `Working…`: both writes occur in one task, and the main
 
 ### Browser claims do not automatically apply to Node.js
 
-Node.js adds scheduling facilities such as `process.nextTick` and event-loop phases implemented with libuv. Fine-grained ordering can also depend on Node.js and libuv versions. A good interview answer therefore says “in a browser” or “in Node.js” before making scheduling guarantees.
+Node.js adds scheduling facilities such as `process.nextTick` and event-loop phases implemented with libuv. In practice, `process.nextTick` is often ordered before other promise jobs and `queueMicrotask`, and the exact semantics can vary with Node.js and libuv versions. A good interview answer therefore says “in a browser” or “in Node.js” before making scheduling guarantees.
 
 ## Common Misconceptions
 
@@ -174,6 +179,7 @@ Node.js adds scheduling facilities such as `process.nextTick` and event-loop pha
 | “A fulfilled promise calls `.then` immediately.”    | Fulfillment is promise state. The reaction still runs later as a job, integrated as a microtask in browsers.      |
 | “A zero-delay timer runs immediately.”              | Its callback can run only in a later task after the current work and eligible microtasks.                         |
 | “Promises move work to another thread.”             | Promises represent eventual results; their executors and reactions still run as JavaScript on the relevant agent. |
+| “React transitions move work off-thread.”            | Transitions adjust React update priority and scheduling eligibility, but the underlying JavaScript still runs on the same main-thread agent. |
 | “React concurrent rendering is parallel rendering.” | React cooperatively schedules eligible work; it cannot preempt arbitrary synchronous JavaScript.                  |
 
 ## React Connection
@@ -183,6 +189,8 @@ React runs inside the same host constraints:
 - **Render is JavaScript work.** Expensive component evaluation occupies the main thread.
 - **Commit is not paint.** React may mutate the DOM during commit; the browser decides when pixels appear.
 - **Scheduling requires a yield.** React cannot interrupt a long event handler or CPU loop that does not return control.
+- **Transitions shift priority, not thread ownership.** `startTransition` and `useDeferredValue` make updates less urgent, but the work still executes on the same main-thread agent.
+- **Interview cue:** call out whether the issue is framework scheduling or browser rendering, not just “React is slow.”
 
 ```jsx
 function SearchButton() {
@@ -203,7 +211,7 @@ function SearchButton() {
 }
 ```
 
-React may batch the state updates, but the deeper problem is that the handler monopolizes the main thread. A transition changes the priority of eligible React updates; it does not move the loop to another thread.
+React may batch updates, but the deeper problem is that the handler monopolizes the main thread. A transition changes update priority; it does not move the loop to another thread.
 
 ## Performance and Memory Implications
 
