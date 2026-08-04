@@ -8,6 +8,9 @@ export function AppHeader() {
   const [dark, setDark] = useState(false);
   const pathname = usePathname();
   const isQuestions = pathname.startsWith("/questions");
+  const isLearn = pathname.startsWith("/learn") || pathname.startsWith("/chapters");
+  const isReference = pathname.startsWith("/reference");
+  const isPractice = pathname.startsWith("/practice");
 
   useEffect(() => {
     const saved = localStorage.getItem("handbook-theme");
@@ -27,21 +30,21 @@ export function AppHeader() {
 
   return (
     <header className="site-header">
-      <Link className="brand" href="/" aria-label="JavaScript Interview Handbook home">
-        <span className="brand-mark">JS</span>
+      <Link className="brand" href="/" aria-label="Frontend Engineering Wiki home">
+        <span className="brand-mark">FE</span>
         <span className="brand-copy">
-          <strong>Interview Handbook</strong>
-          <small>Senior frontend edition</small>
+          <strong>Frontend Wiki</strong>
+          <small>Engineering knowledge hub</small>
         </span>
       </Link>
       <nav className="header-actions" aria-label="Primary navigation">
         <div className="section-switch" aria-label="Choose application section">
           <Link
-            className={!isQuestions ? "active" : ""}
-            href="/"
-            aria-current={!isQuestions ? "page" : undefined}
+            className={isLearn ? "active" : ""}
+            href="/learn/javascript"
+            aria-current={isLearn ? "page" : undefined}
           >
-            Handbook
+            Learn
           </Link>
           <Link
             className={isQuestions ? "active" : ""}
@@ -50,19 +53,33 @@ export function AppHeader() {
           >
             Q&amp;A
           </Link>
+          <Link
+            className={isReference ? "active" : ""}
+            href="/reference"
+            aria-current={isReference ? "page" : undefined}
+          >
+            Reference
+          </Link>
+          <Link
+            className={isPractice ? "active" : ""}
+            href="/practice"
+            aria-current={isPractice ? "page" : undefined}
+          >
+            Practice
+          </Link>
         </div>
         <a
           className="nav-author"
           href="https://github.com/Dmitrii-Lobanov"
           target="_blank"
           rel="noreferrer"
-          aria-label="Created by Dmitrii Lobanov — GitHub profile"
+          aria-label="Frontend Wiki created by Dmitrii Lobanov — GitHub profile"
         >
           <span className="nav-author-avatar" aria-hidden="true">
             DL
           </span>
           <span className="nav-author-name">
-            <small>Handbook author</small>
+            <small>Wiki author</small>
             <strong>Dmitrii Lobanov</strong>
           </span>
           <span className="nav-author-arrow" aria-hidden="true">

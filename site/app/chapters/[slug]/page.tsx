@@ -33,7 +33,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
   return (
     <main className="reader-shell">
       <aside className="chapter-sidebar">
-        <Link className="back-link" href="/#library">
+        <Link className="back-link" href="/learn/javascript#library">
           ← All chapters
         </Link>
         <span className="sidebar-label"> Part {chapter.partNumber}</span>
@@ -97,7 +97,7 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
               <strong>{next.title} →</strong>
             </Link>
           ) : (
-            <Link href="/#library">
+            <Link href="/learn/javascript#library">
               <span>Next</span>
               <strong>Explore the roadmap →</strong>
             </Link>

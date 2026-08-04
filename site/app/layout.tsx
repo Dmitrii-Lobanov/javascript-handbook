@@ -20,28 +20,27 @@ const metadataBase = new URL(
 export const metadata: Metadata = {
   metadataBase,
   title: {
-    default: "JavaScript Interview Handbook",
-    template: "%s · JavaScript Interview Handbook",
+    default: "Frontend Engineering Wiki",
+    template: "%s · Frontend Engineering Wiki",
   },
-  description:
-    "A rigorous, interview-oriented guide to JavaScript internals for senior frontend engineers.",
+  description: "Handbooks, interview questions, references, and practice for frontend engineers.",
   openGraph: {
-    title: "JavaScript Interview Handbook",
-    description: "Master JavaScript internals for senior frontend interviews.",
+    title: "Frontend Engineering Wiki",
+    description: "Learn frontend engineering deeply and prepare for senior interviews.",
     type: "website",
     images: [
       {
         url: "/og.png",
         width: 1731,
         height: 909,
-        alt: "JavaScript Interview Handbook — Senior Frontend Edition",
+        alt: "Frontend Engineering Wiki",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "JavaScript Interview Handbook",
-    description: "Master JavaScript internals for senior frontend interviews.",
+    title: "Frontend Engineering Wiki",
+    description: "Learn frontend engineering deeply and prepare for senior interviews.",
     images: ["/og.png"],
   },
 };
