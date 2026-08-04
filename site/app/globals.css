@@ -1,44 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #171a22;
-  --muted: #646775;
-  --paper: #f6f2e9;
-  --surface: #fffdf8;
-  --line: #d8d2c6;
-  --accent: #f2c94c;
-  --accent-ink: #27200a;
-  --teal: #0b756f;
-  --code: #151821;
-  --syntax-comment: #8b93a7;
-  --syntax-keyword: #c792ea;
-  --syntax-string: #8bd5ca;
-  --syntax-number: #82aaff;
-  --syntax-title: #ffc777;
-  --syntax-variable: #f4f0e7;
-  --syntax-built-in: #ff966c;
-  --syntax-meta: #7dcfff;
+  --ink: #102a33;
+  --muted: #587078;
+  --paper: #e6f0ef;
+  --surface: #f8fbfa;
+  --line: #bfd1d0;
+  --accent: #f2aa5b;
+  --accent-ink: #172a31;
+  --teal: #087b78;
+  --code: #061923;
+  --syntax-comment: #78949b;
+  --syntax-keyword: #e68cae;
+  --syntax-string: #72d2c3;
+  --syntax-number: #82b8ff;
+  --syntax-title: #f2bd69;
+  --syntax-variable: #e8f3f1;
+  --syntax-built-in: #f29a68;
+  --syntax-meta: #6fcde2;
   --reader-scale: 1;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --ink: #f4f0e7;
-  --muted: #a9a8b0;
-  --paper: #111319;
-  --surface: #1a1d25;
-  --line: #343741;
-  --accent: #f2c94c;
-  --accent-ink: #27200a;
-  --teal: #58cfc4;
-  --code: #0b0d12;
-  --syntax-comment: #8b949e;
-  --syntax-keyword: #ff7b72;
-  --syntax-string: #a5d6ff;
-  --syntax-number: #79c0ff;
-  --syntax-title: #d2a8ff;
-  --syntax-variable: #f4f0e7;
-  --syntax-built-in: #ffa657;
-  --syntax-meta: #7ee787;
+  --ink: #e8f3f1;
+  --muted: #99afb0;
+  --paper: #06171f;
+  --surface: #0b222c;
+  --line: #29434c;
+  --accent: #f2b766;
+  --accent-ink: #17252b;
+  --teal: #48d1c4;
+  --code: #031117;
+  --syntax-comment: #718a91;
+  --syntax-keyword: #ff8fb3;
+  --syntax-string: #8be0d0;
+  --syntax-number: #83bdff;
+  --syntax-title: #f3c56f;
+  --syntax-variable: #e8f3f1;
+  --syntax-built-in: #ff9f70;
+  --syntax-meta: #78d5e8;
   color-scheme: dark;
 }
 * {
@@ -50,7 +50,13 @@ html {
 }
 body {
   margin: 0;
-  background: var(--paper);
+  background:
+    radial-gradient(
+      circle at 82% 8%,
+      color-mix(in srgb, var(--teal) 8%, transparent),
+      transparent 30rem
+    ),
+    var(--paper);
   color: var(--ink);
   font-family:
     Inter,
