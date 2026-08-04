@@ -342,6 +342,66 @@ button {
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
+.answer-card-section {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.answer-card-section + .answer-card-section {
+  margin-top: 1rem;
+}
+.answer-card-section > span {
+  display: block;
+  margin-bottom: 0.65rem;
+  color: var(--teal);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.answer-card-section p,
+.answer-card-section li {
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.answer-card-section p {
+  margin: 0 0 0.8rem;
+}
+.answer-card-section p:last-child,
+.answer-card-section ul:last-child,
+.answer-card-section pre:last-child {
+  margin-bottom: 0;
+}
+.answer-card-section ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.answer-card-section li {
+  margin: 0.25rem 0;
+}
+.answer-card-section li::marker {
+  color: var(--teal);
+}
+.answer-card-section code:not(pre code) {
+  padding: 0.12rem 0.28rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--teal) 10%, transparent);
+  color: var(--ink);
+  font-size: 0.82em;
+}
+.answer-card-section pre {
+  overflow-x: auto;
+  margin: 0.85rem 0;
+  padding: 0.9rem;
+  border-radius: 8px;
+  background: var(--code);
+  color: var(--syntax-variable);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+.answer-card-section.explanation {
+  color: var(--muted);
+}
 .questions-roadmap-heading {
   margin-bottom: 2rem;
 }
@@ -413,7 +473,7 @@ button {
   padding: 0;
   list-style: none;
 }
-.question-section li {
+.question-section > ol > li {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
@@ -421,24 +481,146 @@ button {
   padding: 1rem 1.4rem;
   border-bottom: 1px solid var(--line);
 }
-.question-section li:last-child {
+.question-section > ol > li:last-child {
   border-bottom: 0;
 }
-.question-section li > span {
+.question-section > ol > li > span {
   color: var(--teal);
   font: 700 0.76rem/1 monospace;
 }
-.question-section li p {
+.question-section > ol > li > p {
   margin: 0;
   line-height: 1.45;
 }
-.question-section li small {
+.question-section > ol > li > small {
   padding: 0.3rem 0.5rem;
   border: 1px solid var(--line);
   border-radius: 99px;
   color: var(--muted);
   font-size: 0.65rem;
   text-transform: uppercase;
+}
+.question-section > ol > li.answered-question {
+  display: block;
+  padding: 0;
+}
+.answered-question details > summary {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.4rem;
+  cursor: pointer;
+  list-style: none;
+}
+.answered-question details > summary::-webkit-details-marker {
+  display: none;
+}
+.answered-question details > summary:hover {
+  background: color-mix(in srgb, var(--teal) 5%, transparent);
+}
+.answered-question summary > span:first-child {
+  color: var(--teal);
+  font: 700 0.76rem/1 monospace;
+}
+.answered-question summary p {
+  margin: 0;
+  line-height: 1.45;
+}
+.answer-toggle {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--teal);
+}
+.answer-toggle::before,
+.answer-toggle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 99px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease;
+}
+.answer-toggle::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.answered-question > details[open] > summary .answer-toggle::after {
+  transform: translate(-50%, -50%);
+}
+.answer-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  padding: 0 1.4rem 1.4rem 5.4rem;
+}
+.answer-body .answer-card-section + .answer-card-section {
+  margin-top: 0;
+}
+.answer-details {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+}
+.answer-details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.62rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--teal) 45%, var(--line));
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--teal) 8%, var(--surface));
+  cursor: pointer;
+  list-style: none;
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.answer-details > summary::-webkit-details-marker {
+  display: none;
+}
+.answer-details > summary:hover {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 14%, var(--surface));
+  transform: translateY(-1px);
+}
+.answer-details-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.answer-details-chevron {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.answer-details[open] .answer-details-chevron {
+  transform: translateY(2px) rotate(225deg);
+}
+.answer-details-content.answer-card-section {
+  margin: 0.85rem 0 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
 }
 .library-section {
   padding: clamp(3rem, 7vw, 6rem) max(1.5rem, calc((100vw - 1180px) / 2));
@@ -1023,52 +1205,52 @@ button {
   background: none;
   color: inherit;
 }
-.prose .hljs-comment,
-.prose .hljs-quote {
+:is(.prose, .answer-card-section) .hljs-comment,
+:is(.prose, .answer-card-section) .hljs-quote {
   color: var(--syntax-comment);
   font-style: italic;
 }
-.prose .hljs-keyword,
-.prose .hljs-selector-tag,
-.prose .hljs-literal,
-.prose .hljs-type {
+:is(.prose, .answer-card-section) .hljs-keyword,
+:is(.prose, .answer-card-section) .hljs-selector-tag,
+:is(.prose, .answer-card-section) .hljs-literal,
+:is(.prose, .answer-card-section) .hljs-type {
   color: var(--syntax-keyword);
 }
-.prose .hljs-string,
-.prose .hljs-regexp,
-.prose .hljs-attribute {
+:is(.prose, .answer-card-section) .hljs-string,
+:is(.prose, .answer-card-section) .hljs-regexp,
+:is(.prose, .answer-card-section) .hljs-attribute {
   color: var(--syntax-string);
 }
-.prose .hljs-number,
-.prose .hljs-symbol,
-.prose .hljs-bullet {
+:is(.prose, .answer-card-section) .hljs-number,
+:is(.prose, .answer-card-section) .hljs-symbol,
+:is(.prose, .answer-card-section) .hljs-bullet {
   color: var(--syntax-number);
 }
-.prose .hljs-title,
-.prose .hljs-section,
-.prose .hljs-selector-id,
-.prose .hljs-selector-class {
+:is(.prose, .answer-card-section) .hljs-title,
+:is(.prose, .answer-card-section) .hljs-section,
+:is(.prose, .answer-card-section) .hljs-selector-id,
+:is(.prose, .answer-card-section) .hljs-selector-class {
   color: var(--syntax-title);
 }
-.prose .hljs-variable,
-.prose .hljs-template-variable,
-.prose .hljs-params,
-.prose .hljs-property {
+:is(.prose, .answer-card-section) .hljs-variable,
+:is(.prose, .answer-card-section) .hljs-template-variable,
+:is(.prose, .answer-card-section) .hljs-params,
+:is(.prose, .answer-card-section) .hljs-property {
   color: var(--syntax-variable);
 }
-.prose .hljs-built_in,
-.prose .hljs-builtin-name {
+:is(.prose, .answer-card-section) .hljs-built_in,
+:is(.prose, .answer-card-section) .hljs-builtin-name {
   color: var(--syntax-built-in);
 }
-.prose .hljs-meta,
-.prose .hljs-meta .hljs-keyword {
+:is(.prose, .answer-card-section) .hljs-meta,
+:is(.prose, .answer-card-section) .hljs-meta .hljs-keyword {
   color: var(--syntax-meta);
 }
-.prose .hljs-addition {
+:is(.prose, .answer-card-section) .hljs-addition {
   color: var(--syntax-string);
   background: color-mix(in srgb, var(--syntax-string) 12%, transparent);
 }
-.prose .hljs-deletion {
+:is(.prose, .answer-card-section) .hljs-deletion {
   color: #ff7b72;
   background: color-mix(in srgb, #ff7b72 12%, transparent);
 }
@@ -1332,12 +1514,26 @@ button {
     gap: 0.8rem;
     padding: 1rem;
   }
-  .question-section li {
+  .question-section > ol > li {
     grid-template-columns: 40px minmax(0, 1fr);
     padding: 0.9rem 1rem;
   }
-  .question-section li small {
+  .question-section > ol > li > small {
     display: none;
+  }
+  .answered-question details > summary {
+    grid-template-columns: 40px minmax(0, 1fr) 30px;
+    gap: 0.65rem;
+    padding: 0.9rem 1rem;
+  }
+  .answer-toggle {
+    width: 30px;
+    height: 30px;
+  }
+  .answer-body {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0 1rem 1rem 4.1rem;
   }
   .reader-shell {
     padding: 1.5rem 1.1rem 4rem;

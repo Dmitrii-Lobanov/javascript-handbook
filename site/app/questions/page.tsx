@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { questionRoadmap } from "@/generated/content";
+import { MarkdownContent } from "../components/MarkdownContent";
+import { questionAnswers, questionRoadmap } from "@/generated/content";
 
 export const metadata: Metadata = {
   title: "JavaScript Interview Q&A",
@@ -23,14 +24,14 @@ export default function QuestionsPage() {
         </p>
         <div className="questions-stats" aria-label="Questions and answers roadmap statistics">
           <div>
-            <strong>{questionCount}</strong>
-            <span>questions planned</span>
+            <strong>{questionAnswers.length}</strong>
+            <span>answers available</span>
           </div>
           <div>
             <strong>{questionRoadmap.length}</strong>
             <span>topic groups</span>
           </div>
-          <span className="coming-soon-pill">Answers coming soon</span>
+          <span className="coming-soon-pill">{questionCount} questions planned</span>
         </div>
       </section>
 
@@ -38,7 +39,7 @@ export default function QuestionsPage() {
         <div className="questions-roadmap-heading">
           <span className="eyebrow">Q&amp;A roadmap</span>
           <h2 id="questions-roadmap-title">Choose a topic</h2>
-          <p>The roadmap is ready. Question and answer pages will be added later.</p>
+          <p>Available answers are marked below. The remaining questions stay on the roadmap.</p>
         </div>
 
         <div className="question-section-list">
@@ -53,13 +54,58 @@ export default function QuestionsPage() {
                 <span className="part-toggle" aria-hidden="true" />
               </summary>
               <ol>
-                {section.questions.map((question) => (
-                  <li key={question.number}>
-                    <span>{String(question.number).padStart(3, "0")}</span>
-                    <p>{question.title}</p>
-                    <small>Planned</small>
-                  </li>
-                ))}
+                {section.questions.map((question) => {
+                  const answer = questionAnswers.find(
+                    (answer) => answer.number === question.number,
+                  );
+
+                  return answer ? (
+                    <li className="answered-question" key={question.number}>
+                      <details>
+                        <summary>
+                          <span>{String(question.number).padStart(3, "0")}</span>
+                          <p>{question.title}</p>
+                          <span className="answer-toggle" aria-hidden="true" />
+                        </summary>
+                        <div className="answer-body">
+                          <div className="answer-card-section">
+                            <span>Short answer</span>
+                            <MarkdownContent markdown={answer.answer} />
+                          </div>
+                          <div className="answer-card-section explanation">
+                            <span>Why it matters</span>
+                            <MarkdownContent markdown={answer.explanation} />
+                          </div>
+                          {answer.details && (
+                            <details className="answer-details">
+                              <summary>
+                                <svg
+                                  className="answer-details-icon"
+                                  viewBox="0 0 24 24"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="9" />
+                                  <path d="M12 10.5v6M12 7.5h.01" />
+                                </svg>
+                                More details
+                                <span className="answer-details-chevron" aria-hidden="true" />
+                              </summary>
+                              <div className="answer-details-content answer-card-section">
+                                <MarkdownContent markdown={answer.details} />
+                              </div>
+                            </details>
+                          )}
+                        </div>
+                      </details>
+                    </li>
+                  ) : (
+                    <li key={question.number}>
+                      <span>{String(question.number).padStart(3, "0")}</span>
+                      <p>{question.title}</p>
+                      <small>Planned</small>
+                    </li>
+                  );
+                })}
               </ol>
             </details>
           ))}
