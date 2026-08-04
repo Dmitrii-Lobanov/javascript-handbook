@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export function AppHeader() {
   const [dark, setDark] = useState(false);
+  const pathname = usePathname();
+  const isQuestions = pathname.startsWith("/questions");
 
   useEffect(() => {
     const saved = localStorage.getItem("handbook-theme");
@@ -32,6 +35,22 @@ export function AppHeader() {
         </span>
       </Link>
       <nav className="header-actions" aria-label="Primary navigation">
+        <div className="section-switch" aria-label="Choose application section">
+          <Link
+            className={!isQuestions ? "active" : ""}
+            href="/"
+            aria-current={!isQuestions ? "page" : undefined}
+          >
+            Handbook
+          </Link>
+          <Link
+            className={isQuestions ? "active" : ""}
+            href="/questions"
+            aria-current={isQuestions ? "page" : undefined}
+          >
+            Q&amp;A
+          </Link>
+        </div>
         <a
           className="nav-author"
           href="https://github.com/Dmitrii-Lobanov"
@@ -50,7 +69,6 @@ export function AppHeader() {
             ↗
           </span>
         </a>
-        <Link href="/#library">Library</Link>
         <a
           href="https://github.com/Dmitrii-Lobanov/javascript-handbook"
           target="_blank"

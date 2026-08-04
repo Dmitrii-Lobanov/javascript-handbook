@@ -21,6 +21,11 @@ export type RoadmapPart = {
   chapters: Array<{ number: number; title: string; slug: string | null }>;
 };
 
+export type QuestionRoadmapSection = {
+  title: string;
+  questions: Array<{ number: number; title: string }>;
+};
+
 export const chapters: Chapter[] = [
   {
     number: 1,
@@ -823,6 +828,465 @@ export const roadmap: RoadmapPart[] = [
         number: 76,
         title: "Final Review and Cheat Sheets",
         slug: null,
+      },
+    ],
+  },
+];
+
+export const questionRoadmap: QuestionRoadmapSection[] = [
+  {
+    title: "JavaScript fundamentals",
+    questions: [
+      {
+        number: 1,
+        title: "What is the difference between var, let, and const?",
+      },
+      {
+        number: 2,
+        title: "What are JavaScript’s primitive data types?",
+      },
+      {
+        number: 3,
+        title: "What is the difference between null and undefined?",
+      },
+      {
+        number: 4,
+        title: "What is the difference between == and ===?",
+      },
+      {
+        number: 5,
+        title: "What are truthy and falsy values?",
+      },
+      {
+        number: 6,
+        title: "What is type coercion?",
+      },
+      {
+        number: 7,
+        title: "What is hoisting?",
+      },
+      {
+        number: 8,
+        title: "What is the temporal dead zone?",
+      },
+      {
+        number: 9,
+        title: "What is lexical scope?",
+      },
+      {
+        number: 10,
+        title: "What is a closure?",
+      },
+      {
+        number: 11,
+        title: "What is variable shadowing?",
+      },
+      {
+        number: 12,
+        title: "What is the difference between passing values by value and by reference?",
+      },
+      {
+        number: 13,
+        title: "How do shallow and deep copies differ?",
+      },
+      {
+        number: 14,
+        title: "What is destructuring?",
+      },
+      {
+        number: 15,
+        title: "What are rest and spread syntax, and how do they differ?",
+      },
+      {
+        number: 16,
+        title: "What are template literals?",
+      },
+      {
+        number: 17,
+        title: "What are JavaScript modules, and how do import and export work?",
+      },
+    ],
+  },
+  {
+    title: "Functions and objects",
+    questions: [
+      {
+        number: 18,
+        title: "What is the difference between a function declaration and a function expression?",
+      },
+      {
+        number: 19,
+        title: "How do arrow functions differ from regular functions?",
+      },
+      {
+        number: 20,
+        title: "How does the this keyword work?",
+      },
+      {
+        number: 21,
+        title: "What do call, apply, and bind do?",
+      },
+      {
+        number: 22,
+        title: "What is a higher-order function?",
+      },
+      {
+        number: 23,
+        title: "What is a callback function?",
+      },
+      {
+        number: 24,
+        title: "What are pure functions and side effects?",
+      },
+      {
+        number: 25,
+        title: "What is an immediately invoked function expression (IIFE)?",
+      },
+      {
+        number: 26,
+        title: "How do default parameters work?",
+      },
+      {
+        number: 27,
+        title: "How do JavaScript objects inherit properties?",
+      },
+      {
+        number: 28,
+        title: "What is the prototype chain?",
+      },
+      {
+        number: 29,
+        title: "What is the difference between a class and constructor function?",
+      },
+      {
+        number: 30,
+        title: "What is the difference between static and instance methods?",
+      },
+      {
+        number: 31,
+        title: "What are getters and setters?",
+      },
+      {
+        number: 32,
+        title: "What is the difference between mutable and immutable operations?",
+      },
+    ],
+  },
+  {
+    title: "Arrays and collections",
+    questions: [
+      {
+        number: 33,
+        title: "What is the difference between map, filter, and reduce?",
+      },
+      {
+        number: 34,
+        title: "What is the difference between forEach and map?",
+      },
+      {
+        number: 35,
+        title: "What is the difference between find and filter?",
+      },
+      {
+        number: 36,
+        title: "What is the difference between some and every?",
+      },
+      {
+        number: 37,
+        title: "Which array methods mutate the original array?",
+      },
+      {
+        number: 38,
+        title: "How can you remove duplicate values from an array?",
+      },
+      {
+        number: 39,
+        title: "When would you use Map instead of an object?",
+      },
+      {
+        number: 40,
+        title: "When would you use Set?",
+      },
+      {
+        number: 41,
+        title: "What are WeakMap and WeakSet?",
+      },
+    ],
+  },
+  {
+    title: "Asynchronous JavaScript",
+    questions: [
+      {
+        number: 42,
+        title: "What is the JavaScript event loop?",
+      },
+      {
+        number: 43,
+        title: "What is the call stack?",
+      },
+      {
+        number: 44,
+        title: "What is the difference between synchronous and asynchronous code?",
+      },
+      {
+        number: 45,
+        title: "What are microtasks and macrotasks?",
+      },
+      {
+        number: 46,
+        title: "In what order do synchronous code, promises, and timers execute?",
+      },
+      {
+        number: 47,
+        title: "What is a Promise?",
+      },
+      {
+        number: 48,
+        title: "What states can a Promise have?",
+      },
+      {
+        number: 49,
+        title: "How do async and await work?",
+      },
+      {
+        number: 50,
+        title: "How do Promise.all, Promise.allSettled, Promise.race, and Promise.any differ?",
+      },
+      {
+        number: 51,
+        title: "How should errors be handled in asynchronous code?",
+      },
+      {
+        number: 52,
+        title: "How can an HTTP request be cancelled?",
+      },
+      {
+        number: 53,
+        title: "How can multiple asynchronous operations be executed in parallel?",
+      },
+    ],
+  },
+  {
+    title: "Browser and DOM",
+    questions: [
+      {
+        number: 54,
+        title: "What is the DOM?",
+      },
+      {
+        number: 55,
+        title: "What is the difference between the DOM and the HTML source?",
+      },
+      {
+        number: 56,
+        title: "How do you select, create, update, and remove DOM elements?",
+      },
+      {
+        number: 57,
+        title: "What is event bubbling?",
+      },
+      {
+        number: 58,
+        title: "What is event capturing?",
+      },
+      {
+        number: 59,
+        title: "What is event delegation?",
+      },
+      {
+        number: 60,
+        title: "What is the difference between event.target and event.currentTarget?",
+      },
+      {
+        number: 61,
+        title: "What do preventDefault and stopPropagation do?",
+      },
+      {
+        number: 62,
+        title: "What is the difference between DOMContentLoaded and load?",
+      },
+      {
+        number: 63,
+        title: "What is the difference between innerHTML, innerText, and textContent?",
+      },
+      {
+        number: 64,
+        title: "What are custom events?",
+      },
+      {
+        number: 65,
+        title: "What are the differences between cookies, localStorage, and sessionStorage?",
+      },
+      {
+        number: 66,
+        title: "What is the same-origin policy?",
+      },
+      {
+        number: 67,
+        title: "What is CORS?",
+      },
+      {
+        number: 68,
+        title: "How does the Fetch API work?",
+      },
+      {
+        number: 69,
+        title: "What is the difference between Fetch and XMLHttpRequest?",
+      },
+      {
+        number: 70,
+        title: "What is the History API?",
+      },
+      {
+        number: 71,
+        title: "What are Web Workers, and when should they be used?",
+      },
+    ],
+  },
+  {
+    title: "Performance and optimization",
+    questions: [
+      {
+        number: 72,
+        title: "What are debounce and throttle?",
+      },
+      {
+        number: 73,
+        title: "What causes memory leaks in frontend applications?",
+      },
+      {
+        number: 74,
+        title: "How does JavaScript garbage collection work?",
+      },
+      {
+        number: 75,
+        title: "What are reflow and repaint?",
+      },
+      {
+        number: 76,
+        title: "What is the difference between async and defer on script elements?",
+      },
+      {
+        number: 77,
+        title: "What is lazy loading?",
+      },
+      {
+        number: 78,
+        title: "What is code splitting?",
+      },
+      {
+        number: 79,
+        title: "What is tree shaking?",
+      },
+      {
+        number: 80,
+        title: "What is memoization?",
+      },
+      {
+        number: 81,
+        title: "How can frontend JavaScript performance be measured and improved?",
+      },
+      {
+        number: 82,
+        title: "What is the difference between requestAnimationFrame and setTimeout?",
+      },
+    ],
+  },
+  {
+    title: "Errors, security, and code quality",
+    questions: [
+      {
+        number: 83,
+        title: "How do try, catch, finally, and throw work?",
+      },
+      {
+        number: 84,
+        title: "What is the difference between syntax, runtime, and logical errors?",
+      },
+      {
+        number: 85,
+        title: "What is cross-site scripting (XSS), and how can it be prevented?",
+      },
+      {
+        number: 86,
+        title: "What is cross-site request forgery (CSRF), and how can it be prevented?",
+      },
+      {
+        number: 87,
+        title: "Why is using eval dangerous?",
+      },
+      {
+        number: 88,
+        title: "What is strict mode?",
+      },
+      {
+        number: 89,
+        title: "What is optional chaining?",
+      },
+      {
+        number: 90,
+        title: "What is nullish coalescing?",
+      },
+      {
+        number: 91,
+        title: "What are common ways to test JavaScript code?",
+      },
+      {
+        number: 92,
+        title: "What is the difference between unit, integration, and end-to-end testing?",
+      },
+    ],
+  },
+  {
+    title: "Practical interview questions",
+    questions: [
+      {
+        number: 93,
+        title: "How would you reverse a string?",
+      },
+      {
+        number: 94,
+        title: "How would you check whether a string is a palindrome?",
+      },
+      {
+        number: 95,
+        title: "How would you flatten a nested array?",
+      },
+      {
+        number: 96,
+        title: "How would you group an array of objects by a property?",
+      },
+      {
+        number: 97,
+        title: "How would you implement debounce?",
+      },
+      {
+        number: 98,
+        title: "How would you implement throttle?",
+      },
+      {
+        number: 99,
+        title: "How would you implement a deep clone?",
+      },
+      {
+        number: 100,
+        title: "How would you implement a simplified version of Promise.all?",
+      },
+      {
+        number: 101,
+        title: "How would you retry a failed asynchronous operation?",
+      },
+      {
+        number: 102,
+        title: "How would you build an event emitter?",
+      },
+      {
+        number: 103,
+        title: "How would you cache the result of a function?",
+      },
+      {
+        number: 104,
+        title: "How would you diagnose and improve a slow frontend application?",
       },
     ],
   },
