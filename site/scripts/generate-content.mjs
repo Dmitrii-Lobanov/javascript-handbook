@@ -162,9 +162,9 @@ function stripInlineMarkdown(markdown) {
 
 const questionAnswers = existsSync(questionsAnswersFile)
   ? readFileSync(questionsAnswersFile, "utf8")
-      .split(/(?=^### Card \d+\s*$)/m)
+      .split(/(?=^#{2,3} Card \d+\s*$)/m)
       .map((block) => {
-        const number = Number(block.match(/^### Card (\d+)\s*$/m)?.[1]);
+        const number = Number(block.match(/^#{2,3} Card (\d+)\s*$/m)?.[1]);
         return {
           number,
           question: stripInlineMarkdown(cardField(block, "question")),

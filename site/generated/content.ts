@@ -1305,50 +1305,170 @@ export const questionAnswers: QuestionAnswer[] = [
     number: 1,
     question: "What is the difference between var, let, and const?",
     answer:
-      "`var` is function-scoped and can be redeclared. `let` and `const` are block-scoped; `let` can be reassigned, while `const` cannot.",
+      "`var`, `let`, and `const` declare variables, but they differ in scope, redeclaration, reassignment, and initialization.\n\n- `var` is function-scoped and can be redeclared and reassigned.\n- `let` is block-scoped, cannot be redeclared in the same scope, and can be reassigned.\n- `const` is block-scoped and cannot be redeclared or reassigned.",
     explanation:
-      "`var` is initialized to `undefined` when its scope starts. `let` and `const` stay in the temporal dead zone until their declaration is evaluated. Use `const` by default and `let` when reassignment is required. A `const` object can still be mutated.",
+      'Prefer `const` by default and use `let` when a variable must change. Avoid `var` in modern JavaScript because its function scope can cause unexpected behavior.\n\n```js\nconst name = "Alex";\nlet count = 0;\ncount++;\n```',
     details:
-      "`var` belongs to the nearest function scope, so a block such as an `if` statement does not contain it. It also permits redeclaration. `let` and `const` belong to the nearest block and cannot be redeclared in the same scope. `const` requires an initializer and protects only the binding—not the object it identifies.\n\n```js\nif (true) {\n  var functionScoped = 1;\n  let blockScoped = 2;\n}\n\nconsole.log(functionScoped); // 1\nconsole.log(blockScoped); // ReferenceError\n```",
+      'Variables declared with `let` and `const` belong to the nearest block, while `var` belongs to the nearest function:\n\n```js\nif (true) {\n  var functionScoped = "available outside";\n  let blockScoped = "available only inside";\n}\n\nconsole.log(functionScoped); // "available outside"\nconsole.log(blockScoped);    // ReferenceError\n```\n\nA `var` declaration can be repeated in the same scope:\n\n```js\nvar score = 10;\nvar score = 20; // Allowed\n```\n\n`let` and `const` cannot be redeclared in the same scope:\n\n```js\nlet age = 30;\nlet age = 31; // SyntaxError\n```\n\n`const` prevents reassignment, but it does not make objects immutable:\n\n```js\nconst user = { name: "Alex" };\n\nuser.name = "Sam";       // Allowed\nuser = { name: "Lee" };  // TypeError\n```\n\nAll three declarations are hoisted. However, `var` is initialized with `undefined`, while `let` and `const` remain inaccessible in the temporal dead zone until their declarations execute.',
   },
   {
     number: 2,
     question: "What are JavaScript’s primitive data types?",
     answer:
-      "JavaScript has seven primitive data types:\n\n- `string`\n- `number`\n- `bigint`\n- `boolean`\n- `undefined`\n- `symbol`\n- `null`",
+      "JavaScript has seven primitive data types:\n\n- `string`\n- `number`\n- `bigint`\n- `boolean`\n- `undefined`\n- `symbol`\n- `null`\n\nA primitive represents a single immutable value. Everything that is not a primitive is an object, including arrays and functions.",
     explanation:
-      'Primitive values are immutable and are compared by value. Everything that is not a primitive is an object, including arrays and functions. One historical JavaScript quirk is that `typeof null` returns `"object"`.',
+      'Primitive values cannot be modified in place and are compared by value:\n\n```js\nconst first = "hello";\nconst second = "hello";\n\nfirst === second; // true\n```',
     details:
-      'Immutability means a primitive cannot change in place; an operation produces another value instead. Objects have identity, so separately created objects are unequal even when their properties match. Symbols are primitives with unique identity: two calls to `Symbol("id")` create distinct values.\n\n```js\n"hello".toUpperCase(); // returns a new string\n{} === {}; // false: different object identities\nSymbol("id") === Symbol("id"); // false\n```',
+      'Each primitive has a particular purpose:\n\n- `string` represents text.\n- `number` represents floating-point numbers, including `NaN` and `Infinity`.\n- `bigint` represents integers larger than the safe range supported by `number`.\n- `boolean` represents `true` or `false`.\n- `undefined` commonly represents a missing or uninitialized value.\n- `symbol` creates unique identifiers.\n- `null` represents an intentional absence of a value.\n\n```js\nconst title = "Developer";\nconst price = 19.99;\nconst largeNumber = 9007199254740993n;\nconst isActive = true;\nconst missing = undefined;\nconst id = Symbol("id");\nconst selectedUser = null;\n```\n\nPrimitive values are immutable:\n\n```js\nlet text = "hello";\ntext.toUpperCase();\n\nconsole.log(text); // "hello"\n```\n\nString methods return new values rather than modifying the original string.\n\nThe `typeof` operator identifies most primitive types:\n\n```js\ntypeof "hello";    // "string"\ntypeof 42;         // "number"\ntypeof 42n;        // "bigint"\ntypeof true;       // "boolean"\ntypeof undefined;  // "undefined"\ntypeof Symbol();   // "symbol"\n```\n\nOne historical JavaScript behavior is:\n\n```js\ntypeof null; // "object"\n```\n\nDespite this result, `null` is a primitive.',
   },
   {
     number: 3,
     question: "What is the difference between null and undefined?",
     answer:
-      "`undefined` commonly represents a missing or uninitialized value. `null` is normally assigned deliberately to represent no value.",
+      "`undefined` usually means that a value has not been assigned or does not exist. `null` is an explicit value used to represent the intentional absence of a value.",
     explanation:
-      "JavaScript often produces `undefined` automatically, such as for a missing property. Developers normally assign `null` deliberately.\n\n```js\nlet name; // undefined\nconst user = null; // intentionally empty\nconst age = person.age; // undefined if age does not exist\n```",
+      "JavaScript frequently produces `undefined` automatically, while developers normally assign `null` deliberately.\n\n```js\nlet name;          // undefined\nconst user = null; // intentionally empty\n```",
     details:
-      'Other common sources of `undefined` are omitted arguments and functions without an explicit return value. `null` and `undefined` are different primitive values: strict equality distinguishes them, while loose equality treats them as equal to each other. Their business meaning is still an application convention, so APIs should use them consistently.\n\n```js\nnull === undefined; // false\nnull == undefined; // true\nnull ?? "fallback"; // "fallback"\n```',
+      'Common situations that produce `undefined` include:\n\n- A declared but uninitialized variable\n- A missing object property\n- A function parameter that was not provided\n- A function with no explicit return value\n\n```js\nlet value;\nconsole.log(value); // undefined\n\nconst user = {};\nconsole.log(user.name); // undefined\n\nfunction greet(name) {\n  console.log(name);\n}\n\ngreet(); // undefined\n\nfunction doSomething() {}\ndoSomething(); // returns undefined\n```\n\n`null` is commonly used when a value is intentionally empty:\n\n```js\nconst state = {\n  selectedUser: null\n};\n```\n\nTheir types behave differently:\n\n```js\ntypeof undefined; // "undefined"\ntypeof null;      // "object"\n```\n\nLoose equality considers them equal, but strict equality does not:\n\n```js\nnull == undefined;  // true\nnull === undefined; // false\n```\n\nA useful nullish check is:\n\n```js\nif (value == null) {\n  // Runs when value is either null or undefined\n}\n```\n\nIn most other comparisons, strict equality should be preferred.',
   },
   {
     number: 4,
     question: "What is the difference between == and ===?",
     answer:
-      "`===` compares without type coercion. `==` follows a type-directed algorithm that may coerce one operand when their types differ.",
+      "The loose equality operator `==` compares values after performing type coercion when necessary. The strict equality operator `===` compares values without converting their types.",
     explanation:
-      'Prefer `===` unless a specific loose-equality rule is intentional, such as `value == null` to match both `null` and `undefined`.\n\n```js\n5 == "5"; // true\n5 === "5"; // false\n```\n\nObjects are compared by identity with either operator:\n\n```js\n{} === {}; // false\n```',
+      'Strict equality is more predictable and should generally be preferred:\n\n```js\n5 == "5";  // true\n5 === "5"; // false\n```',
     details:
-      "Loose equality chooses conversions according to the operand types; it does not simply convert both sides to numbers. Booleans convert to numbers, objects may convert to primitives, and `null` is loosely equal only to `undefined`. Both equality operators compare objects by identity rather than their properties. `NaN` is unequal to itself under both operators, so use `Number.isNaN` when testing for it.\n\n```js\nfalse == 0; // true\n[] == false; // true\nnull == 0; // false\nNumber.isNaN(NaN); // true\n```",
+      'Loose equality follows type-conversion rules that can create surprising results:\n\n```js\n0 == false;          // true\n"" == false;         // true\nnull == undefined;   // true\n" \\t" == 0;          // true\n```\n\nStrict equality requires matching types:\n\n```js\n0 === false;          // false\n"" === false;         // false\nnull === undefined;   // false\n```\n\n`NaN` is not equal to itself with either operator:\n\n```js\nNaN == NaN;  // false\nNaN === NaN; // false\n```\n\nUse `Number.isNaN()` to test for it:\n\n```js\nNumber.isNaN(NaN); // true\n```\n\nObjects are compared by identity rather than by their contents:\n\n```js\n{} === {}; // false\n\nconst user = { name: "Alex" };\nconst sameUser = user;\n\nuser === sameUser; // true\n```\n\nJavaScript also provides `Object.is()`, which differs from `===` in two notable cases:\n\n```js\nObject.is(NaN, NaN); // true\nObject.is(0, -0);    // false\n```',
   },
   {
     number: 5,
     question: "What are truthy and falsy values?",
     answer:
-      'Truthy values behave like `true` in a Boolean context, while falsy values behave like `false`.\n\nThe falsy values are:\n\n- `false`\n- `0`\n- `-0`\n- `0n`\n- `""`\n- `null`\n- `undefined`\n- `NaN`',
+      'A truthy value becomes `true` when evaluated in a Boolean context. A falsy value becomes `false`.\n\nJavaScript’s falsy values are:\n\n- `false`\n- `0`\n- `-0`\n- `0n`\n- `""`\n- `null`\n- `undefined`\n- `NaN`\n\nEvery other value is truthy.',
     explanation:
-      'Every other value is truthy, including empty arrays and empty objects. This matters in conditions, logical operators, and default-value expressions.\n\n```js\nif ("hello") {\n  // Runs because a non-empty string is truthy\n}\n\nBoolean([]); // true\nBoolean({}); // true\n```',
+      'JavaScript performs Boolean coercion in conditions and logical expressions:\n\n```js\nif ("hello") {\n  // Runs because a non-empty string is truthy\n}\n```',
     details:
-      'Boolean contexts include `if`, `while`, ternary conditions, and logical operators. Every object is truthy, including wrapper objects such as `new Boolean(false)`. For defaults, `||` replaces every falsy value, while `??` replaces only `null` and `undefined`. Use `??` when `0`, `false`, or an empty string are valid values.\n\n```js\n0 || 10; // 10\n0 ?? 10; // 0\n"" || "Untitled"; // "Untitled"\n"" ?? "Untitled"; // ""\n```',
+      'Values that sometimes look empty can still be truthy:\n\n```js\nBoolean([]);      // true\nBoolean({});      // true\nBoolean("false"); // true\nBoolean("0");     // true\n```\n\nLogical operators return operands rather than always returning Boolean values:\n\n```js\n"hello" && 42; // 42\n"" && 42;      // ""\n"" || "guest"; // "guest"\n```\n\nThe `&&` operator returns the first falsy operand or the final operand if all are truthy. The `||` operator returns the first truthy operand or the final operand if all are falsy.\n\nThis can cause problems when `0` or an empty string is a valid value:\n\n```js\nconst count = 0;\nconst result = count || 10;\n\nconsole.log(result); // 10\n```\n\nNullish coalescing only uses the fallback for `null` or `undefined`:\n\n```js\nconst result = count ?? 10;\n\nconsole.log(result); // 0\n```\n\nUse `Boolean(value)` or double negation when an actual Boolean is required:\n\n```js\nBoolean("hello"); // true\n!!"hello";        // true\n```',
+  },
+  {
+    number: 6,
+    question: "What is type coercion?",
+    answer:
+      "Type coercion is the conversion of a value from one data type to another. It can happen automatically through implicit coercion or intentionally through explicit conversion.",
+    explanation:
+      'JavaScript may automatically convert values when operators receive different types:\n\n```js\n"5" + 2; // "52"\n"5" - 2; // 3\n```\n\nExplicit conversion is usually easier to understand:\n\n```js\nNumber("5"); // 5\nString(5);   // "5"\nBoolean(0);  // false\n```',
+    details:
+      'Implicit coercion depends on the operator and the values involved.\n\nThe `+` operator performs addition when both operands are numbers. If either operand becomes a string, it performs string concatenation:\n\n```js\n5 + 2;    // 7\n"5" + 2;  // "52"\n5 + "2";  // "52"\n```\n\nMost other arithmetic operators attempt to convert their operands to numbers:\n\n```js\n"10" - 4; // 6\n"10" * 2; // 20\n"10" / 2; // 5\n```\n\nIf a value cannot be converted into a valid number, the result is `NaN`:\n\n```js\nNumber("hello"); // NaN\n"hello" * 2;     // NaN\n```\n\nBoolean coercion occurs in conditions and logical expressions:\n\n```js\nBoolean("");      // false\nBoolean("false"); // true\nBoolean([]);      // true\nBoolean({});      // true\n```\n\nLoose equality performs coercion before comparison, while strict equality does not:\n\n```js\n5 == "5";  // true\n5 === "5"; // false\n```\n\nExplicit conversion communicates intent more clearly and reduces unexpected behavior:\n\n```js\nconst input = "42";\nconst total = Number(input) + 8;\n\nconsole.log(total); // 50\n```',
+  },
+  {
+    number: 7,
+    question: "What is hoisting?",
+    answer:
+      "Hoisting describes how JavaScript creates declarations before executing the code in a scope.\n\nDifferent declarations behave differently:\n\n- Function declarations are initialized with their function definitions.\n- `var` variables are initialized with `undefined`.\n- `let`, `const`, and `class` declarations remain inaccessible until their declarations execute.\n- Function expressions follow the rules of the variables that contain them.",
+    explanation:
+      'JavaScript does not physically move declarations. Hoisting describes the observable result of declarations being processed before code execution.\n\n```js\nsayHello(); // Works\n\nfunction sayHello() {\n  console.log("Hello");\n}\n```',
+    details:
+      'A `var` variable can be accessed before its declaration, but its value is initially `undefined`:\n\n```js\nconsole.log(score); // undefined\nvar score = 10;\n```\n\nConceptually, the declaration is processed before execution, but the assignment remains in place:\n\n```js\nvar score;\nconsole.log(score);\nscore = 10;\n```\n\n`let` and `const` are also registered before execution, but accessing them early throws a `ReferenceError`:\n\n```js\nconsole.log(age); // ReferenceError\nlet age = 30;\n```\n\nFunction expressions are not fully initialized early:\n\n```js\ngreet(); // TypeError: greet is not a function\n\nvar greet = function () {\n  console.log("Hello");\n};\n```\n\nWith `let` or `const`, calling the function expression early produces a `ReferenceError`:\n\n```js\ngreet(); // ReferenceError\n\nconst greet = function () {\n  console.log("Hello");\n};\n```\n\nUnderstanding hoisting helps explain why declaration style affects when a variable or function can be used.',
+  },
+  {
+    number: 8,
+    question: "What is the temporal dead zone?",
+    answer:
+      "The temporal dead zone, or TDZ, is the period between entering a scope and executing the declaration of a `let`, `const`, or `class` binding.\n\nDuring this period, the binding belongs to the scope but has not been initialized. Accessing it throws a `ReferenceError`.",
+    explanation:
+      "The TDZ ends when JavaScript reaches the declaration:\n\n```js\nconsole.log(count); // ReferenceError\n\nlet count = 1;\n\nconsole.log(count); // 1\n```",
+    details:
+      'A variable in the TDZ can also shadow a variable from an outer scope:\n\n```js\nconst status = "global";\n\n{\n  console.log(status); // ReferenceError\n  const status = "local";\n}\n```\n\nJavaScript does not use the global `status` inside the block because the local binding belongs to that entire block. It remains inaccessible until its declaration.\n\nEven `typeof`, which is normally safe for undeclared variables, throws an error for a variable in the TDZ:\n\n```js\ntypeof unknownVariable; // "undefined"\n\ntypeof value; // ReferenceError\nlet value = 10;\n```\n\nA `const` variable must be initialized at its declaration:\n\n```js\nconst name; // SyntaxError\n```\n\nA `let` variable can be declared without an initial value. It becomes `undefined` after the declaration executes:\n\n```js\nlet name;\nconsole.log(name); // undefined\n```\n\nThe TDZ encourages variables to be declared before use and helps reveal initialization-order mistakes.',
+  },
+  {
+    number: 9,
+    question: "What is lexical scope?",
+    answer:
+      "Lexical scope means that a variable’s accessibility is determined by where variables and functions are written in the source code.\n\nWhen JavaScript resolves a variable, it searches the current scope and then moves outward through the surrounding scopes. This sequence is called the scope chain.",
+    explanation:
+      'Inner functions can access variables from outer scopes, but outer scopes cannot access variables declared only inside inner scopes.\n\n```js\nconst message = "Hello";\n\nfunction greet() {\n  console.log(message); // Accessible\n}\n```',
+    details:
+      'JavaScript has several kinds of scope:\n\n- Global scope\n- Module scope\n- Function scope\n- Block scope\n\nA function retains the scope in which it was defined, regardless of where it is called:\n\n```js\nconst name = "Global";\n\nfunction printName() {\n  console.log(name);\n}\n\nfunction run() {\n  const name = "Local";\n  printName();\n}\n\nrun(); // "Global"\n```\n\n`printName` was defined in the global lexical environment, so it uses the global `name`. The fact that it is called inside `run` does not change its scope.\n\nNested functions can search through multiple outer scopes:\n\n```js\nconst globalValue = "global";\n\nfunction outer() {\n  const outerValue = "outer";\n\n  function inner() {\n    const innerValue = "inner";\n\n    console.log(innerValue);\n    console.log(outerValue);\n    console.log(globalValue);\n  }\n\n  inner();\n}\n```\n\nScope lookup moves outward only. `outer` cannot access `innerValue`.\n\nLexical scope is also the foundation of closures because a function retains access to the environment where it was created.',
+  },
+  {
+    number: 10,
+    question: "What is a closure?",
+    answer:
+      "A closure is the combination of a function and the lexical environment in which that function was created.\n\nIt allows a function to retain access to variables from its outer scope even after the outer function has finished executing.",
+    explanation:
+      "Closures are commonly used for private state, callbacks, function factories, memoization, and partial application.\n\n```js\nfunction createCounter() {\n  let count = 0;\n\n  return () => ++count;\n}\n```",
+    details:
+      'The returned function continues to access `count` after `createCounter` has completed:\n\n```js\nconst counter = createCounter();\n\ncounter(); // 1\ncounter(); // 2\ncounter(); // 3\n```\n\nEach invocation of the outer function creates a separate lexical environment:\n\n```js\nconst firstCounter = createCounter();\nconst secondCounter = createCounter();\n\nfirstCounter();  // 1\nfirstCounter();  // 2\nsecondCounter(); // 1\n```\n\nClosures can create private state:\n\n```js\nfunction createAccount(initialBalance) {\n  let balance = initialBalance;\n\n  return {\n    deposit(amount) {\n      balance += amount;\n    },\n    getBalance() {\n      return balance;\n    }\n  };\n}\n\nconst account = createAccount(100);\naccount.deposit(50);\naccount.getBalance(); // 150\n```\n\nThe `balance` variable cannot be accessed directly from outside the returned methods.\n\nClosures are also created in event handlers:\n\n```js\nfunction attachHandler(button, message) {\n  button.addEventListener("click", () => {\n    console.log(message);\n  });\n}\n```\n\nThe handler retains access to `message`.\n\nClosures may keep referenced data in memory for as long as the closure remains reachable. Unnecessary long-lived closures can therefore contribute to memory usage.',
+  },
+  {
+    number: 11,
+    question: "What is variable shadowing?",
+    answer:
+      "Variable shadowing occurs when an inner scope declares a variable with the same name as a variable in an outer scope.\n\nInside the inner scope, that name resolves to the inner variable. The outer variable still exists and becomes accessible again after execution leaves the inner scope.",
+    explanation:
+      'Shadowing is valid, but excessive shadowing can make code confusing because the same name represents different values in nearby scopes.\n\n```js\nconst name = "Alex";\n\nfunction greet() {\n  const name = "Sam";\n  console.log(name); // "Sam"\n}\n```',
+    details:
+      'Shadowing can occur in functions and blocks:\n\n```js\nconst status = "offline";\n\n{\n  const status = "online";\n  console.log(status); // "online"\n}\n\nconsole.log(status); // "offline"\n```\n\nFunction parameters can also shadow outer variables:\n\n```js\nconst user = "Alex";\n\nfunction greet(user) {\n  console.log(user);\n}\n\ngreet("Sam"); // "Sam"\n```\n\nNot every combination of declarations is allowed. For example, a `let` variable cannot be redeclared with `var` in the same scope:\n\n```js\nlet count = 1;\nvar count = 2; // SyntaxError\n```\n\nShadowing is different from reassignment:\n\n```js\nlet score = 10;\n\n{\n  score = 20; // Reassigns the outer variable\n}\n\nconsole.log(score); // 20\n```\n\nDeclaring `let score = 20` inside the block would create a separate shadowing variable instead.\n\nClear, specific names are usually preferable when shadowing could make the code difficult to follow.',
+  },
+  {
+    number: 12,
+    question: "What is the difference between passing values by value and by reference?",
+    answer:
+      "JavaScript always passes function arguments by value.\n\n- For a primitive, the copied value is the primitive itself.\n- For an object, array, or function, the copied value is a reference identifying the same object.\n\nA function can mutate an object through the copied reference, but reassigning the parameter does not change the caller’s variable.",
+    explanation:
+      'JavaScript is accurately described as pass-by-value, including when the value being copied is an object reference.\n\n```js\nfunction update(user) {\n  user.name = "Sam";\n  user = { name: "Lee" };\n}\n```',
+    details:
+      'Reassigning a primitive parameter does not affect the original variable:\n\n```js\nfunction change(value) {\n  value = 20;\n}\n\nlet score = 10;\nchange(score);\n\nconsole.log(score); // 10\n```\n\nThe function receives its own copy of the number.\n\nWith an object, the parameter and the caller’s variable initially contain copies of the same reference:\n\n```js\nfunction update(user) {\n  user.name = "Sam";\n}\n\nconst person = { name: "Alex" };\nupdate(person);\n\nconsole.log(person.name); // "Sam"\n```\n\nBoth references identify the same object, so mutation is visible to the caller.\n\nReassigning the parameter only replaces the function’s local reference:\n\n```js\nfunction replace(user) {\n  user = { name: "Lee" };\n}\n\nconst person = { name: "Alex" };\nreplace(person);\n\nconsole.log(person.name); // "Alex"\n```\n\nThis distinction also applies to arrays:\n\n```js\nfunction addItem(items) {\n  items.push("new"); // Mutates the original array\n}\n\nfunction replaceItems(items) {\n  items = []; // Reassigns only the local parameter\n}\n```\n\nTo avoid unwanted mutation, create a new object or array:\n\n```js\nfunction rename(user, name) {\n  return { ...user, name };\n}\n```',
+  },
+  {
+    number: 13,
+    question: "How do shallow and deep copies differ?",
+    answer:
+      "A shallow copy creates a new top-level object or array but reuses references to nested objects. A deep copy creates independent copies of nested data as well.\n\nModifying a nested value in a shallow copy may affect the original. Modifying a deep copy does not.",
+    explanation:
+      "Spread syntax, `Object.assign()`, `Array.from()`, and `slice()` create shallow copies. `structuredClone()` can deeply copy many supported values.\n\n```js\nconst copy = { ...original };\n```",
+    details:
+      'A shallow copy duplicates only the first level:\n\n```js\nconst original = {\n  name: "Alex",\n  settings: {\n    theme: "light"\n  }\n};\n\nconst copy = { ...original };\n\ncopy.name = "Sam";\ncopy.settings.theme = "dark";\n\nconsole.log(original.name);           // "Alex"\nconsole.log(original.settings.theme); // "dark"\n```\n\n`name` is independent because it is a primitive top-level property. The nested `settings` object remains shared.\n\n`structuredClone()` creates a deep copy:\n\n```js\nconst deepCopy = structuredClone(original);\n\ndeepCopy.settings.theme = "blue";\n\nconsole.log(original.settings.theme); // "dark"\n```\n\nIt supports many types, including:\n\n- Objects and arrays\n- `Date`\n- `Map` and `Set`\n- Typed arrays\n- Circular references\n\nIt cannot clone every value. Functions, DOM nodes, and some platform-specific objects are not supported.\n\nConverting through JSON is sometimes used as a simple deep-copy technique:\n\n```js\nconst copy = JSON.parse(JSON.stringify(original));\n```\n\nHowever, this approach loses or changes unsupported data such as `undefined`, functions, symbols, `Date`, `Map`, `Set`, `BigInt`, and circular references. It should not be treated as a general-purpose cloning solution.',
+  },
+  {
+    number: 14,
+    question: "What is destructuring?",
+    answer:
+      "Destructuring is syntax that extracts values from arrays or properties from objects and assigns them to variables.\n\nObject destructuring matches values by property name, while array destructuring matches values by position.",
+    explanation:
+      'Destructuring provides a concise way to access selected data:\n\n```js\nconst user = { name: "Alex", age: 30 };\nconst { name, age } = user;\n\nconst colors = ["red", "blue"];\nconst [primary, secondary] = colors;\n```',
+    details:
+      'Object properties can be renamed:\n\n```js\nconst user = { name: "Alex" };\nconst { name: displayName } = user;\n\nconsole.log(displayName); // "Alex"\n```\n\nDefault values are used when the extracted value is `undefined`:\n\n```js\nconst user = {};\nconst { role = "guest" } = user;\n\nconsole.log(role); // "guest"\n```\n\nA default does not replace `null`:\n\n```js\nconst user = { role: null };\nconst { role = "guest" } = user;\n\nconsole.log(role); // null\n```\n\nArray elements can be skipped:\n\n```js\nconst colors = ["red", "green", "blue"];\nconst [primary, , tertiary] = colors;\n\nconsole.log(tertiary); // "blue"\n```\n\nNested values can be destructured:\n\n```js\nconst user = {\n  profile: {\n    email: "alex@example.com"\n  }\n};\n\nconst {\n  profile: { email }\n} = user;\n```\n\nRest syntax collects the remaining values:\n\n```js\nconst [first, ...remaining] = [1, 2, 3, 4];\n// first: 1\n// remaining: [2, 3, 4]\n```\n\nDestructuring is also useful in function parameters:\n\n```js\nfunction printUser({ name, role = "guest" }) {\n  console.log(`${name}: ${role}`);\n}\n```\n\nNested destructuring can throw an error if an expected parent value is missing, so defaults or optional access may be necessary when working with uncertain data.',
+  },
+  {
+    number: 15,
+    question: "What are rest and spread syntax, and how do they differ?",
+    answer:
+      "Rest and spread both use `...`, but they perform opposite operations:\n\n- Spread expands an iterable or object into individual values or properties.\n- Rest collects multiple remaining values or properties into a new array or object.\n\nTheir meaning is determined by where the syntax appears.",
+    explanation:
+      "Spread expands values, while rest collects them:\n\n```js\nconst numbers = [1, 2, 3];\nconst copy = [...numbers]; // Spread\n\nfunction sum(...values) {  // Rest\n  return values.reduce((total, value) => total + value, 0);\n}\n```",
+    details:
+      'Array spread can copy or combine arrays:\n\n```js\nconst first = [1, 2];\nconst second = [3, 4];\n\nconst combined = [...first, ...second];\n// [1, 2, 3, 4]\n```\n\nFunction-call spread passes iterable values as separate arguments:\n\n```js\nconst numbers = [4, 8, 2];\n\nMath.max(...numbers); // 8\n```\n\nObject spread copies enumerable own properties:\n\n```js\nconst defaults = {\n  theme: "light",\n  language: "en"\n};\n\nconst settings = {\n  ...defaults,\n  theme: "dark"\n};\n```\n\nLater properties override earlier properties, so `settings.theme` becomes `"dark"`.\n\nRest parameters collect arguments into a real array:\n\n```js\nfunction average(...numbers) {\n  const total = numbers.reduce(\n    (sum, number) => sum + number,\n    0\n  );\n\n  return total / numbers.length;\n}\n```\n\nRest syntax can collect remaining destructured values:\n\n```js\nconst user = {\n  id: 1,\n  name: "Alex",\n  role: "admin"\n};\n\nconst { id, ...details } = user;\n```\n\nSpread creates shallow copies. Nested objects remain shared:\n\n```js\nconst original = {\n  settings: { dark: false }\n};\n\nconst copy = { ...original };\ncopy.settings.dark = true;\n\nconsole.log(original.settings.dark); // true\n```',
+  },
+  {
+    number: 16,
+    question: "What are template literals?",
+    answer:
+      "Template literals are strings enclosed by backticks.\n\nThey support:\n\n- Expression interpolation with `${expression}`\n- Multiline strings\n- Tagged templates that process the literal through a function",
+    explanation:
+      'Template literals make dynamic strings more readable:\n\n```js\nconst name = "Alex";\nconst message = `Hello, ${name}!`;\n```',
+    details:
+      'Any valid expression can appear inside `${...}`:\n\n```js\nconst price = 20;\nconst quantity = 3;\n\nconst message = `Total: $${price * quantity}`;\n// "Total: $60"\n```\n\nProperties and function calls can also be interpolated:\n\n```js\nconst user = { name: "Alex" };\n\nconst text = `Welcome, ${user.name.toUpperCase()}!`;\n```\n\nTemplate literals can span multiple lines:\n\n```js\nconst content = `First line\nSecond line\nThird line`;\n```\n\nTagged templates pass the literal’s static strings and evaluated expressions to a function:\n\n```js\nfunction inspect(strings, ...values) {\n  console.log(strings);\n  console.log(values);\n}\n\nconst name = "Alex";\nconst count = 3;\n\ninspect`${name} has ${count} messages`;\n```\n\nTagged templates can be used for escaping content, localization, formatting, or domain-specific syntax.\n\nInterpolation does not automatically make untrusted content safe. When inserting user-controlled values into HTML, developers must still use appropriate escaping or safe DOM APIs to prevent cross-site scripting.',
+  },
+  {
+    number: 17,
+    question: "What are JavaScript modules, and how do import and export work?",
+    answer:
+      "JavaScript modules divide an application into separate files with explicit dependencies and their own top-level scope.\n\n`export` exposes values from a module, and `import` makes those values available in another module.\n\nA module may have multiple named exports but only one default export.",
+    explanation:
+      'Modules improve code organization, reuse, dependency management, and encapsulation.\n\n```js\n// math.js\nexport const add = (a, b) => a + b;\n\n// app.js\nimport { add } from "./math.js";\n```',
+    details:
+      'Named exports use the exported names:\n\n```js\n// math.js\nexport const add = (a, b) => a + b;\nexport const subtract = (a, b) => a - b;\n```\n\nThey are imported with braces:\n\n```js\nimport { add, subtract } from "./math.js";\n```\n\nA named import can be aliased:\n\n```js\nimport { add as sum } from "./math.js";\n```\n\nA default export can be imported using any local name:\n\n```js\n// logger.js\nexport default function log(message) {\n  console.log(message);\n}\n```\n\n```js\nimport writeLog from "./logger.js";\n```\n\nNamed and default imports can be combined:\n\n```js\n// math.js\nexport default function multiply(a, b) {\n  return a * b;\n}\n\nexport const add = (a, b) => a + b;\n```\n\n```js\nimport multiply, { add } from "./math.js";\n```\n\nStatic imports are resolved before the module executes and normally appear at the top level. Dynamic `import()` loads a module asynchronously:\n\n```js\nconst module = await import("./analytics.js");\nmodule.trackPageView();\n```\n\nDynamic imports are useful for conditional loading and code splitting.\n\nImported bindings are live bindings. If the exporting module updates an exported variable, importing modules observe its current value:\n\n```js\n// counter.js\nexport let count = 0;\n\nexport function increment() {\n  count++;\n}\n```\n\nModules are evaluated once, and repeated imports reuse the same module instance.\n\nIn browsers, modules are loaded with:\n\n```html\n\u003cscript type="module" src="./app.js">\u003c/script>\n```\n\nBrowser modules use strict mode automatically, have their own scope, and are deferred by default.',
   },
 ];
