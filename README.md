@@ -35,7 +35,7 @@ The book has nine parts:
 8. React Connections
 9. Interview Preparation
 
-See the [complete table of contents](book/table-of-contents.md).
+See the [complete table of contents](javascript/handbook/table-of-contents.md).
 
 ## How to read the handbook
 
@@ -45,7 +45,9 @@ The primary goal is not to memorize phrasing. Practice giving a direct definitio
 
 ## Repository layout
 
-- `book/` contains the manuscript, editorial guidance, and chapter template.
+- `javascript/handbook/` contains the JavaScript manuscript and table of contents.
+- `javascript/q-and-a/` contains the JavaScript interview roadmap, answers, and explanations.
+- `react/handbook/` and `react/q-and-a/` are ready for the React knowledge track.
 - `exercises/questions/` and `exercises/solutions/` keep longer exercises separate from chapters.
 - `examples/browser/`, `examples/node/`, and `examples/react/` contain runnable, environment-specific examples.
 - `diagrams/` stores reusable diagram sources or exported assets when Markdown embedding is insufficient.

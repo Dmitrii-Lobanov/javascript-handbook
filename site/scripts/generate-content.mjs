@@ -4,9 +4,10 @@ import { fileURLToPath } from "node:url";
 
 const siteRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(siteRoot, "..");
-const bookRoot = join(repositoryRoot, "book");
-const questionsRoadmapFile = join(repositoryRoot, "questions", "roadmap.md");
-const questionsAnswersFile = join(repositoryRoot, "questions", "answers.md");
+const javascriptRoot = join(repositoryRoot, "javascript");
+const bookRoot = join(javascriptRoot, "handbook");
+const questionsRoadmapFile = join(javascriptRoot, "q-and-a", "roadmap.md");
+const questionsAnswersFile = join(javascriptRoot, "q-and-a", "answers.md");
 const outputFile = join(siteRoot, "generated", "content.ts");
 
 if (!existsSync(bookRoot)) {

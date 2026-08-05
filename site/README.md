@@ -1,6 +1,6 @@
 # JavaScript Interview Handbook app
 
-A statically generated Next.js reading app for the Markdown handbook in the repository's `book/` directory, ready for Vercel.
+A statically generated Next.js frontend wiki. JavaScript source content lives under the repository's `javascript/` directory, with a parallel `react/` structure ready for future content.
 
 ## Development
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-The `predev` and `prebuild` hooks regenerate `generated/content.ts` from the manuscript. Add or edit a chapter under `../book/`, then restart development or run:
+The `predev` and `prebuild` hooks regenerate `generated/content.ts` from the source files. Add or edit JavaScript chapters under `../javascript/handbook/` and Q&A under `../javascript/q-and-a/`, then restart development or run:
 
 ```bash
 npm run generate:content
