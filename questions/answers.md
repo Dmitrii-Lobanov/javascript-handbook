@@ -1320,3 +1320,1218 @@
   ```
 
   Browser modules use strict mode automatically, have their own scope, and are deferred by default.
+
+  # Functions and Objects Interview Cards
+
+## Card 18
+
+- question  
+  What is the difference between a function declaration and a function expression?
+
+- answer  
+  A function declaration defines a named function as a standalone statement. A function expression creates a function as part of an expression and usually assigns it to a variable.
+
+  Function declarations are fully initialized during hoisting. Function expressions follow the initialization rules of the variables that contain them.
+
+- explanation  
+  A function declaration can be called before it appears in the code. A function expression normally cannot.
+
+  ```js
+  greet(); // Works
+
+  function greet() {
+    console.log("Hello");
+  }
+  ```
+
+- details  
+  A function declaration uses this syntax:
+
+  ```js
+  function add(a, b) {
+    return a + b;
+  }
+  ```
+
+  A function expression can be anonymous:
+
+  ```js
+  const add = function (a, b) {
+    return a + b;
+  };
+  ```
+
+  It can also have an internal name:
+
+  ```js
+  const calculate = function add(a, b) {
+    return a + b;
+  };
+  ```
+
+  When a function expression is stored in `const`, the variable is in the temporal dead zone before its declaration:
+
+  ```js
+  greet(); // ReferenceError
+
+  const greet = function () {
+    console.log("Hello");
+  };
+  ```
+
+  With `var`, the variable is initialized with `undefined`, so calling it early produces a `TypeError`:
+
+  ```js
+  greet(); // TypeError: greet is not a function
+
+  var greet = function () {
+    console.log("Hello");
+  };
+  ```
+
+  Function expressions are useful when functions are passed as values, used as callbacks, or created conditionally.
+
+---
+
+## Card 19
+
+- question  
+  How do arrow functions differ from regular functions?
+
+- answer  
+  Arrow functions provide shorter syntax and do not create their own `this`, `arguments`, `super`, or `new.target`.
+
+  Their `this` value is inherited lexically from the surrounding scope. Arrow functions also cannot be used as constructors and do not have a `prototype` property for constructing instances.
+
+- explanation  
+  Arrow functions are useful for callbacks and functions that should preserve the surrounding `this`. Regular functions are usually more appropriate for object methods and constructors.
+
+  ```js
+  const double = number => number * 2;
+  ```
+
+- details  
+  Arrow functions can use an implicit return when the body contains one expression:
+
+  ```js
+  const add = (a, b) => a + b;
+  ```
+
+  Curly braces require an explicit `return`:
+
+  ```js
+  const add = (a, b) => {
+    return a + b;
+  };
+  ```
+
+  Returning an object implicitly requires parentheses:
+
+  ```js
+  const createUser = name => ({ name });
+  ```
+
+  Arrow functions inherit `this` from their surrounding scope:
+
+  ```js
+  const timer = {
+    seconds: 0,
+
+    start() {
+      setInterval(() => {
+        this.seconds++;
+      }, 1000);
+    }
+  };
+  ```
+
+  The callback uses the same `this` as `start`.
+
+  An arrow function is usually unsuitable as an object method when dynamic `this` is required:
+
+  ```js
+  const user = {
+    name: "Alex",
+    greet: () => {
+      console.log(this.name);
+    }
+  };
+  ```
+
+  The arrow function does not receive `user` as its `this`.
+
+  Arrow functions cannot be called with `new`:
+
+  ```js
+  const User = name => {
+    this.name = name;
+  };
+
+  new User("Alex"); // TypeError
+  ```
+
+  They also do not have their own `arguments` object. Rest parameters should be used instead:
+
+  ```js
+  const sum = (...numbers) =>
+    numbers.reduce((total, number) => total + number, 0);
+  ```
+
+---
+
+## Card 20
+
+- question  
+  How does the `this` keyword work?
+
+- answer  
+  In a regular function, `this` is usually determined by how the function is called, not where it is defined.
+
+  Its value can come from:
+
+  - A method call
+  - A constructor call with `new`
+  - An explicit call using `call`, `apply`, or `bind`
+  - The default function-calling rule
+  - The surrounding lexical scope for an arrow function
+
+- explanation  
+  When a function is called as an object method, `this` normally refers to the object before the dot.
+
+  ```js
+  const user = {
+    name: "Alex",
+    greet() {
+      console.log(this.name);
+    }
+  };
+
+  user.greet(); // "Alex"
+  ```
+
+- details  
+  A standalone function call uses the default binding:
+
+  ```js
+  "use strict";
+
+  function showThis() {
+    console.log(this);
+  }
+
+  showThis(); // undefined
+  ```
+
+  In older non-strict browser scripts, the default value may be the global object.
+
+  A method can lose its receiver when it is separated from its object:
+
+  ```js
+  const greet = user.greet;
+  greet(); // `this` is no longer `user`
+  ```
+
+  Explicit binding can provide a value:
+
+  ```js
+  greet.call(user); // "Alex"
+  ```
+
+  Constructor calls create a new object and bind it to `this`:
+
+  ```js
+  function User(name) {
+    this.name = name;
+  }
+
+  const user = new User("Alex");
+  ```
+
+  Arrow functions do not create their own `this`:
+
+  ```js
+  const user = {
+    name: "Alex",
+
+    delayedGreeting() {
+      setTimeout(() => {
+        console.log(this.name);
+      }, 100);
+    }
+  };
+  ```
+
+  Binding precedence is generally:
+
+  1. Constructor binding with `new`
+  2. Explicit binding with `bind`, `call`, or `apply`
+  3. Method binding
+  4. Default binding
+
+  A function created by `bind` keeps its bound `this`, although calling that bound function with `new` uses the newly created instance.
+
+---
+
+## Card 21
+
+- question  
+  What do `call`, `apply`, and `bind` do?
+
+- answer  
+  `call`, `apply`, and `bind` let developers control the `this` value used by a regular function.
+
+  - `call` invokes the function immediately with arguments listed separately.
+  - `apply` invokes the function immediately with arguments provided as an array or array-like value.
+  - `bind` returns a new function with a fixed `this` value and optional preset arguments.
+
+- explanation  
+  `call` and `apply` execute a function immediately. `bind` creates a function that can be executed later.
+
+  ```js
+  greet.call(user, "Hello");
+  greet.apply(user, ["Hello"]);
+  const boundGreet = greet.bind(user);
+  ```
+
+- details  
+  Consider this function:
+
+  ```js
+  function introduce(greeting, punctuation) {
+    return `${greeting}, I am ${this.name}${punctuation}`;
+  }
+
+  const user = { name: "Alex" };
+  ```
+
+  `call` accepts individual arguments:
+
+  ```js
+  introduce.call(user, "Hello", "!");
+  // "Hello, I am Alex!"
+  ```
+
+  `apply` accepts them as a collection:
+
+  ```js
+  introduce.apply(user, ["Hello", "!"]);
+  // "Hello, I am Alex!"
+  ```
+
+  `bind` creates a new function:
+
+  ```js
+  const introduceAlex = introduce.bind(user);
+
+  introduceAlex("Hello", "!");
+  // "Hello, I am Alex!"
+  ```
+
+  `bind` can also preset arguments, which is called partial application:
+
+  ```js
+  const sayHelloToAlex = introduce.bind(
+    user,
+    "Hello"
+  );
+
+  sayHelloToAlex("!");
+  ```
+
+  These methods cannot replace the lexical `this` of an arrow function:
+
+  ```js
+  const showThis = () => this;
+
+  showThis.call(user); // Does not change arrow `this`
+  ```
+
+---
+
+## Card 22
+
+- question  
+  What is a higher-order function?
+
+- answer  
+  A higher-order function is a function that accepts one or more functions as arguments, returns a function, or does both.
+
+  Higher-order functions support composition and abstraction by allowing behavior to be treated as data.
+
+- explanation  
+  Common array methods such as `map`, `filter`, and `reduce` are higher-order functions because they receive callback functions.
+
+  ```js
+  const doubled = [1, 2, 3].map(
+    number => number * 2
+  );
+  ```
+
+- details  
+  A function that receives another function is higher-order:
+
+  ```js
+  function repeat(times, action) {
+    for (let index = 0; index < times; index++) {
+      action(index);
+    }
+  }
+
+  repeat(3, index => {
+    console.log(index);
+  });
+  ```
+
+  A function that returns a function is also higher-order:
+
+  ```js
+  function multiplyBy(multiplier) {
+    return number => number * multiplier;
+  }
+
+  const double = multiplyBy(2);
+  const triple = multiplyBy(3);
+
+  double(5); // 10
+  triple(5); // 15
+  ```
+
+  Higher-order functions can separate reusable control flow from changing behavior:
+
+  ```js
+  function withLogging(action) {
+    return (...argumentsList) => {
+      console.log("Starting");
+      const result = action(...argumentsList);
+      console.log("Finished");
+      return result;
+    };
+  }
+  ```
+
+  This pattern is useful for validation, authorization, caching, logging, retries, and event handling.
+
+---
+
+## Card 23
+
+- question  
+  What is a callback function?
+
+- answer  
+  A callback is a function passed to another function so that the receiving function can execute it at an appropriate time.
+
+  Callbacks may run synchronously, such as callbacks passed to `map`, or asynchronously, such as event handlers and timer callbacks.
+
+- explanation  
+  A callback allows one function to receive customizable behavior.
+
+  ```js
+  function processUser(user, callback) {
+    callback(user);
+  }
+
+  processUser({ name: "Alex" }, user => {
+    console.log(user.name);
+  });
+  ```
+
+- details  
+  Synchronous callbacks execute before the surrounding function returns:
+
+  ```js
+  const numbers = [1, 2, 3];
+
+  const doubled = numbers.map(number => {
+    return number * 2;
+  });
+  ```
+
+  Asynchronous callbacks execute later:
+
+  ```js
+  setTimeout(() => {
+    console.log("Executed later");
+  }, 1000);
+  ```
+
+  Event listeners also use callbacks:
+
+  ```js
+  button.addEventListener("click", event => {
+    console.log(event.target);
+  });
+  ```
+
+  Traditional asynchronous code can become deeply nested:
+
+  ```js
+  getUser(userId, user => {
+    getOrders(user.id, orders => {
+      getOrderDetails(orders[0].id, details => {
+        console.log(details);
+      });
+    });
+  });
+  ```
+
+  This is often called callback hell. Promises and `async`/`await` make many asynchronous workflows easier to compose and handle.
+
+  Error-first callbacks are common in older Node.js APIs:
+
+  ```js
+  operation((error, result) => {
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    console.log(result);
+  });
+  ```
+
+---
+
+## Card 24
+
+- question  
+  What are pure functions and side effects?
+
+- answer  
+  A pure function always returns the same output for the same inputs and does not modify or depend on external mutable state.
+
+  A side effect is any observable interaction with something outside the function’s returned value.
+
+- explanation  
+  Pure functions are easier to test, reuse, cache, and reason about.
+
+  ```js
+  function add(a, b) {
+    return a + b;
+  }
+  ```
+
+- details  
+  Common side effects include:
+
+  - Modifying an external variable
+  - Mutating an argument
+  - Updating the DOM
+  - Writing to storage
+  - Sending a network request
+  - Logging to the console
+  - Reading the current time
+  - Generating a random value
+
+  This function is impure because it changes external state:
+
+  ```js
+  let total = 0;
+
+  function addToTotal(amount) {
+    total += amount;
+    return total;
+  }
+  ```
+
+  This version is pure:
+
+  ```js
+  function addToTotal(total, amount) {
+    return total + amount;
+  }
+  ```
+
+  Mutation can also make a function impure:
+
+  ```js
+  function addUser(users, user) {
+    users.push(user);
+    return users;
+  }
+  ```
+
+  A non-mutating version returns a new array:
+
+  ```js
+  function addUser(users, user) {
+    return [...users, user];
+  }
+  ```
+
+  Real applications require side effects. The goal is usually to isolate them from pure business logic rather than eliminate them entirely.
+
+  For example, data transformation can remain pure while a separate function handles the network request or DOM update.
+
+---
+
+## Card 25
+
+- question  
+  What is an immediately invoked function expression (IIFE)?
+
+- answer  
+  An IIFE is a function expression that executes immediately after it is created.
+
+  It was traditionally used to create a private scope and prevent variables from leaking into the global scope.
+
+- explanation  
+  Parentheses turn the function declaration-like syntax into an expression, and the final parentheses invoke it.
+
+  ```js
+  (function () {
+    const message = "Private";
+    console.log(message);
+  })();
+  ```
+
+- details  
+  An arrow function can also be used:
+
+  ```js
+  (() => {
+    const value = 42;
+    console.log(value);
+  })();
+  ```
+
+  An IIFE can return a value:
+
+  ```js
+  const result = (() => {
+    const first = 10;
+    const second = 20;
+
+    return first + second;
+  })();
+
+  console.log(result); // 30
+  ```
+
+  IIFEs were commonly used in the module pattern:
+
+  ```js
+  const counter = (() => {
+    let count = 0;
+
+    return {
+      increment() {
+        count++;
+      },
+      getCount() {
+        return count;
+      }
+    };
+  })();
+  ```
+
+  The `count` variable remains private.
+
+  Modern JavaScript modules and block-scoped variables have reduced the need for IIFEs. However, they can still be useful for one-time initialization or creating an isolated scope in older code.
+
+  An async IIFE allows `await` in environments where top-level `await` is unavailable:
+
+  ```js
+  (async () => {
+    const response = await fetch("/api/users");
+    const users = await response.json();
+
+    console.log(users);
+  })();
+  ```
+
+---
+
+## Card 26
+
+- question  
+  How do default parameters work?
+
+- answer  
+  Default parameters provide fallback values for function parameters when the corresponding argument is missing or explicitly set to `undefined`.
+
+  The default expression is evaluated when the function is called, not when it is defined.
+
+- explanation  
+  A default value is not used when the argument is `null`, `false`, `0`, or an empty string.
+
+  ```js
+  function greet(name = "Guest") {
+    return `Hello, ${name}`;
+  }
+
+  greet();          // "Hello, Guest"
+  greet(undefined); // "Hello, Guest"
+  greet(null);      // "Hello, null"
+  ```
+
+- details  
+  Default expressions can reference earlier parameters:
+
+  ```js
+  function createRange(start, end = start + 10) {
+    return { start, end };
+  }
+
+  createRange(5); // { start: 5, end: 15 }
+  ```
+
+  A later parameter cannot safely be referenced before it has been initialized:
+
+  ```js
+  function example(first = second, second = 2) {
+    return first + second;
+  }
+
+  example(); // ReferenceError
+  ```
+
+  Default expressions can call functions:
+
+  ```js
+  function generateId() {
+    return crypto.randomUUID();
+  }
+
+  function createUser(name, id = generateId()) {
+    return { name, id };
+  }
+  ```
+
+  `generateId()` runs each time the default is needed.
+
+  Destructured parameters can have defaults:
+
+  ```js
+  function configure({
+    theme = "light",
+    language = "en"
+  } = {}) {
+    return { theme, language };
+  }
+
+  configure(); // Works because the object defaults to {}
+  ```
+
+  Without `= {}`, calling `configure()` would attempt to destructure `undefined` and throw an error.
+
+---
+
+## Card 27
+
+- question  
+  How do JavaScript objects inherit properties?
+
+- answer  
+  JavaScript objects inherit properties and methods through prototypes.
+
+  Every ordinary object has an internal prototype link to another object or to `null`. When a property is not found directly on an object, JavaScript follows this link through the prototype chain.
+
+- explanation  
+  Inheritance allows multiple objects to share behavior without copying the same methods onto every instance.
+
+  ```js
+  const animal = {
+    speak() {
+      console.log("Sound");
+    }
+  };
+
+  const dog = Object.create(animal);
+  dog.speak();
+  ```
+
+- details  
+  An object can have both own properties and inherited properties:
+
+  ```js
+  const animal = {
+    type: "animal"
+  };
+
+  const dog = Object.create(animal);
+  dog.name = "Rex";
+
+  dog.name; // Own property
+  dog.type; // Inherited property
+  ```
+
+  `Object.hasOwn()` checks whether a property belongs directly to the object:
+
+  ```js
+  Object.hasOwn(dog, "name"); // true
+  Object.hasOwn(dog, "type"); // false
+  ```
+
+  Constructor functions typically place shared methods on their `prototype` object:
+
+  ```js
+  function User(name) {
+    this.name = name;
+  }
+
+  User.prototype.greet = function () {
+    return `Hello, ${this.name}`;
+  };
+
+  const user = new User("Alex");
+  user.greet();
+  ```
+
+  The `new` operator creates an object whose prototype points to `User.prototype`.
+
+  Classes use the same prototype-based mechanism:
+
+  ```js
+  class User {
+    constructor(name) {
+      this.name = name;
+    }
+
+    greet() {
+      return `Hello, ${this.name}`;
+    }
+  }
+  ```
+
+  Class syntax makes the pattern more readable but does not replace prototype-based inheritance with a separate inheritance model.
+
+---
+
+## Card 28
+
+- question  
+  What is the prototype chain?
+
+- answer  
+  The prototype chain is the sequence of objects JavaScript searches when resolving a property.
+
+  JavaScript first checks the object itself. If the property is not found, it checks the object’s prototype and continues upward until it finds the property or reaches `null`.
+
+- explanation  
+  The prototype chain enables inherited properties and shared methods.
+
+  ```js
+  const user = {};
+  user.toString();
+  ```
+
+  `toString` is found through `Object.prototype`.
+
+- details  
+  Consider an array:
+
+  ```js
+  const numbers = [1, 2, 3];
+  ```
+
+  A simplified version of its prototype chain is:
+
+  ```text
+  numbers
+    → Array.prototype
+    → Object.prototype
+    → null
+  ```
+
+  `numbers.map` is found on `Array.prototype`, while `numbers.toString` can ultimately be found through the chain.
+
+  An own property shadows an inherited property with the same name:
+
+  ```js
+  const parent = {
+    role: "parent"
+  };
+
+  const child = Object.create(parent);
+  child.role = "child";
+
+  console.log(child.role); // "child"
+  ```
+
+  The prototype can be inspected using:
+
+  ```js
+  Object.getPrototypeOf(child);
+  ```
+
+  An object without `Object.prototype` can be created with:
+
+  ```js
+  const dictionary = Object.create(null);
+  ```
+
+  This object does not inherit methods such as `toString` or `hasOwnProperty`.
+
+  Directly changing prototypes with `Object.setPrototypeOf()` can harm performance. Prototypes are usually established when objects are created through classes, constructor functions, object literals, or `Object.create()`.
+
+---
+
+## Card 29
+
+- question  
+  What is the difference between a class and a constructor function?
+
+- answer  
+  Classes and constructor functions can both create objects that share methods through prototypes.
+
+  JavaScript classes provide clearer syntax for constructors, instance methods, static methods, inheritance, and private fields. Internally, they still use prototype-based inheritance.
+
+- explanation  
+  Classes are primarily a more structured syntax over JavaScript’s existing constructor and prototype mechanisms.
+
+  ```js
+  class User {
+    constructor(name) {
+      this.name = name;
+    }
+
+    greet() {
+      return `Hello, ${this.name}`;
+    }
+  }
+  ```
+
+- details  
+  The constructor-function equivalent is:
+
+  ```js
+  function User(name) {
+    this.name = name;
+  }
+
+  User.prototype.greet = function () {
+    return `Hello, ${this.name}`;
+  };
+  ```
+
+  Both versions allow this:
+
+  ```js
+  const user = new User("Alex");
+  user.greet();
+  ```
+
+  Important differences include:
+
+  - Class declarations are in the temporal dead zone.
+  - Class constructors must be called with `new`.
+  - Class bodies run in strict mode.
+  - Class methods are non-enumerable.
+  - Classes support `extends`, `super`, static members, and private fields with concise syntax.
+
+  Calling a class without `new` throws an error:
+
+  ```js
+  User("Alex"); // TypeError
+  ```
+
+  A traditional constructor function may be called without `new`, although doing so is usually a bug.
+
+  Classes support private fields:
+
+  ```js
+  class Account {
+    #balance = 0;
+
+    deposit(amount) {
+      this.#balance += amount;
+    }
+
+    getBalance() {
+      return this.#balance;
+    }
+  }
+  ```
+
+  Private fields cannot be accessed directly outside the class.
+
+---
+
+## Card 30
+
+- question  
+  What is the difference between static and instance methods?
+
+- answer  
+  An instance method is called on an object created by a class and can access that instance through `this`.
+
+  A static method belongs to the class itself rather than to individual instances. It is called using the class name.
+
+- explanation  
+  Instance methods operate on instance-specific data. Static methods usually provide utilities or class-level behavior.
+
+  ```js
+  class User {
+    greet() {
+      return "Hello";
+    }
+
+    static createGuest() {
+      return new User();
+    }
+  }
+  ```
+
+- details  
+  Instance methods are stored on the class prototype:
+
+  ```js
+  class User {
+    constructor(name) {
+      this.name = name;
+    }
+
+    greet() {
+      return `Hello, ${this.name}`;
+    }
+  }
+
+  const user = new User("Alex");
+  user.greet();
+  ```
+
+  The instance method is shared rather than recreated for every instance:
+
+  ```js
+  user.greet === User.prototype.greet; // true
+  ```
+
+  Static methods are called on the class:
+
+  ```js
+  class User {
+    static fromJSON(json) {
+      const data = JSON.parse(json);
+      return new User(data.name);
+    }
+
+    constructor(name) {
+      this.name = name;
+    }
+  }
+
+  const user = User.fromJSON('{"name":"Alex"}');
+  ```
+
+  An instance does not inherit static methods:
+
+  ```js
+  user.fromJSON(); // TypeError
+  ```
+
+  Inside a static method, `this` normally refers to the class on which the method was called:
+
+  ```js
+  class Base {
+    static create() {
+      return new this();
+    }
+  }
+
+  class Child extends Base {}
+
+  Child.create(); // Creates a Child instance
+  ```
+
+  Static properties are also useful for class-level constants or shared state, although shared mutable state should be used carefully.
+
+---
+
+## Card 31
+
+- question  
+  What are getters and setters?
+
+- answer  
+  Getters and setters are methods that control how an object property is read or assigned while allowing it to be used with ordinary property syntax.
+
+  A getter runs when the property is read. A setter runs when a value is assigned to the property.
+
+- explanation  
+  Getters can compute values, while setters can validate or normalize assignments.
+
+  ```js
+  const user = {
+    firstName: "Alex",
+    lastName: "Smith",
+
+    get fullName() {
+      return `${this.firstName} ${this.lastName}`;
+    }
+  };
+  ```
+
+- details  
+  The getter is accessed like a property, not called like a method:
+
+  ```js
+  user.fullName; // "Alex Smith"
+  ```
+
+  A setter can validate data:
+
+  ```js
+  class Temperature {
+    #celsius = 0;
+
+    get celsius() {
+      return this.#celsius;
+    }
+
+    set celsius(value) {
+      if (!Number.isFinite(value)) {
+        throw new TypeError("Temperature must be a number");
+      }
+
+      this.#celsius = value;
+    }
+  }
+  ```
+
+  It is used with assignment syntax:
+
+  ```js
+  const temperature = new Temperature();
+
+  temperature.celsius = 25;
+  console.log(temperature.celsius); // 25
+  ```
+
+  A getter can expose a derived value:
+
+  ```js
+  class Rectangle {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+    }
+
+    get area() {
+      return this.width * this.height;
+    }
+  }
+  ```
+
+  Getters should generally avoid surprising side effects because property access looks like a simple read.
+
+  Setters accept exactly one parameter. If only a getter is defined, the property is read-only through that accessor.
+
+  Accessors can be defined in object literals, classes, or with `Object.defineProperty()`.
+
+---
+
+## Card 32
+
+- question  
+  What is the difference between mutable and immutable operations?
+
+- answer  
+  A mutable operation changes an existing object or array. An immutable operation creates and returns a new value without changing the original.
+
+  JavaScript primitives are immutable, but objects and arrays are mutable by default.
+
+- explanation  
+  Immutable updates make state changes easier to track and are especially useful in frontend state management.
+
+  ```js
+  const original = [1, 2];
+  const updated = [...original, 3];
+  ```
+
+- details  
+  Common mutating array methods include:
+
+  - `push`
+  - `pop`
+  - `shift`
+  - `unshift`
+  - `splice`
+  - `sort`
+  - `reverse`
+  - `fill`
+
+  ```js
+  const numbers = [3, 1, 2];
+  numbers.sort();
+
+  console.log(numbers); // [1, 2, 3]
+  ```
+
+  Common non-mutating array methods include:
+
+  - `map`
+  - `filter`
+  - `slice`
+  - `concat`
+  - `toSorted`
+  - `toReversed`
+  - `toSpliced`
+
+  ```js
+  const numbers = [3, 1, 2];
+  const sorted = numbers.toSorted();
+
+  console.log(numbers); // [3, 1, 2]
+  console.log(sorted);  // [1, 2, 3]
+  ```
+
+  Objects can be updated immutably with spread syntax:
+
+  ```js
+  const user = {
+    name: "Alex",
+    role: "user"
+  };
+
+  const updatedUser = {
+    ...user,
+    role: "admin"
+  };
+  ```
+
+  Nested updates require copying every changed level:
+
+  ```js
+  const state = {
+    user: {
+      settings: {
+        theme: "light"
+      }
+    }
+  };
+
+  const updatedState = {
+    ...state,
+    user: {
+      ...state.user,
+      settings: {
+        ...state.user.settings,
+        theme: "dark"
+      }
+    }
+  };
+  ```
+
+  `const` does not make an object immutable:
+
+  ```js
+  const user = { name: "Alex" };
+  user.name = "Sam"; // Allowed
+  ```
+
+  `Object.freeze()` prevents direct changes to an object’s own properties, but it is shallow:
+
+  ```js
+  const settings = Object.freeze({
+    nested: {
+      theme: "light"
+    }
+  });
+
+  settings.nested.theme = "dark"; // Nested object is not frozen
+  ```
+
+  Immutability can improve predictability, change detection, undo functionality, memoization, and debugging. However, copying large structures also has a performance and memory cost, so the appropriate strategy depends on the application.
+
+  

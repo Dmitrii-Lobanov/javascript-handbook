@@ -49,7 +49,7 @@ export default function QuestionsPage() {
                 <span className="question-section-index">{String(index + 1).padStart(2, "0")}</span>
                 <span>
                   <strong>{section.title}</strong>
-                  <small>{section.questions.length} planned questions</small>
+                  <small>{section.questions.length} questions</small>
                 </span>
                 <span className="part-toggle" aria-hidden="true" />
               </summary>
