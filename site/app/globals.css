@@ -375,6 +375,14 @@ button {
     8px 8px 0 color-mix(in srgb, var(--ink) 85%, transparent),
     0 25px 60px color-mix(in srgb, var(--accent) 18%, transparent);
 }
+.technology-hero-mark.react {
+  border: 1px solid color-mix(in srgb, var(--teal) 55%, var(--line));
+  background: color-mix(in srgb, var(--teal) 14%, var(--surface));
+  color: var(--teal);
+  box-shadow:
+    8px 8px 0 color-mix(in srgb, var(--teal) 50%, transparent),
+    0 25px 60px color-mix(in srgb, var(--teal) 12%, transparent);
+}
 .technology-hero h1 {
   margin: 0.65rem 0 1rem;
   font:

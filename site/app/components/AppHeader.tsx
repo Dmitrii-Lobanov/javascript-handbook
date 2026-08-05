@@ -8,6 +8,7 @@ export function AppHeader() {
   const [dark, setDark] = useState(false);
   const pathname = usePathname();
   const isJavaScript = pathname.startsWith("/javascript");
+  const isReact = pathname.startsWith("/react");
 
   useEffect(() => {
     const saved = localStorage.getItem("handbook-theme");
@@ -49,6 +50,13 @@ export function AppHeader() {
             aria-current={isJavaScript ? "page" : undefined}
           >
             JavaScript
+          </Link>
+          <Link
+            className={isReact ? "active" : ""}
+            href="/react"
+            aria-current={isReact ? "page" : undefined}
+          >
+            React
           </Link>
         </div>
         <a

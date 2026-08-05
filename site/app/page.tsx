@@ -53,6 +53,7 @@ const tracks = [
     title: "React",
     description: "Rendering, state, effects, scheduling, performance, and component design.",
     meta: "Handbook and Q&A planned",
+    href: "/react",
     state: "next",
   },
   {
