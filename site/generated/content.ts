@@ -1619,6 +1619,726 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       "Immutable updates make state changes easier to track and are especially useful in frontend state management.\n\n```js\nconst original = [1, 2];\nconst updated = [...original, 3];\n```",
     details:
-      'Common mutating array methods include:\n\n- `push`\n- `pop`\n- `shift`\n- `unshift`\n- `splice`\n- `sort`\n- `reverse`\n- `fill`\n\n```js\nconst numbers = [3, 1, 2];\nnumbers.sort();\n\nconsole.log(numbers); // [1, 2, 3]\n```\n\nCommon non-mutating array methods include:\n\n- `map`\n- `filter`\n- `slice`\n- `concat`\n- `toSorted`\n- `toReversed`\n- `toSpliced`\n\n```js\nconst numbers = [3, 1, 2];\nconst sorted = numbers.toSorted();\n\nconsole.log(numbers); // [3, 1, 2]\nconsole.log(sorted);  // [1, 2, 3]\n```\n\nObjects can be updated immutably with spread syntax:\n\n```js\nconst user = {\n  name: "Alex",\n  role: "user"\n};\n\nconst updatedUser = {\n  ...user,\n  role: "admin"\n};\n```\n\nNested updates require copying every changed level:\n\n```js\nconst state = {\n  user: {\n    settings: {\n      theme: "light"\n    }\n  }\n};\n\nconst updatedState = {\n  ...state,\n  user: {\n    ...state.user,\n    settings: {\n      ...state.user.settings,\n      theme: "dark"\n    }\n  }\n};\n```\n\n`const` does not make an object immutable:\n\n```js\nconst user = { name: "Alex" };\nuser.name = "Sam"; // Allowed\n```\n\n`Object.freeze()` prevents direct changes to an object’s own properties, but it is shallow:\n\n```js\nconst settings = Object.freeze({\n  nested: {\n    theme: "light"\n  }\n});\n\nsettings.nested.theme = "dark"; // Nested object is not frozen\n```\n\nImmutability can improve predictability, change detection, undo functionality, memoization, and debugging. However, copying large structures also has a performance and memory cost, so the appropriate strategy depends on the application.',
+      'Common mutating array methods include:\n\n- `push`\n- `pop`\n- `shift`\n- `unshift`\n- `splice`\n- `sort`\n- `reverse`\n- `fill`\n\n```js\nconst numbers = [3, 1, 2];\nnumbers.sort();\n\nconsole.log(numbers); // [1, 2, 3]\n```\n\nCommon non-mutating array methods include:\n\n- `map`\n- `filter`\n- `slice`\n- `concat`\n- `toSorted`\n- `toReversed`\n- `toSpliced`\n\n```js\nconst numbers = [3, 1, 2];\nconst sorted = numbers.toSorted();\n\nconsole.log(numbers); // [3, 1, 2]\nconsole.log(sorted);  // [1, 2, 3]\n```\n\nObjects can be updated immutably with spread syntax:\n\n```js\nconst user = {\n  name: "Alex",\n  role: "user"\n};\n\nconst updatedUser = {\n  ...user,\n  role: "admin"\n};\n```\n\nNested updates require copying every changed level:\n\n```js\nconst state = {\n  user: {\n    settings: {\n      theme: "light"\n    }\n  }\n};\n\nconst updatedState = {\n  ...state,\n  user: {\n    ...state.user,\n    settings: {\n      ...state.user.settings,\n      theme: "dark"\n    }\n  }\n};\n```\n\n`const` does not make an object immutable:\n\n```js\nconst user = { name: "Alex" };\nuser.name = "Sam"; // Allowed\n```\n\n`Object.freeze()` prevents direct changes to an object’s own properties, but it is shallow:\n\n```js\nconst settings = Object.freeze({\n  nested: {\n    theme: "light"\n  }\n});\n\nsettings.nested.theme = "dark"; // Nested object is not frozen\n```\n\nImmutability can improve predictability, change detection, undo functionality, memoization, and debugging. However, copying large structures also has a performance and memory cost, so the appropriate strategy depends on the application.\n\n# Arrays and Collections Interview Cards',
+  },
+  {
+    number: 33,
+    question: "What is the difference between map, filter, and reduce?",
+    answer:
+      "`map`, `filter`, and `reduce` iterate over arrays without modifying the original array by themselves.\n\n- `map` transforms every element and returns an array of the same length.\n- `filter` keeps elements that pass a condition and returns an array of equal or shorter length.\n- `reduce` combines all elements into a single accumulated result.",
+    explanation:
+      "Choose the method based on the desired result:\n\n```js\nconst numbers = [1, 2, 3, 4];\n\nnumbers.map(number => number * 2);\n// [2, 4, 6, 8]\n\nnumbers.filter(number => number % 2 === 0);\n// [2, 4]\n\nnumbers.reduce((sum, number) => sum + number, 0);\n// 10\n```",
+    details:
+      '`map` calls its callback for every existing element and stores each returned value:\n\n```js\nconst users = [\n  { id: 1, name: "Alex" },\n  { id: 2, name: "Sam" }\n];\n\nconst names = users.map(user => user.name);\n// ["Alex", "Sam"]\n```\n\n`filter` includes an element when the callback returns a truthy value:\n\n```js\nconst activeUsers = users.filter(user => user.active);\n```\n\n`reduce` receives an accumulator, the current value, the current index, and the original array:\n\n```js\nconst total = numbers.reduce(\n  (accumulator, number) => accumulator + number,\n  0\n);\n```\n\nThe second argument is the accumulator’s initial value. Providing it is generally safer:\n\n```js\n[].reduce((sum, number) => sum + number);\n// TypeError\n\n[].reduce((sum, number) => sum + number, 0);\n// 0\n```\n\n`reduce` can build arrays, objects, maps, or other structures:\n\n```js\nconst grouped = users.reduce((groups, user) => {\n  const role = user.role;\n  groups[role] ??= [];\n  groups[role].push(user);\n  return groups;\n}, {});\n```\n\nAlthough these methods do not mutate the source array directly, their callbacks can still mutate objects contained in the array. Avoid such side effects when predictable transformations are important.',
+  },
+  {
+    number: 34,
+    question: "What is the difference between forEach and map?",
+    answer:
+      "Both methods execute a callback for each array element.\n\n- `map` returns a new array containing the callback’s return values.\n- `forEach` returns `undefined` and is intended for side effects.",
+    explanation:
+      "Use `map` to transform data. Use `forEach` when performing an action such as logging, updating the DOM, or modifying external state.\n\n```js\nconst numbers = [1, 2, 3];\n\nconst doubled = numbers.map(number => number * 2);\n// [2, 4, 6]\n\nnumbers.forEach(number => console.log(number));\n```",
+    details:
+      "Returning a value from a `forEach` callback does not create a result array:\n\n```js\nconst result = [1, 2, 3].forEach(number => {\n  return number * 2;\n});\n\nconsole.log(result); // undefined\n```\n\nBoth methods receive the same callback arguments:\n\n```js\narray.map((element, index, originalArray) => {\n  // ...\n});\n\narray.forEach((element, index, originalArray) => {\n  // ...\n});\n```\n\nNeither method supports early termination with `break` or `return`:\n\n```js\n[1, 2, 3].forEach(number => {\n  if (number === 2) {\n    return; // Skips only the rest of this callback\n  }\n});\n```\n\nUse `for...of`, `find`, `some`, or `every` when early termination is required.\n\nAvoid using `forEach` directly with asynchronous callbacks when the operations must be awaited:\n\n```js\n// Does not wait for all callbacks to finish\nusers.forEach(async user => {\n  await saveUser(user);\n});\n```\n\nSequential processing can use `for...of`:\n\n```js\nfor (const user of users) {\n  await saveUser(user);\n}\n```\n\nParallel processing can use `map` with `Promise.all`:\n\n```js\nawait Promise.all(\n  users.map(user => saveUser(user))\n);\n```",
+  },
+  {
+    number: 35,
+    question: "What is the difference between find and filter?",
+    answer:
+      "Both methods test array elements using a callback.\n\n- `find` returns the first matching element and stops searching.\n- `filter` returns a new array containing every matching element.\n\nIf no element matches, `find` returns `undefined`, while `filter` returns an empty array.",
+    explanation:
+      "Use `find` when expecting one result and `filter` when collecting multiple results.\n\n```js\nconst numbers = [1, 2, 3, 4];\n\nnumbers.find(number => number > 2);\n// 3\n\nnumbers.filter(number => number > 2);\n// [3, 4]\n```",
+    details:
+      '`find` returns the element itself, not its index:\n\n```js\nconst users = [\n  { id: 1, name: "Alex" },\n  { id: 2, name: "Sam" }\n];\n\nconst user = users.find(user => user.id === 2);\n// { id: 2, name: "Sam" }\n```\n\nUse `findIndex` when the position is needed:\n\n```js\nconst index = users.findIndex(user => user.id === 2);\n// 1\n```\n\nNewer JavaScript also provides `findLast` and `findLastIndex` for searching from the end:\n\n```js\nconst values = [1, 4, 2, 4];\n\nvalues.findLast(value => value === 4);      // 4\nvalues.findLastIndex(value => value === 4); // 3\n```\n\n`filter` always returns a new array, even when nothing matches:\n\n```js\nconst matches = users.filter(user => user.id === 99);\n\nconsole.log(matches); // []\nconsole.log(Boolean(matches)); // true\n```\n\nBecause an empty array is truthy, check its length when determining whether results exist:\n\n```js\nif (matches.length === 0) {\n  console.log("No users found");\n}\n```',
+  },
+  {
+    number: 36,
+    question: "What is the difference between some and every?",
+    answer:
+      "`some` and `every` test array elements and return Boolean values.\n\n- `some` returns `true` when at least one element passes the test.\n- `every` returns `true` only when all elements pass the test.\n\nBoth methods stop as soon as the final result is known.",
+    explanation:
+      "`some` answers “Does any element match?” while `every` answers “Do all elements match?”\n\n```js\nconst numbers = [2, 4, 5];\n\nnumbers.some(number => number % 2 !== 0);\n// true\n\nnumbers.every(number => number > 0);\n// true\n```",
+    details:
+      '`some` stops after finding the first truthy callback result:\n\n```js\nconst hasAdmin = users.some(user => {\n  return user.role === "admin";\n});\n```\n\n`every` stops after finding the first falsy result:\n\n```js\nconst allActive = users.every(user => {\n  return user.active;\n});\n```\n\nTheir results for an empty array are important:\n\n```js\n[].some(() => true);  // false\n[].every(() => false); // true\n```\n\n`some` returns `false` because no element satisfies the condition. `every` returns `true` because no element violates the condition. This is known as vacuous truth.\n\n`some` can be used as an existence check:\n\n```js\nconst hasPermission = permissions.some(\n  permission => permission === "edit"\n);\n```\n\n`every` is useful for validation:\n\n```js\nconst formIsValid = fields.every(field => {\n  return field.value.trim() !== "";\n});\n```\n\nBecause both short-circuit, they may be more efficient than `filter` when only a Boolean result is required.',
+  },
+  {
+    number: 37,
+    question: "Which array methods mutate the original array?",
+    answer:
+      "Common mutating array methods include:\n\n- `push`\n- `pop`\n- `shift`\n- `unshift`\n- `splice`\n- `sort`\n- `reverse`\n- `fill`\n- `copyWithin`\n\nMethods such as `map`, `filter`, `slice`, `concat`, `toSorted`, `toReversed`, and `toSpliced` return new arrays instead.",
+    explanation:
+      "Mutation changes the existing array reference, which can create unexpected state changes in frontend applications.\n\n```js\nconst numbers = [3, 1, 2];\nnumbers.sort();\n\nconsole.log(numbers); // [1, 2, 3]\n```",
+    details:
+      'Methods that add or remove elements mutate the array:\n\n```js\nconst items = ["a", "b"];\n\nitems.push("c");    // ["a", "b", "c"]\nitems.pop();        // ["a", "b"]\nitems.unshift("z"); // ["z", "a", "b"]\nitems.shift();      // ["a", "b"]\n```\n\n`splice` can remove, replace, or insert elements:\n\n```js\nconst items = ["a", "b", "c"];\n\nitems.splice(1, 1, "x");\n// items is ["a", "x", "c"]\n```\n\n`sort` and `reverse` mutate the original:\n\n```js\nconst numbers = [3, 1, 2];\n\nconst result = numbers.sort();\n\nresult === numbers; // true\n```\n\nModern non-mutating alternatives include:\n\n```js\nconst sorted = numbers.toSorted();\nconst reversed = numbers.toReversed();\nconst changed = numbers.toSpliced(1, 1, 10);\nconst replaced = numbers.with(0, 99);\n```\n\nOlder code can copy before applying a mutating method:\n\n```js\nconst sorted = [...numbers].sort((a, b) => a - b);\n```\n\nAssignment by index also mutates an array:\n\n```js\nnumbers[0] = 100;\n```\n\nA method can return a new array while its callback still mutates contained objects:\n\n```js\nconst users = [{ name: "Alex" }];\n\nconst result = users.map(user => {\n  user.name = "Sam";\n  return user;\n});\n\nconsole.log(users[0].name); // "Sam"\n```',
+  },
+  {
+    number: 38,
+    question: "How can you remove duplicate values from an array?",
+    answer:
+      "For primitive values, the most common solution is to create a `Set` and convert it back into an array.\n\nA `Set` stores only unique values and preserves insertion order.",
+    explanation:
+      "Spread syntax provides a concise solution:\n\n```js\nconst values = [1, 2, 2, 3, 3];\nconst uniqueValues = [...new Set(values)];\n\n// [1, 2, 3]\n```",
+    details:
+      '`Array.from()` can also convert a `Set` into an array:\n\n```js\nconst uniqueValues = Array.from(new Set(values));\n```\n\n`Set` works well for duplicate primitive values:\n\n```js\n[...new Set(["a", "a", "b"])];\n// ["a", "b"]\n```\n\nObject values are compared by identity, not by contents:\n\n```js\nconst users = [\n  { id: 1 },\n  { id: 1 }\n];\n\n[...new Set(users)].length; // 2\n```\n\nAlthough the objects contain the same data, they are different object references.\n\nObjects can be deduplicated by a property using a `Map`:\n\n```js\nconst users = [\n  { id: 1, name: "Alex" },\n  { id: 2, name: "Sam" },\n  { id: 1, name: "Alexander" }\n];\n\nconst uniqueUsers = [\n  ...new Map(\n    users.map(user => [user.id, user])\n  ).values()\n];\n```\n\nBecause later entries replace earlier entries with the same key, this keeps the final object for each `id`.\n\nTo keep the first occurrence:\n\n```js\nconst seen = new Set();\n\nconst uniqueUsers = users.filter(user => {\n  if (seen.has(user.id)) {\n    return false;\n  }\n\n  seen.add(user.id);\n  return true;\n});\n```\n\nThe right solution depends on whether uniqueness is based on primitive equality, object identity, or a selected property.',
+  },
+  {
+    number: 39,
+    question: "When would you use Map instead of an object?",
+    answer:
+      "Use `Map` when keys are dynamic, keys are not limited to strings and symbols, insertion order matters, or the collection is frequently updated and iterated.\n\nUse an object when representing a record with known property names, especially when the data naturally maps to JSON.",
+    explanation:
+      'A `Map` accepts values of any type as keys and provides dedicated collection methods.\n\n```js\nconst settings = new Map();\n\nsettings.set("theme", "dark");\nsettings.set(42, "numeric key");\nsettings.set(document.body, "element key");\n```',
+    details:
+      'Object property keys are strings or symbols. Other values are converted to strings:\n\n```js\nconst object = {};\n\nobject[1] = "number";\nobject["1"] = "string";\n\nconsole.log(object[1]); // "string"\n```\n\nA `Map` distinguishes these keys:\n\n```js\nconst map = new Map();\n\nmap.set(1, "number");\nmap.set("1", "string");\n\nmap.get(1);   // "number"\nmap.get("1"); // "string"\n```\n\nObjects can also be used as keys:\n\n```js\nconst user = { id: 1 };\nconst permissions = new Map();\n\npermissions.set(user, ["read", "write"]);\npermissions.get(user); // ["read", "write"]\n```\n\nA `Map` provides:\n\n```js\nmap.set(key, value);\nmap.get(key);\nmap.has(key);\nmap.delete(key);\nmap.clear();\nmap.size;\n```\n\nIt is directly iterable:\n\n```js\nfor (const [key, value] of map) {\n  console.log(key, value);\n}\n```\n\nObjects are often more convenient for structured records:\n\n```js\nconst user = {\n  id: 1,\n  name: "Alex",\n  role: "admin"\n};\n```\n\nObjects work directly with `JSON.stringify()`. A `Map` requires explicit conversion before JSON serialization.',
+  },
+  {
+    number: 40,
+    question: "When would you use Set?",
+    answer:
+      "Use a `Set` when a collection should contain only unique values or when efficient membership checks, additions, and deletions are important.\n\nA `Set` preserves insertion order and can contain values of any type.",
+    explanation:
+      "A `Set` is useful for deduplication and checking whether a value has already been seen.\n\n```js\nconst selectedIds = new Set();\n\nselectedIds.add(1);\nselectedIds.add(1);\nselectedIds.add(2);\n\nconsole.log(selectedIds.size); // 2\n```",
+    details:
+      'The main `Set` operations are:\n\n```js\nconst roles = new Set();\n\nroles.add("admin");\nroles.has("admin");    // true\nroles.delete("admin"); // true\nroles.clear();\nroles.size;            // 0\n```\n\nA `Set` can be constructed from any iterable:\n\n```js\nconst uniqueLetters = new Set("hello");\n// Set { "h", "e", "l", "o" }\n```\n\nIt can be converted into an array:\n\n```js\nconst values = [...uniqueLetters];\n```\n\nSets are directly iterable:\n\n```js\nfor (const role of roles) {\n  console.log(role);\n}\n```\n\nObject values are unique by identity:\n\n```js\nconst first = { id: 1 };\nconst second = { id: 1 };\n\nconst set = new Set([first, second]);\n\nconsole.log(set.size); // 2\n```\n\nA `Set` is often clearer than repeatedly using `array.includes()` when many membership checks are required:\n\n```js\nconst allowedRoles = new Set([\n  "admin",\n  "editor",\n  "author"\n]);\n\nif (allowedRoles.has(user.role)) {\n  // Allow access\n}\n```\n\nModern JavaScript environments also provide set-composition methods such as `union`, `intersection`, `difference`, and `isSubsetOf`. Compatibility should be checked when supporting older browsers.',
+  },
+  {
+    number: 41,
+    question: "What are WeakMap and WeakSet?",
+    answer:
+      "`WeakMap` and `WeakSet` are collections that hold their object entries weakly. Their presence in the collection does not prevent those objects from being garbage-collected when no other reachable references remain.\n\nA `WeakMap` associates values with object or non-registered symbol keys. A `WeakSet` tracks object or non-registered symbol values.",
+    explanation:
+      'They are useful for attaching metadata or tracking objects without extending those objects’ lifetimes.\n\n```js\nconst metadata = new WeakMap();\n\nconst element = document.querySelector("button");\nmetadata.set(element, { clicks: 0 });\n```',
+    details:
+      'A regular `Map` strongly retains its keys:\n\n```js\nconst cache = new Map();\n\nlet user = { id: 1 };\ncache.set(user, "cached");\n\nuser = null;\n```\n\nThe object remains reachable through `cache`, so it cannot be garbage-collected.\n\nA `WeakMap` does not keep its keys alive:\n\n```js\nconst cache = new WeakMap();\n\nlet user = { id: 1 };\ncache.set(user, "cached");\n\nuser = null;\n```\n\nIf no other references remain, the object and its associated entry may be collected.\n\nCommon `WeakMap` operations are:\n\n```js\nweakMap.set(object, value);\nweakMap.get(object);\nweakMap.has(object);\nweakMap.delete(object);\n```\n\nCommon `WeakSet` operations are:\n\n```js\nweakSet.add(object);\nweakSet.has(object);\nweakSet.delete(object);\n```\n\nWeak collections are not iterable and do not expose `size` or `clear`. Garbage collection is unpredictable, so JavaScript cannot provide a reliable list of their current entries.\n\nA `WeakMap` can store private metadata associated with an object:\n\n```js\nconst privateData = new WeakMap();\n\nclass User {\n  constructor(name) {\n    privateData.set(this, { name });\n  }\n\n  getName() {\n    return privateData.get(this).name;\n  }\n}\n```\n\nA `WeakSet` can track whether particular objects have been processed:\n\n```js\nconst processed = new WeakSet();\n\nfunction process(object) {\n  if (processed.has(object)) {\n    return;\n  }\n\n  processed.add(object);\n  // Process the object\n}\n```\n\nWeak collections are specialized tools. Use `Map` or `Set` when iteration, primitive keys, or collection size is required.\n\n# Asynchronous JavaScript Interview Cards',
+  },
+  {
+    number: 42,
+    question: "What is the JavaScript event loop?",
+    answer:
+      "The event loop coordinates synchronous JavaScript execution with asynchronous work.\n\nIt monitors the call stack and task queues. When the call stack is empty, it allows queued callbacks to run according to their priority and scheduling rules.",
+    explanation:
+      'JavaScript executes one piece of JavaScript code at a time on its main thread, but browser APIs can perform operations such as timers and network requests outside the call stack.\n\n```js\nconsole.log("First");\n\nsetTimeout(() => {\n  console.log("Third");\n}, 0);\n\nconsole.log("Second");\n```\n\nOutput:\n\n```text\nFirst\nSecond\nThird\n```',
+    details:
+      "The browser environment includes several cooperating components:\n\n- The JavaScript engine\n- The call stack\n- Browser APIs\n- The microtask queue\n- Task queues\n- The event loop\n- The rendering system\n\nWhen a timer is created, the browser tracks it outside the JavaScript call stack. After the delay has elapsed, its callback becomes eligible to enter a task queue.\n\nThe event loop generally performs work in this order:\n\n1. Execute the current task.\n2. Empty the microtask queue.\n3. Give the browser an opportunity to render.\n4. Begin another task.\n\nA zero-millisecond timeout does not run immediately. It specifies a minimum delay before the callback can be queued:\n\n```js\nsetTimeout(callback, 0);\n```\n\nThe callback must still wait for the current code and all queued microtasks to complete.\n\nLong-running synchronous code blocks the event loop:\n\n```js\nconst start = Date.now();\n\nwhile (Date.now() - start \u003c 5000) {\n  // Blocks the main thread\n}\n```\n\nDuring this period, the page may not respond to input, process callbacks, or update its display.",
+  },
+  {
+    number: 43,
+    question: "What is the call stack?",
+    answer:
+      "The call stack is the data structure JavaScript uses to track active function executions.\n\nWhen a function is called, a stack frame is added. When the function returns or throws an error, its frame is removed.",
+    explanation:
+      'JavaScript executes the function at the top of the stack before returning to the function below it.\n\n```js\nfunction first() {\n  second();\n}\n\nfunction second() {\n  console.log("Hello");\n}\n\nfirst();\n```',
+    details:
+      "A simplified execution sequence is:\n\n```text\nAdd global execution context\nAdd first()\nAdd second()\nAdd console.log()\nRemove console.log()\nRemove second()\nRemove first()\n```\n\nEach stack frame stores information such as:\n\n- Function arguments\n- Local variables\n- The current execution position\n- The function’s `this` value\n- A reference to its lexical environment\n\nRecursive functions add a new frame for every call:\n\n```js\nfunction countDown(number) {\n  if (number === 0) {\n    return;\n  }\n\n  countDown(number - 1);\n}\n\ncountDown(5);\n```\n\nRecursion without a valid stopping condition eventually exceeds the available stack:\n\n```js\nfunction recurse() {\n  recurse();\n}\n\nrecurse(); // RangeError: Maximum call stack size exceeded\n```\n\nStack traces show the chain of active function calls at the time an error occurred, making them important for debugging.",
+  },
+  {
+    number: 44,
+    question: "What is the difference between synchronous and asynchronous code?",
+    answer:
+      "Synchronous code executes sequentially, with each operation completing before the next one begins.\n\nAsynchronous code starts an operation and allows other JavaScript to continue while waiting. Its result is handled later through a callback, Promise, event, or `async` function.",
+    explanation:
+      'Asynchronous programming prevents waiting operations such as network requests and timers from unnecessarily blocking other work.\n\n```js\nconsole.log("Before");\n\nsetTimeout(() => {\n  console.log("Timer finished");\n}, 1000);\n\nconsole.log("After");\n```',
+    details:
+      'Synchronous code blocks further JavaScript execution until it finishes:\n\n```js\nconst result = performCalculation();\nconsole.log(result);\n```\n\nAsynchronous APIs return control before their work completes:\n\n```js\nfetch("/api/users")\n  .then(response => response.json())\n  .then(users => console.log(users));\n\nconsole.log("Request started");\n```\n\n`async`/`await` makes asynchronous code look sequential, but `await` does not block the entire JavaScript thread:\n\n```js\nasync function loadUsers() {\n  const response = await fetch("/api/users");\n  const users = await response.json();\n\n  return users;\n}\n```\n\nThe async function pauses at `await`, while other eligible work can continue.\n\nAsynchronous code is helpful for:\n\n- Network requests\n- Timers\n- User interactions\n- File operations in supported environments\n- Background work\n- Streams and animations\n\nCPU-intensive JavaScript is still blocking unless it is divided into smaller tasks or moved to a worker.',
+  },
+  {
+    number: 45,
+    question: "What are microtasks and macrotasks?",
+    answer:
+      "Microtasks and tasks—often informally called macrotasks—are scheduled work with different priorities.\n\nAfter the current synchronous code finishes, JavaScript empties the microtask queue before starting the next task.",
+    explanation:
+      'Promise callbacks are microtasks, while timer callbacks are tasks. Therefore, a resolved Promise usually runs before a zero-delay timer.\n\n```js\nsetTimeout(() => console.log("Timer"), 0);\n\nPromise.resolve().then(() => {\n  console.log("Promise");\n});\n\nconsole.log("Synchronous");\n```\n\nOutput:\n\n```text\nSynchronous\nPromise\nTimer\n```',
+    details:
+      'Common microtask sources include:\n\n- Promise reaction callbacks\n- Code after `await`\n- `queueMicrotask()`\n- `MutationObserver` callbacks\n\nCommon task sources include:\n\n- `setTimeout`\n- `setInterval`\n- User-interface events\n- Message events\n- Some network and platform callbacks\n\nMicrotasks added while processing microtasks run before the browser moves to the next task:\n\n```js\nqueueMicrotask(() => {\n  console.log("Microtask 1");\n\n  queueMicrotask(() => {\n    console.log("Microtask 2");\n  });\n});\n```\n\nExcessive microtasks can delay rendering and other tasks. This is called microtask starvation:\n\n```js\nfunction repeat() {\n  queueMicrotask(repeat);\n}\n\nrepeat();\n```\n\nBrowser scheduling details are defined in terms of tasks rather than “macrotasks,” but “macrotask” is commonly used in interviews to distinguish task queues from the microtask queue.',
+  },
+  {
+    number: 46,
+    question: "In what order do synchronous code, promises, and timers execute?",
+    answer:
+      "The usual order is:\n\n1. Synchronous code\n2. Microtasks, including Promise callbacks and continuations after `await`\n3. The next task, such as a timer callback\n\nMicrotasks are emptied after the current task completes and before another task begins.",
+    explanation:
+      'Promise callbacks therefore run before timer callbacks when both become eligible during the same task.\n\n```js\nconsole.log("A");\n\nsetTimeout(() => console.log("B"), 0);\n\nPromise.resolve().then(() => console.log("C"));\n\nconsole.log("D");\n```\n\nOutput:\n\n```text\nA\nD\nC\nB\n```',
+    details:
+      'Nested scheduling changes the order:\n\n```js\nconsole.log("1");\n\nsetTimeout(() => {\n  console.log("2");\n\n  Promise.resolve().then(() => {\n    console.log("3");\n  });\n}, 0);\n\nPromise.resolve().then(() => {\n  console.log("4");\n\n  setTimeout(() => {\n    console.log("5");\n  }, 0);\n});\n\nconsole.log("6");\n```\n\nOutput:\n\n```text\n1\n6\n4\n2\n3\n5\n```\n\nThe reasoning is:\n\n1. Synchronous code prints `1` and `6`.\n2. The first Promise callback runs and prints `4`.\n3. The first timer task prints `2`.\n4. Its Promise callback runs as a microtask and prints `3`.\n5. The timer created inside the earlier Promise callback prints `5`.\n\nAn `await` continuation is also scheduled through the microtask mechanism:\n\n```js\nasync function run() {\n  console.log("Inside 1");\n  await Promise.resolve();\n  console.log("Inside 2");\n}\n\nconsole.log("Outside 1");\nrun();\nconsole.log("Outside 2");\n```\n\nOutput:\n\n```text\nOutside 1\nInside 1\nOutside 2\nInside 2\n```',
+  },
+  {
+    number: 47,
+    question: "What is a Promise?",
+    answer:
+      "A Promise is an object representing the eventual completion or failure of an asynchronous operation.\n\nIt provides a structured way to register success and failure handlers and to compose asynchronous operations without deeply nested callbacks.",
+    explanation:
+      '`then` handles fulfillment, `catch` handles rejection, and `finally` runs after settlement regardless of the outcome.\n\n```js\nfetch("/api/users")\n  .then(response => response.json())\n  .then(users => console.log(users))\n  .catch(error => console.error(error))\n  .finally(() => console.log("Finished"));\n```',
+    details:
+      'A Promise can be created with an executor function:\n\n```js\nconst promise = new Promise((resolve, reject) => {\n  const succeeded = true;\n\n  if (succeeded) {\n    resolve("Completed");\n  } else {\n    reject(new Error("Failed"));\n  }\n});\n```\n\nThe executor runs synchronously:\n\n```js\nconsole.log("Before");\n\nnew Promise(resolve => {\n  console.log("Executor");\n  resolve();\n});\n\nconsole.log("After");\n```\n\nOutput:\n\n```text\nBefore\nExecutor\nAfter\n```\n\nPromise handlers always run asynchronously as microtasks, even when the Promise is already settled:\n\n```js\nPromise.resolve("Done").then(console.log);\nconsole.log("Synchronous");\n```\n\nOutput:\n\n```text\nSynchronous\nDone\n```\n\n`then` returns a new Promise, enabling chaining:\n\n```js\nPromise.resolve(2)\n  .then(value => value * 2)\n  .then(value => value + 1)\n  .then(console.log); // 5\n```\n\nReturning a Promise from a handler causes the next step to wait for it:\n\n```js\nfetch("/api/user")\n  .then(response => response.json())\n  .then(user => fetch(`/api/orders/${user.id}`))\n  .then(response => response.json());\n```\n\nThrowing inside a handler rejects the Promise returned by that handler:\n\n```js\nPromise.resolve()\n  .then(() => {\n    throw new Error("Failed");\n  })\n  .catch(error => console.error(error));\n```',
+  },
+  {
+    number: 48,
+    question: "What states can a Promise have?",
+    answer:
+      "A Promise has three possible states:\n\n- **Pending:** The operation has not settled.\n- **Fulfilled:** The operation completed successfully and produced a value.\n- **Rejected:** The operation failed and produced a reason, usually an `Error`.\n\nA fulfilled or rejected Promise is described as settled.",
+    explanation:
+      'A Promise can move from pending to fulfilled or rejected only once. Its final state and result cannot later be changed.\n\n```js\nconst promise = new Promise(resolve => {\n  resolve("First");\n  resolve("Second"); // Ignored\n});\n```',
+    details:
+      'These transitions are possible:\n\n```text\npending → fulfilled\npending → rejected\n```\n\nThese transitions are not possible:\n\n```text\nfulfilled → rejected\nrejected → fulfilled\nsettled → pending\n```\n\nResolving a Promise with another Promise makes the outer Promise adopt the other Promise’s eventual state:\n\n```js\nconst inner = new Promise(resolve => {\n  setTimeout(() => resolve("Done"), 1000);\n});\n\nconst outer = new Promise(resolve => {\n  resolve(inner);\n});\n\nouter.then(console.log); // "Done"\n```\n\nA Promise may be resolved but still pending while it follows another Promise. For everyday interviews, “resolved” is often treated as synonymous with “fulfilled,” but the specification distinguishes them.\n\nA rejection should normally use an `Error` object:\n\n```js\nreject(new Error("Unable to load user"));\n```\n\nThis preserves a useful message and stack trace.\n\nAn unhandled rejection occurs when a rejected Promise has no rejection handler. Browsers may report it in the console and emit an `unhandledrejection` event.',
+  },
+  {
+    number: 49,
+    question: "How do async and await work?",
+    answer:
+      "Declaring a function with `async` makes it always return a Promise.\n\n`await` pauses that async function until a value or Promise settles. If it fulfills, `await` produces its value. If it rejects, `await` throws the rejection reason inside the async function.",
+    explanation:
+      '`async`/`await` provides syntax for writing Promise-based workflows in a readable, sequential style.\n\n```js\nasync function loadUser() {\n  const response = await fetch("/api/user");\n  const user = await response.json();\n\n  return user;\n}\n```',
+    details:
+      'Returning a normal value from an async function creates a fulfilled Promise:\n\n```js\nasync function getNumber() {\n  return 42;\n}\n\ngetNumber().then(console.log); // 42\n```\n\nThrowing creates a rejected Promise:\n\n```js\nasync function fail() {\n  throw new Error("Failed");\n}\n\nfail().catch(console.error);\n```\n\n`await` accepts any value. A non-Promise value behaves like an already fulfilled Promise, but continuation still occurs asynchronously:\n\n```js\nasync function run() {\n  console.log("A");\n  await 42;\n  console.log("C");\n}\n\nrun();\nconsole.log("B");\n```\n\nOutput:\n\n```text\nA\nB\nC\n```\n\nErrors can be handled with `try` and `catch`:\n\n```js\nasync function loadUser() {\n  try {\n    const response = await fetch("/api/user");\n\n    if (!response.ok) {\n      throw new Error(`HTTP ${response.status}`);\n    }\n\n    return await response.json();\n  } catch (error) {\n    console.error(error);\n    throw error;\n  }\n}\n```\n\nIndependent operations should not be awaited one after another unnecessarily:\n\n```js\nconst [user, products] = await Promise.all([\n  fetchUser(),\n  fetchProducts()\n]);\n```\n\nThis starts both operations before waiting for them together.',
+  },
+  {
+    number: 50,
+    question: "How do Promise.all, Promise.allSettled, Promise.race, and Promise.any differ?",
+    answer:
+      "These static methods combine multiple asynchronous values:\n\n- `Promise.all` fulfills when all inputs fulfill and rejects when the first input rejects.\n- `Promise.allSettled` waits for every input and always fulfills with their outcomes.\n- `Promise.race` settles with the first input to settle.\n- `Promise.any` fulfills with the first input to fulfill and rejects only if every input rejects.",
+    explanation:
+      "Choose the method based on whether every result is required, partial failures are acceptable, or only the first outcome matters.",
+    details:
+      '`Promise.all` preserves input order, regardless of completion order:\n\n```js\nconst results = await Promise.all([\n  fetchUser(),\n  fetchProducts(),\n  fetchSettings()\n]);\n```\n\nIf any input rejects, the combined Promise rejects immediately. Other operations are not automatically cancelled.\n\n`Promise.allSettled` returns status objects:\n\n```js\nconst results = await Promise.allSettled([\n  Promise.resolve("A"),\n  Promise.reject(new Error("Failed"))\n]);\n```\n\nResult shape:\n\n```js\n[\n  {\n    status: "fulfilled",\n    value: "A"\n  },\n  {\n    status: "rejected",\n    reason: Error("Failed")\n  }\n]\n```\n\n`Promise.race` reacts to the first settlement, whether successful or failed:\n\n```js\nconst result = await Promise.race([\n  fetchData(),\n  timeoutPromise(5000)\n]);\n```\n\n`Promise.any` ignores rejections until one input fulfills:\n\n```js\nconst fastestSuccess = await Promise.any([\n  fetchFromServerA(),\n  fetchFromServerB()\n]);\n```\n\nIf every input rejects, `Promise.any` rejects with an `AggregateError`.\n\nEmpty iterables behave differently:\n\n```js\nPromise.all([]);        // Fulfilled with []\nPromise.allSettled([]); // Fulfilled with []\nPromise.any([]);        // Rejected with AggregateError\nPromise.race([]);       // Remains pending\n```',
+  },
+  {
+    number: 51,
+    question: "How should errors be handled in asynchronous code?",
+    answer:
+      "Promise errors should be handled with `.catch()` or with `try...catch` around awaited operations.\n\nErrors should normally be represented by `Error` objects, handled at a level that can meaningfully recover, and rethrown when the caller still needs to know that the operation failed.",
+    explanation:
+      'A `try...catch` block can catch an awaited Promise rejection:\n\n```js\ntry {\n  const user = await fetchUser();\n} catch (error) {\n  console.error("Unable to load user", error);\n}\n```',
+    details:
+      'Promise chains propagate rejections to the nearest rejection handler:\n\n```js\nfetchUser()\n  .then(user => fetchOrders(user.id))\n  .then(orders => renderOrders(orders))\n  .catch(error => {\n    showErrorMessage(error);\n  });\n```\n\nA `try...catch` block does not catch a Promise rejection unless the Promise is awaited:\n\n```js\ntry {\n  fetchUser(); // Rejection is not caught here\n} catch (error) {\n  console.error(error);\n}\n```\n\nCorrect version:\n\n```js\ntry {\n  await fetchUser();\n} catch (error) {\n  console.error(error);\n}\n```\n\nFetch only rejects for certain network-level failures. HTTP error statuses must be checked explicitly:\n\n```js\nconst response = await fetch("/api/user");\n\nif (!response.ok) {\n  throw new Error(`Request failed: ${response.status}`);\n}\n```\n\nAvoid silently swallowing errors:\n\n```js\ntry {\n  await saveUser();\n} catch (error) {\n  // Empty catch hides the failure\n}\n```\n\nAdd contextual information while preserving the original cause:\n\n```js\ntry {\n  await saveUser();\n} catch (error) {\n  throw new Error("Could not save user", {\n    cause: error\n  });\n}\n```\n\n`finally` is appropriate for cleanup:\n\n```js\nsetLoading(true);\n\ntry {\n  await loadData();\n} finally {\n  setLoading(false);\n}\n```',
+  },
+  {
+    number: 52,
+    question: "How can an HTTP request be cancelled?",
+    answer:
+      "Requests made with the Fetch API can be cancelled using an `AbortController`.\n\nIts `signal` is passed to `fetch`, and calling `abort()` tells the operation to stop. The Fetch Promise then rejects, normally with an abort-related error.",
+    explanation:
+      'Cancellation is useful when a component is removed, the user starts a newer request, or an operation exceeds a time limit.\n\n```js\nconst controller = new AbortController();\n\nfetch("/api/users", {\n  signal: controller.signal\n});\n\ncontroller.abort();\n```',
+    details:
+      'Cancellation can be handled explicitly:\n\n```js\nconst controller = new AbortController();\n\ntry {\n  const response = await fetch("/api/users", {\n    signal: controller.signal\n  });\n\n  const users = await response.json();\n} catch (error) {\n  if (error.name === "AbortError") {\n    console.log("Request cancelled");\n  } else {\n    throw error;\n  }\n}\n```\n\nA single signal can cancel multiple related operations:\n\n```js\nconst controller = new AbortController();\n\nconst requests = [\n  fetch("/api/user", {\n    signal: controller.signal\n  }),\n  fetch("/api/products", {\n    signal: controller.signal\n  })\n];\n\ncontroller.abort();\n```\n\nSome environments support timeout signals:\n\n```js\nconst response = await fetch("/api/users", {\n  signal: AbortSignal.timeout(5000)\n});\n```\n\nWhen implementing search suggestions, cancel the previous request before starting a new one:\n\n```js\nlet currentController;\n\nasync function search(query) {\n  currentController?.abort();\n  currentController = new AbortController();\n\n  const response = await fetch(\n    `/api/search?q=${encodeURIComponent(query)}`,\n    { signal: currentController.signal }\n  );\n\n  return response.json();\n}\n```\n\nAborting Fetch does not guarantee that the server stops work already started. It primarily stops the client from continuing to wait for or process the response.',
+  },
+  {
+    number: 53,
+    question: "How can multiple asynchronous operations be executed in parallel?",
+    answer:
+      "Start all independent asynchronous operations before awaiting their combined result.\n\n`Promise.all` is usually appropriate when every operation must succeed. `Promise.allSettled` is useful when all outcomes are needed even if some operations fail.",
+    explanation:
+      "Sequential awaits unnecessarily delay independent operations:\n\n```js\nconst user = await fetchUser();\nconst products = await fetchProducts();\n```\n\nParallel version:\n\n```js\nconst [user, products] = await Promise.all([\n  fetchUser(),\n  fetchProducts()\n]);\n```",
+    details:
+      "Suppose each operation takes one second.\n\nSequential execution takes approximately two seconds:\n\n```js\nconst user = await fetchUser();\nconst products = await fetchProducts();\n```\n\nThe second operation does not begin until the first finishes.\n\nParallel execution takes approximately one second:\n\n```js\nconst userPromise = fetchUser();\nconst productsPromise = fetchProducts();\n\nconst [user, products] = await Promise.all([\n  userPromise,\n  productsPromise\n]);\n```\n\nOnly independent operations should run in parallel. Dependent operations must wait for the required value:\n\n```js\nconst user = await fetchUser();\nconst orders = await fetchOrders(user.id);\n```\n\nWhen processing an array in parallel:\n\n```js\nconst users = await Promise.all(\n  userIds.map(id => fetchUser(id))\n);\n```\n\nAvoid `forEach` with async callbacks:\n\n```js\n// Does not wait for completion\nuserIds.forEach(async id => {\n  await fetchUser(id);\n});\n```\n\nUnrestricted parallelism can overload a browser, network, or server when the input is large. A concurrency limit may be necessary:\n\n```js\nasync function processInBatches(items, batchSize) {\n  const results = [];\n\n  for (\n    let index = 0;\n    index \u003c items.length;\n    index += batchSize\n  ) {\n    const batch = items.slice(index, index + batchSize);\n\n    const batchResults = await Promise.all(\n      batch.map(item => processItem(item))\n    );\n\n    results.push(...batchResults);\n  }\n\n  return results;\n}\n```\n\nParallel execution improves total duration when operations are independent, but it does not make the individual operations themselves execute faster.\n\n# Browser and DOM Interview Cards",
+  },
+  {
+    number: 54,
+    question: "What is the DOM?",
+    answer:
+      "The Document Object Model, or DOM, is the browser’s object-based representation of an HTML or XML document.\n\nIt represents the document as a tree of nodes and provides APIs that JavaScript can use to read, create, update, move, and remove content.",
+    explanation:
+      'HTML elements become objects that JavaScript can interact with:\n\n```js\nconst heading = document.querySelector("h1");\nheading.textContent = "Updated title";\n```',
+    details:
+      'The DOM tree contains several node types:\n\n- Document nodes\n- Element nodes\n- Text nodes\n- Comment nodes\n- Document fragments\n\nFor this HTML:\n\n```html\n\u003cmain>\n  \u003ch1>Hello\u003c/h1>\n\u003c/main>\n```\n\nA simplified tree is:\n\n```text\ndocument\n  └── html\n      └── body\n          └── main\n              └── h1\n                  └── "Hello"\n```\n\nThe DOM is not part of the JavaScript language itself. It is a Web API supplied by browser environments.\n\nJavaScript can use DOM APIs to:\n\n- Find elements\n- Change content and attributes\n- Modify styles and classes\n- Attach event listeners\n- Create or remove elements\n- Measure element positions and sizes\n\nDOM updates may trigger browser rendering work, so large or repeated changes can affect performance.',
+  },
+  {
+    number: 55,
+    question: "What is the difference between the DOM and the HTML source?",
+    answer:
+      "The HTML source is the text initially sent to the browser. The DOM is the live object tree the browser creates after parsing that source.\n\nJavaScript, browser error correction, user interaction, and dynamic rendering can change the DOM without changing the original HTML response.",
+    explanation:
+      'The page source and current DOM may contain different content after JavaScript runs.\n\n```js\ndocument.body.append("Added by JavaScript");\n```\n\nThis changes the DOM but not the server’s original HTML file.',
+    details:
+      "Browsers may correct invalid markup while building the DOM:\n\n```html\n\u003ctable>\n  \u003ctr>\n    \u003ctd>Item\u003c/td>\n  \u003c/tr>\n\u003c/table>\n```\n\nThe browser may insert a `\u003ctbody>` element into the DOM even if it was not present in the source.\n\nThe source is generally static for a particular response. The DOM is live and can change because of:\n\n- JavaScript\n- Form input\n- Browser extensions\n- Client-side frameworks\n- DOM APIs\n- Browser parsing rules\n\n“View Page Source” normally shows the original response. Browser developer tools normally show the current DOM.\n\nThe DOM is also different from the visual rendering of the page. CSS can hide, reorder, or visually transform elements without changing their DOM structure.",
+  },
+  {
+    number: 56,
+    question: "How do you select, create, update, and remove DOM elements?",
+    answer:
+      "Elements can be selected with methods such as `querySelector` and `querySelectorAll`, created with `createElement`, updated through properties and attributes, and removed with `remove`.",
+    explanation:
+      'A common workflow is to create an element, configure it, and insert it into the document.\n\n```js\nconst item = document.createElement("li");\nitem.textContent = "New item";\n\ndocument.querySelector("ul").append(item);\n```',
+    details:
+      'Common selection methods include:\n\n```js\ndocument.querySelector(".card");\ndocument.querySelectorAll(".card");\ndocument.getElementById("profile");\n```\n\n`querySelector` returns the first match or `null`. `querySelectorAll` returns a static `NodeList`.\n\nContent and properties can be updated directly:\n\n```js\nconst image = document.querySelector("img");\n\nimage.src = "/avatar.png";\nimage.alt = "User avatar";\n```\n\nAttributes can be managed explicitly:\n\n```js\nelement.setAttribute("aria-label", "Close");\nelement.getAttribute("aria-label");\nelement.removeAttribute("aria-label");\n```\n\nClasses can be managed with `classList`:\n\n```js\nelement.classList.add("active");\nelement.classList.remove("hidden");\nelement.classList.toggle("selected");\n```\n\nElements can be inserted with:\n\n```js\nparent.append(element);\nparent.prepend(element);\nreference.before(element);\nreference.after(element);\n```\n\nThey can be replaced or removed:\n\n```js\noldElement.replaceWith(newElement);\nelement.remove();\n```\n\nFor many insertions, a `DocumentFragment` can group work before insertion:\n\n```js\nconst fragment = document.createDocumentFragment();\n\nfor (const name of names) {\n  const item = document.createElement("li");\n  item.textContent = name;\n  fragment.append(item);\n}\n\nlist.append(fragment);\n```',
+  },
+  {
+    number: 57,
+    question: "What is event bubbling?",
+    answer:
+      "Event bubbling is the phase in which an event moves from its target element upward through its ancestors.\n\nMost common DOM events bubble, allowing parent elements to respond to events that began on their descendants.",
+    explanation:
+      'Clicking the button can trigger listeners on both the button and its parent:\n\n```js\nparent.addEventListener("click", () => {\n  console.log("Parent");\n});\n\nbutton.addEventListener("click", () => {\n  console.log("Button");\n});\n```\n\nThe button listener normally runs before the parent listener.',
+    details:
+      'An event generally moves through three phases:\n\n1. Capturing: from the document toward the target\n2. Target: at the element where the event occurred\n3. Bubbling: from the target back toward the document\n\nBubbling makes event delegation possible:\n\n```js\nlist.addEventListener("click", event => {\n  const item = event.target.closest("li");\n\n  if (item) {\n    console.log(item.dataset.id);\n  }\n});\n```\n\nNot every event bubbles. For example, `focus` and `blur` do not normally bubble, although `focusin` and `focusout` do.\n\nBubbling can be stopped:\n\n```js\nevent.stopPropagation();\n```\n\nHowever, stopping propagation can interfere with unrelated parent behavior and should be used intentionally.',
+  },
+  {
+    number: 58,
+    question: "What is event capturing?",
+    answer:
+      "Event capturing is the phase in which an event travels from the top of the document tree down toward its target.\n\nEvent listeners use the bubbling phase by default. A listener can participate in capturing by setting the `capture` option to `true`.",
+    explanation:
+      'A capturing parent listener runs before a target’s ordinary bubbling listener.\n\n```js\nparent.addEventListener(\n  "click",\n  () => console.log("Parent capture"),\n  { capture: true }\n);\n```',
+    details:
+      'The event order is generally:\n\n```text\ndocument capture\n  → ancestor capture\n  → target\n  → ancestor bubble\n  → document bubble\n```\n\nThe shorter boolean form is also supported:\n\n```js\nparent.addEventListener("click", handler, true);\n```\n\nThe options object is clearer and can include other settings:\n\n```js\nelement.addEventListener("click", handler, {\n  capture: true,\n  once: true,\n  passive: true\n});\n```\n\nCapture listeners can be useful when:\n\n- An event does not bubble normally\n- A parent must observe an event before a child handles it\n- Centralized interception is required\n\nA listener must normally be removed with the same capture setting used when it was added:\n\n```js\nelement.removeEventListener("click", handler, {\n  capture: true\n});\n```',
+  },
+  {
+    number: 59,
+    question: "What is event delegation?",
+    answer:
+      "Event delegation attaches one listener to a shared ancestor instead of attaching separate listeners to every descendant.\n\nThe ancestor uses event bubbling and information such as `event.target` to determine which descendant initiated the event.",
+    explanation:
+      'Delegation reduces the number of listeners and automatically supports matching elements added later.\n\n```js\nlist.addEventListener("click", event => {\n  const button = event.target.closest(".delete-button");\n\n  if (!button || !list.contains(button)) {\n    return;\n  }\n\n  deleteItem(button.dataset.id);\n});\n```',
+    details:
+      'Without delegation, every button needs a listener:\n\n```js\ndocument\n  .querySelectorAll(".delete-button")\n  .forEach(button => {\n    button.addEventListener("click", handleDelete);\n  });\n```\n\nNewly added buttons would require additional listeners.\n\nWith delegation, the ancestor’s listener handles current and future descendants:\n\n```js\nlist.insertAdjacentHTML(\n  "beforeend",\n  \'\u003cbutton class="delete-button">Delete\u003c/button>\'\n);\n```\n\n`closest()` is usually safer than checking only `event.target.matches()` because the click may originate from a nested icon or text element.\n\nConfirm that the matched element belongs to the intended container:\n\n```js\nif (!button || !list.contains(button)) {\n  return;\n}\n```\n\nDelegation works best for bubbling events. For non-bubbling behavior, use a related bubbling event or a capture listener where appropriate.',
+  },
+  {
+    number: 60,
+    question: "What is the difference between event.target and event.currentTarget?",
+    answer:
+      "`event.target` is the element where the event originated.\n\n`event.currentTarget` is the element whose event listener is currently running.",
+    explanation:
+      'During event delegation, the target may be a descendant while the current target is the ancestor holding the listener.\n\n```js\nlist.addEventListener("click", event => {\n  console.log(event.target);\n  console.log(event.currentTarget); // list\n});\n```',
+    details:
+      'Given this markup:\n\n```html\n\u003cbutton id="save">\n  \u003cspan>Save\u003c/span>\n\u003c/button>\n```\n\nAnd this listener:\n\n```js\nconst button = document.querySelector("#save");\n\nbutton.addEventListener("click", event => {\n  console.log(event.target);\n  console.log(event.currentTarget);\n});\n```\n\nClicking the `\u003cspan>` produces:\n\n- `event.target`: the `\u003cspan>`\n- `event.currentTarget`: the `\u003cbutton>`\n\n`target` normally stays the same as the event propagates. `currentTarget` changes for each listener.\n\nOutside the listener callback, `currentTarget` is typically `null`:\n\n```js\nbutton.addEventListener("click", event => {\n  setTimeout(() => {\n    console.log(event.currentTarget); // null\n  });\n});\n```\n\nSave the value during the callback if it is needed later.',
+  },
+  {
+    number: 61,
+    question: "What do preventDefault and stopPropagation do?",
+    answer:
+      "`preventDefault()` prevents the browser’s default action for an event.\n\n`stopPropagation()` prevents the event from continuing through the remaining ancestors during capture or bubbling.\n\nThey affect different parts of event handling.",
+    explanation:
+      'Preventing a form submission does not automatically stop the event from bubbling.\n\n```js\nform.addEventListener("submit", event => {\n  event.preventDefault();\n});\n```',
+    details:
+      'Common default browser actions include:\n\n- Following a link\n- Submitting a form\n- Checking a checkbox\n- Opening a context menu\n- Performing some drag-and-drop actions\n\nA default action can be prevented only when the event is cancelable:\n\n```js\nif (event.cancelable) {\n  event.preventDefault();\n}\n```\n\n`stopPropagation()` stops movement to other elements but does not stop other listeners on the same element.\n\nTo stop those as well, use:\n\n```js\nevent.stopImmediatePropagation();\n```\n\nPassive listeners cannot call `preventDefault()`:\n\n```js\nelement.addEventListener("touchmove", handler, {\n  passive: true\n});\n```\n\nPassive listeners help scrolling performance by promising that the handler will not cancel the event.\n\nBoth methods should be used carefully because preventing expected browser behavior or propagation may break accessibility and other components.',
+  },
+  {
+    number: 62,
+    question: "What is the difference between DOMContentLoaded and load?",
+    answer:
+      "`DOMContentLoaded` fires after the initial HTML has been parsed and the DOM has been constructed.\n\n`load` fires later, after the document and dependent resources such as images, stylesheets, and frames have finished loading.",
+    explanation:
+      'Use `DOMContentLoaded` when code only needs the DOM. Use `load` when it depends on all page resources being available.\n\n```js\ndocument.addEventListener("DOMContentLoaded", () => {\n  console.log("DOM ready");\n});\n\nwindow.addEventListener("load", () => {\n  console.log("Page resources loaded");\n});\n```',
+    details:
+      'Deferred scripts execute after parsing and before `DOMContentLoaded`:\n\n```html\n\u003cscript defer src="app.js">\u003c/script>\n```\n\nModule scripts are deferred by default:\n\n```html\n\u003cscript type="module" src="app.js">\u003c/script>\n```\n\nA normal script placed at the end of `\u003cbody>` can often access earlier DOM elements without waiting for `DOMContentLoaded`.\n\nThe `load` event also exists on individual resources:\n\n```js\nimage.addEventListener("load", () => {\n  console.log("Image loaded");\n});\n```\n\nIf code may run after `DOMContentLoaded` has already fired, check the document state:\n\n```js\nfunction initialize() {\n  // Set up application\n}\n\nif (document.readyState === "loading") {\n  document.addEventListener(\n    "DOMContentLoaded",\n    initialize,\n    { once: true }\n  );\n} else {\n  initialize();\n}\n```',
+  },
+  {
+    number: 63,
+    question: "What is the difference between innerHTML, innerText, and textContent?",
+    answer:
+      "- `innerHTML` reads or writes HTML markup.\n- `textContent` reads or writes the textual content of a node and its descendants.\n- `innerText` represents rendered text and takes visibility and layout into account.",
+    explanation:
+      'Use `textContent` for plain text. Use `innerHTML` only when HTML parsing is required and the content is trusted or properly sanitized.\n\n```js\nelement.textContent = "\u003cstrong>Hello\u003c/strong>";\n// Displays the markup as text\n\nelement.innerHTML = "\u003cstrong>Hello\u003c/strong>";\n// Creates a strong element\n```',
+    details:
+      '`innerHTML` parses assigned strings as markup:\n\n```js\ncontainer.innerHTML = `\n  \u003cbutton class="save">Save\u003c/button>\n`;\n```\n\nAssigning untrusted input to it can create an XSS vulnerability:\n\n```js\ncontainer.innerHTML = userProvidedContent;\n```\n\n`textContent` does not parse markup, making it appropriate for user-provided plain text:\n\n```js\ncontainer.textContent = userProvidedContent;\n```\n\n`textContent` includes text from hidden elements and returns content close to the underlying DOM structure.\n\n`innerText` reflects rendered text:\n\n```html\n\u003cdiv id="message">\n  Visible\n  \u003cspan hidden>Hidden\u003c/span>\n\u003c/div>\n```\n\n`textContent` includes `"Hidden"`, while `innerText` generally does not.\n\nReading `innerText` may require layout calculation, making it potentially more expensive than `textContent`.\n\nSetting `textContent` or `innerHTML` replaces existing child nodes and removes their directly attached event listeners.',
+  },
+  {
+    number: 64,
+    question: "What are custom events?",
+    answer:
+      "Custom events are application-defined DOM events used to communicate that a meaningful action or state change has occurred.\n\nThey are created with `CustomEvent` and can carry additional information through the `detail` property.",
+    explanation:
+      'Custom events let components communicate without calling each other’s internal functions directly.\n\n```js\nconst event = new CustomEvent("cart:item-added", {\n  detail: {\n    productId: 42\n  }\n});\n\nelement.dispatchEvent(event);\n```',
+    details:
+      'A listener receives the custom data through `event.detail`:\n\n```js\nelement.addEventListener("cart:item-added", event => {\n  console.log(event.detail.productId);\n});\n```\n\nCustom events do not bubble by default. Enable bubbling when delegation or ancestor communication is required:\n\n```js\nconst event = new CustomEvent("cart:item-added", {\n  bubbles: true,\n  detail: {\n    productId: 42\n  }\n});\n```\n\nThey can also be cancelable:\n\n```js\nconst event = new CustomEvent("dialog:before-close", {\n  cancelable: true\n});\n\nconst allowed = dialog.dispatchEvent(event);\n\nif (allowed) {\n  dialog.close();\n}\n```\n\nA listener can prevent the action:\n\n```js\ndialog.addEventListener("dialog:before-close", event => {\n  if (hasUnsavedChanges) {\n    event.preventDefault();\n  }\n});\n```\n\nCustom event names should be descriptive and namespaced to reduce collisions.',
+  },
+  {
+    number: 65,
+    question: "What are the differences between cookies, localStorage, and sessionStorage?",
+    answer:
+      "All three store data in the browser, but they differ in lifetime, capacity, server interaction, and scope.\n\n- Cookies can be sent automatically with HTTP requests and support security attributes.\n- `localStorage` persists until explicitly cleared.\n- `sessionStorage` lasts for the lifetime of a particular browser tab.",
+    explanation:
+      "Web Storage is convenient for non-sensitive client-side data. Cookies are appropriate when the server must receive the value, particularly for session management.",
+    details:
+      'A simplified comparison:\n\n| Feature | Cookies | `localStorage` | `sessionStorage` |\n|---|---|---|---|\n| Lifetime | Configurable | Until cleared | Current tab session |\n| Sent to server | Usually, when applicable | No | No |\n| API | String-based cookie header | Key/value | Key/value |\n| Typical capacity | Small | Larger | Larger |\n| Server can set it | Yes | No | No |\n\nWeb Storage stores strings:\n\n```js\nlocalStorage.setItem(\n  "preferences",\n  JSON.stringify({ theme: "dark" })\n);\n\nconst preferences = JSON.parse(\n  localStorage.getItem("preferences")\n);\n```\n\nStorage operations are synchronous and can block the main thread when overused.\n\nSensitive data should not be placed in Web Storage because JavaScript running on the origin can access it. An XSS vulnerability could expose it.\n\nAuthentication cookies can use protections such as:\n\n- `HttpOnly`\n- `Secure`\n- `SameSite`\n- Restricted `Domain` and `Path`\n- Appropriate expiration\n\n`HttpOnly` cookies cannot be read through JavaScript, reducing token theft through XSS, although XSS remains dangerous.',
+  },
+  {
+    number: 66,
+    question: "What is the same-origin policy?",
+    answer:
+      "The same-origin policy is a browser security rule that restricts how documents or scripts from one origin can access resources and data from another origin.\n\nAn origin is defined by its scheme, host, and port.",
+    explanation:
+      "These URLs do not all share the same origin:\n\n```text\nhttps://example.com\nhttp://example.com\nhttps://api.example.com\nhttps://example.com:8443\n```\n\nEach differs by scheme, host, or port.",
+    details:
+      'The policy restricts operations such as:\n\n- Reading cross-origin responses\n- Accessing another origin’s DOM\n- Reading another origin’s storage\n- Inspecting cross-origin frames\n\nSome cross-origin operations are allowed in limited ways. For example, a page can often display a cross-origin image but cannot freely inspect its pixel data through a canvas.\n\nCross-origin network requests may be permitted through CORS. Cross-document communication can use `window.postMessage()`:\n\n```js\notherWindow.postMessage(\n  { type: "READY" },\n  "https://trusted.example"\n);\n```\n\nThe receiving page should validate the sender:\n\n```js\nwindow.addEventListener("message", event => {\n  if (event.origin !== "https://trusted.example") {\n    return;\n  }\n\n  console.log(event.data);\n});\n```\n\nThe same-origin policy is enforced by browsers. It does not prevent direct server-to-server requests.',
+  },
+  {
+    number: 67,
+    question: "What is CORS?",
+    answer:
+      "Cross-Origin Resource Sharing, or CORS, is an HTTP-header mechanism that allows a server to tell browsers which origins may read its responses.\n\nCORS relaxes selected same-origin policy restrictions. It is configured by the server and enforced by the browser.",
+    explanation:
+      "The server may allow a particular origin with a response header:\n\n```http\nAccess-Control-Allow-Origin: https://app.example.com\n```\n\nThe frontend cannot grant itself CORS permission.",
+    details:
+      'Some cross-origin requests are considered simple and may be sent directly. The browser still checks the response headers before exposing the response to JavaScript.\n\nOther requests trigger a preflight request using `OPTIONS`:\n\n```http\nOPTIONS /api/users\nOrigin: https://app.example.com\nAccess-Control-Request-Method: PUT\nAccess-Control-Request-Headers: Content-Type\n```\n\nThe server responds with allowed methods, headers, and origins.\n\nCredentialed requests require explicit configuration:\n\n```js\nfetch("https://api.example.com/user", {\n  credentials: "include"\n});\n```\n\nThe server must allow credentials and cannot use `*` as the allowed origin for that credentialed response.\n\nCORS is not an authentication system. A server must still validate permissions and credentials.\n\nCORS also does not stop non-browser clients from making requests. Its main purpose is controlling whether browser JavaScript can access cross-origin responses.',
+  },
+  {
+    number: 68,
+    question: "How does the Fetch API work?",
+    answer:
+      "The Fetch API performs HTTP requests and returns a Promise that fulfills with a `Response` object.\n\nThe response body is read asynchronously using methods such as `json`, `text`, `blob`, or `arrayBuffer`.",
+    explanation:
+      'Fetch does not automatically reject for HTTP error statuses such as `404` or `500`. The response status must be checked.\n\n```js\nconst response = await fetch("/api/users");\n\nif (!response.ok) {\n  throw new Error(`HTTP ${response.status}`);\n}\n\nconst users = await response.json();\n```',
+    details:
+      'A POST request can be made with:\n\n```js\nconst response = await fetch("/api/users", {\n  method: "POST",\n  headers: {\n    "Content-Type": "application/json"\n  },\n  body: JSON.stringify({\n    name: "Alex"\n  })\n});\n```\n\nUseful response properties include:\n\n```js\nresponse.ok;\nresponse.status;\nresponse.statusText;\nresponse.headers;\nresponse.url;\n```\n\nThe body is a stream and normally can be consumed only once:\n\n```js\nawait response.json();\nawait response.text(); // Error: body already consumed\n```\n\nClone the response first if two consumers are genuinely required:\n\n```js\nconst copy = response.clone();\n```\n\nFetch can include an abort signal:\n\n```js\nconst controller = new AbortController();\n\nfetch("/api/users", {\n  signal: controller.signal\n});\n```\n\nRequest options also control credentials, caching, redirects, and request mode. Application code should handle:\n\n- Network failures\n- HTTP failures\n- Invalid response data\n- Cancellation\n- Timeouts\n- Loading and retry states',
+  },
+  {
+    number: 69,
+    question: "What is the difference between Fetch and XMLHttpRequest?",
+    answer:
+      "Fetch is the modern Promise-based API for HTTP requests. `XMLHttpRequest`, or XHR, is an older event- and callback-based API.\n\nFetch usually provides cleaner composition, better integration with `async`/`await`, and direct access to request and response streams.",
+    explanation:
+      "Fetch is preferred for most modern application code, while XHR may still appear in older systems or specialized upload-progress implementations.",
+    details:
+      'A Fetch request:\n\n```js\nconst response = await fetch("/api/users");\n\nif (!response.ok) {\n  throw new Error(`HTTP ${response.status}`);\n}\n\nconst users = await response.json();\n```\n\nA comparable XHR request:\n\n```js\nconst request = new XMLHttpRequest();\n\nrequest.open("GET", "/api/users");\n\nrequest.onload = () => {\n  if (request.status >= 200 && request.status \u003c 300) {\n    const users = JSON.parse(request.responseText);\n    console.log(users);\n  }\n};\n\nrequest.onerror = () => {\n  console.error("Network error");\n};\n\nrequest.send();\n```\n\nKey differences include:\n\n- Fetch uses Promises.\n- XHR uses events and callbacks.\n- Fetch supports modern stream APIs.\n- XHR has established upload-progress events.\n- Fetch requires explicit checking of HTTP failure statuses.\n- Cancellation uses `AbortController` with Fetch and `abort()` with XHR.\n\nDownload progress can be implemented with Fetch streams, although it requires manual processing. Upload progress support has historically been simpler with XHR.',
+  },
+  {
+    number: 70,
+    question: "What is the History API?",
+    answer:
+      "The History API lets browser applications interact with the current tab’s session history.\n\nIt can add or replace history entries and respond when the user navigates backward or forward.",
+    explanation:
+      'Single-page applications use it to update the URL without performing a full page reload.\n\n```js\nhistory.pushState(\n  { page: "profile" },\n  "",\n  "/profile"\n);\n```',
+    details:
+      'The main methods are:\n\n```js\nhistory.pushState(state, "", url);\nhistory.replaceState(state, "", url);\nhistory.back();\nhistory.forward();\nhistory.go(-2);\n```\n\n`pushState` adds a new entry. `replaceState` updates the current entry without adding another one.\n\nBack and forward navigation can be observed with `popstate`:\n\n```js\nwindow.addEventListener("popstate", event => {\n  renderRoute(location.pathname, event.state);\n});\n```\n\nCalling `pushState` or `replaceState` does not itself trigger `popstate`.\n\nThe new URL must generally have the same origin as the current page.\n\nClient-side routing also requires server configuration. If a user directly loads `/profile`, the server must return the application rather than an unrelated `404` response.\n\nThe History API should be paired with semantic links where possible so navigation remains accessible and behaves correctly with normal browser features.',
+  },
+  {
+    number: 71,
+    question: "What are Web Workers, and when should they be used?",
+    answer:
+      "Web Workers run JavaScript in a background thread separate from the page’s main JavaScript thread.\n\nThey are useful for CPU-intensive work that would otherwise block rendering and user interaction.",
+    explanation:
+      'Workers cannot directly access the DOM. They communicate with the main thread by exchanging messages.\n\n```js\nconst worker = new Worker("./worker.js");\n\nworker.postMessage({ values: [1, 2, 3] });\n\nworker.addEventListener("message", event => {\n  console.log(event.data);\n});\n```',
+    details:
+      'Worker code receives and sends messages:\n\n```js\n// worker.js\nself.addEventListener("message", event => {\n  const result = performExpensiveCalculation(\n    event.data.values\n  );\n\n  self.postMessage(result);\n});\n```\n\nSuitable use cases include:\n\n- Processing large datasets\n- Image or audio manipulation\n- Complex calculations\n- Parsing large files\n- Compression\n- Cryptographic work\n- Background data transformation\n\nWorkers are usually unnecessary for ordinary network requests because Fetch is already asynchronous.\n\nData is normally transferred using the structured clone algorithm, so sending very large values has a cost:\n\n```js\nworker.postMessage(largeObject);\n```\n\nTransferable objects can transfer ownership of certain data without copying:\n\n```js\nworker.postMessage(buffer, [buffer]);\n```\n\nAfter transfer, the original thread can no longer use that buffer.\n\nCommon worker types include:\n\n- Dedicated Workers, used by one page context\n- Shared Workers, potentially shared by multiple contexts\n- Service Workers, used for network interception, caching, and offline capabilities\n\nThese worker types solve different problems and have different lifecycles and APIs.\n\n# Performance and Optimization Interview Cards',
+  },
+  {
+    number: 72,
+    question: "What are debounce and throttle?",
+    answer:
+      "Debounce and throttle limit how frequently a function executes.\n\n- Debounce waits until calls have stopped for a specified period before executing.\n- Throttle allows execution at most once during each specified interval.",
+    explanation:
+      "Debounce is useful when only the final action matters, such as search input. Throttle is useful when continuous updates are needed at a controlled rate, such as scroll tracking.",
+    details:
+      'A debounced search waits until the user pauses typing:\n\n```js\nconst search = debounce(query => {\n  fetchResults(query);\n}, 300);\n\ninput.addEventListener("input", event => {\n  search(event.target.value);\n});\n```\n\nA throttled scroll handler runs periodically while scrolling continues:\n\n```js\nconst handleScroll = throttle(() => {\n  updateScrollPosition(window.scrollY);\n}, 200);\n\nwindow.addEventListener("scroll", handleScroll);\n```\n\nA basic debounce implementation:\n\n```js\nfunction debounce(callback, delay) {\n  let timeoutId;\n\n  return function (...args) {\n    clearTimeout(timeoutId);\n\n    timeoutId = setTimeout(() => {\n      callback.apply(this, args);\n    }, delay);\n  };\n}\n```\n\nDebounce and throttle implementations may support:\n\n- Leading-edge execution\n- Trailing-edge execution\n- Cancellation\n- Immediate flushing\n- A maximum waiting time\n\nFor visual updates tied to the browser’s refresh cycle, `requestAnimationFrame` may be more appropriate than time-based throttling.',
+  },
+  {
+    number: 73,
+    question: "What causes memory leaks in frontend applications?",
+    answer:
+      "A memory leak occurs when an application keeps references to data that it no longer needs, preventing garbage collection.\n\nCommon causes include forgotten event listeners, active timers, retained DOM nodes, long-lived closures, unbounded caches, subscriptions, and detached components.",
+    explanation:
+      "Memory leaks gradually increase memory usage and may make an application slow or unstable during long sessions.",
+    details:
+      'A listener can keep its related data reachable:\n\n```js\nfunction mount() {\n  const largeData = loadLargeData();\n\n  function handleResize() {\n    useData(largeData);\n  }\n\n  window.addEventListener("resize", handleResize);\n}\n```\n\nIf the component is removed but the listener remains, `handleResize` and `largeData` may stay in memory.\n\nCleanup should remove the listener:\n\n```js\nwindow.removeEventListener("resize", handleResize);\n```\n\nAn `AbortController` can manage listener cleanup:\n\n```js\nconst controller = new AbortController();\n\nwindow.addEventListener("resize", handleResize, {\n  signal: controller.signal\n});\n\ncontroller.abort();\n```\n\nOther common cleanup operations include:\n\n```js\nclearInterval(intervalId);\nobserver.disconnect();\nsubscription.unsubscribe();\ncontroller.abort();\n```\n\nDetached DOM nodes can remain in memory if JavaScript still references them:\n\n```js\nconst removedElement = document.querySelector(".panel");\nremovedElement.remove();\n\n// removedElement still references the detached node\n```\n\nBrowser memory tools, heap snapshots, and allocation timelines help identify objects that remain reachable unexpectedly.',
+  },
+  {
+    number: 74,
+    question: "How does JavaScript garbage collection work?",
+    answer:
+      "JavaScript automatically reclaims memory occupied by values that are no longer reachable from active roots.\n\nModern engines primarily use reachability-based garbage collection, commonly involving tracing algorithms such as mark-and-sweep along with generational and incremental optimizations.",
+    explanation:
+      "Developers do not manually free JavaScript objects. They help garbage collection by removing unnecessary references and cleaning up external resources.",
+    details:
+      "Garbage-collection roots typically include:\n\n- The global object\n- Active call-stack variables\n- Active closures\n- Registered callbacks\n- Reachable DOM and platform objects\n\nDuring a simplified mark-and-sweep process, the engine:\n\n1. Starts from known roots.\n2. Marks every value reachable from those roots.\n3. Reclaims unmarked values.\n\nCircular references are not automatically leaks:\n\n```js\nlet first = {};\nlet second = {};\n\nfirst.other = second;\nsecond.other = first;\n\nfirst = null;\nsecond = null;\n```\n\nThe objects can be collected because neither remains reachable from a root.\n\nSetting a local variable to `null` is not usually necessary. It can help when a long-lived object holds a large value that is no longer needed:\n\n```js\ncache.largeResult = null;\n```\n\nGarbage collection is nondeterministic. Code cannot rely on it happening at a particular moment.\n\nResources such as event listeners, network requests, observers, and timers often require explicit cleanup even though their associated JavaScript memory is managed automatically.",
+  },
+  {
+    number: 75,
+    question: "What are reflow and repaint?",
+    answer:
+      "Reflow, often called layout, recalculates the size and position of elements.\n\nRepaint redraws pixels when visual properties change without necessarily changing layout. Compositing combines rendered layers into the final image.",
+    explanation:
+      "Layout changes are usually more expensive because they can affect multiple elements and may be followed by paint and compositing work.",
+    details:
+      "Properties that can trigger layout include:\n\n- Width and height\n- Margin and padding\n- Font size\n- Positioning values\n- Content changes\n- Adding or removing elements\n\nPaint-only changes can include properties such as colors, backgrounds, borders, and shadows.\n\nProperties such as `transform` and `opacity` can often be handled mainly during compositing, making them preferable for animations:\n\n```css\n.panel {\n  transform: translateX(100px);\n  opacity: 0.5;\n}\n```\n\nRepeatedly mixing DOM reads and writes can cause layout thrashing:\n\n```js\nfor (const element of elements) {\n  const width = element.offsetWidth;\n  element.style.width = `${width + 10}px`;\n}\n```\n\nGroup reads and writes instead:\n\n```js\nconst widths = elements.map(\n  element => element.offsetWidth\n);\n\nelements.forEach((element, index) => {\n  element.style.width = `${widths[index] + 10}px`;\n});\n```\n\nNot every style change forces immediate work. Browsers often batch rendering until JavaScript yields, but reading layout-dependent measurements may force pending calculations.",
+  },
+  {
+    number: 76,
+    question: "What is the difference between async and defer on script elements?",
+    answer:
+      "Both `async` and `defer` let external scripts download without blocking HTML parsing.\n\n- `async` executes each script as soon as it finishes downloading, without preserving document order.\n- `defer` waits until HTML parsing finishes and preserves script order.",
+    explanation:
+      "Use `defer` for application scripts that depend on the DOM or each other. Use `async` for independent scripts whose execution order does not matter.",
+    details:
+      'A normal external script blocks parsing:\n\n```html\n\u003cscript src="app.js">\u003c/script>\n```\n\nThe browser pauses HTML parsing while it downloads and executes the script.\n\nDeferred scripts preserve their document order:\n\n```html\n\u003cscript defer src="library.js">\u003c/script>\n\u003cscript defer src="app.js">\u003c/script>\n```\n\n`library.js` executes before `app.js`, even if `app.js` downloads first. Deferred scripts execute before `DOMContentLoaded`.\n\nAsync scripts execute as soon as they are ready:\n\n```html\n\u003cscript async src="analytics.js">\u003c/script>\n```\n\nMultiple async scripts may execute in any order and may run before or after parsing completes.\n\nModule scripts are deferred by default:\n\n```html\n\u003cscript type="module" src="app.js">\u003c/script>\n```\n\nThe `async` attribute can also be added to a module script when immediate execution after dependency loading is appropriate.\n\n`async` and `defer` apply to external classic scripts. Their behavior does not meaningfully apply to an ordinary inline classic script without a `src`.',
+  },
+  {
+    number: 77,
+    question: "What is lazy loading?",
+    answer:
+      "Lazy loading delays downloading, initializing, or rendering a resource until it is likely to be needed.\n\nIt reduces initial page work and can improve startup time, bandwidth usage, and responsiveness.",
+    explanation:
+      'Images and iframes can use native lazy loading:\n\n```html\n\u003cimg\n  src="/photo.jpg"\n  alt="Mountain landscape"\n  loading="lazy"\n>\n```',
+    details:
+      'Common lazy-loaded resources include:\n\n- Images\n- Iframes\n- JavaScript modules\n- Routes\n- Large components\n- Videos\n- Data requested for off-screen content\n\nJavaScript can detect when content approaches the viewport with `IntersectionObserver`:\n\n```js\nconst observer = new IntersectionObserver(entries => {\n  for (const entry of entries) {\n    if (!entry.isIntersecting) {\n      continue;\n    }\n\n    loadContent(entry.target);\n    observer.unobserve(entry.target);\n  }\n});\n\nobserver.observe(document.querySelector(".gallery"));\n```\n\nModules can be loaded dynamically:\n\n```js\nconst module = await import("./editor.js");\nmodule.initializeEditor();\n```\n\nLazy loading has tradeoffs:\n\n- Loading too late can create visible delays.\n- Layout space should be reserved to prevent shifts.\n- Critical above-the-fold content should not normally be lazy-loaded.\n- Errors and loading states must be handled.\n- Excessively small chunks may add request overhead.\n\nPrefetching can complement lazy loading by downloading likely future resources during idle time.',
+  },
+  {
+    number: 78,
+    question: "What is code splitting?",
+    answer:
+      "Code splitting divides a JavaScript application into smaller bundles that can be loaded independently.\n\nIt reduces the amount of JavaScript required for the initial page and delays less important code until it is needed.",
+    explanation:
+      'Dynamic `import()` creates a natural split point in modern bundlers.\n\n```js\nconst editorModule = await import("./editor.js");\neditorModule.openEditor();\n```',
+    details:
+      'Common splitting strategies include:\n\n- Route-based splitting\n- Component-based splitting\n- Feature-based splitting\n- Splitting large third-party libraries\n- Loading administrative tools only for authorized users\n\nFor example, an application does not need to load checkout code on its home page:\n\n```js\nif (route === "/checkout") {\n  const checkout = await import("./checkout.js");\n  checkout.render();\n}\n```\n\nCode splitting can improve:\n\n- Initial bundle size\n- Parse and compilation time\n- Time to interactivity\n- Cache efficiency\n\nIt can also create costs:\n\n- Additional network requests\n- Loading states\n- Chunk-load failures\n- Dependency duplication\n- Delays when a feature is first opened\n\nPreloading or prefetching important future chunks can reduce interaction delays. Bundle analysis tools help identify large dependencies and ineffective split points.',
+  },
+  {
+    number: 79,
+    question: "What is tree shaking?",
+    answer:
+      "Tree shaking is a build optimization that removes exported code determined to be unused.\n\nIt relies primarily on the static structure of ES modules, allowing build tools to analyze `import` and `export` statements without executing the code.",
+    explanation:
+      'If a module exports several functions but an application imports only one, a bundler may exclude the unused exports from the production bundle.\n\n```js\n// utilities.js\nexport function add(a, b) {\n  return a + b;\n}\n\nexport function unusedFeature() {\n  // ...\n}\n```\n\n```js\nimport { add } from "./utilities.js";\n```',
+    details:
+      'Static ES module syntax is easier to analyze than dynamic module patterns:\n\n```js\nimport { add } from "./math.js";\n```\n\nTree shaking is most effective when:\n\n- ES modules are used\n- Production optimizations are enabled\n- Modules avoid unnecessary top-level side effects\n- Packages correctly describe side-effect behavior\n- Imports target tree-shakable entry points\n\nA top-level side effect may require a module to remain:\n\n```js\nregisterGlobalPlugin();\n```\n\nPackage metadata can identify files that must be preserved for their side effects:\n\n```json\n{\n  "sideEffects": [\n    "./src/global.css",\n    "./src/register.js"\n  ]\n}\n```\n\nTree shaking is different from minification:\n\n- Tree shaking removes unused code.\n- Minification rewrites retained code into a smaller form.\n\nImporting an entire library through a non-tree-shakable entry point may prevent unused features from being removed.',
+  },
+  {
+    number: 80,
+    question: "What is memoization?",
+    answer:
+      "Memoization caches a function’s result based on its inputs and returns the cached result when the same inputs occur again.\n\nIt exchanges additional memory and cache-management complexity for reduced computation time.",
+    explanation:
+      "Memoization is most suitable for deterministic, expensive functions that receive repeated inputs.\n\n```js\nfunction memoize(callback) {\n  const cache = new Map();\n\n  return argument => {\n    if (cache.has(argument)) {\n      return cache.get(argument);\n    }\n\n    const result = callback(argument);\n    cache.set(argument, result);\n    return result;\n  };\n}\n```",
+    details:
+      'A memoized calculation:\n\n```js\nconst calculate = memoize(number => {\n  console.log("Calculating");\n  return number * number;\n});\n\ncalculate(5); // Calculates and returns 25\ncalculate(5); // Returns cached 25\n```\n\nMultiple arguments require a reliable cache-key strategy:\n\n```js\nfunction memoizeTwoArguments(callback) {\n  const cache = new Map();\n\n  return (first, second) => {\n    const key = `${first}:${second}`;\n\n    if (!cache.has(key)) {\n      cache.set(key, callback(first, second));\n    }\n\n    return cache.get(key);\n  };\n}\n```\n\nString-based keys can collide for complex inputs. Nested `Map` objects or identity-based caches may be safer.\n\nObject arguments are compared by reference:\n\n```js\ncache.get({ id: 1 }); // Different object each time\n```\n\nMemoization is less useful when:\n\n- Inputs rarely repeat\n- Computation is inexpensive\n- Results change despite identical inputs\n- The cache can grow indefinitely\n- Cached data becomes stale\n\nFrontend frameworks may provide memoization tools, but memoization itself has a cost. It should address a measured performance problem rather than be added automatically.',
+  },
+  {
+    number: 81,
+    question: "How can frontend JavaScript performance be measured and improved?",
+    answer:
+      "Frontend performance should be measured with browser tools and real-user data before optimization.\n\nImprovements usually target loading, JavaScript execution, rendering, memory usage, network activity, and responsiveness.",
+    explanation:
+      "A useful process is:\n\n1. Measure the current experience.\n2. Identify the largest bottleneck.\n3. Apply a focused change.\n4. Measure again.\n5. Confirm that user-facing performance improved.",
+    details:
+      'Useful browser tools and APIs include:\n\n- Performance panel\n- Network panel\n- Memory profiler\n- Lighthouse\n- Performance API\n- `PerformanceObserver`\n- Coverage and bundle-analysis tools\n\nCustom timings can be recorded:\n\n```js\nperformance.mark("render-start");\n\nrenderDashboard();\n\nperformance.mark("render-end");\n\nperformance.measure(\n  "dashboard-render",\n  "render-start",\n  "render-end"\n);\n```\n\nCommon improvements include:\n\n- Reducing initial JavaScript\n- Code splitting and lazy loading\n- Removing unused dependencies\n- Optimizing images and fonts\n- Caching static resources\n- Avoiding layout thrashing\n- Virtualizing long lists\n- Moving heavy work to Web Workers\n- Debouncing or throttling frequent handlers\n- Reducing unnecessary renders\n- Breaking up long tasks\n\nImportant user-facing metrics include:\n\n- Largest Contentful Paint\n- Interaction to Next Paint\n- Cumulative Layout Shift\n- Time to First Byte\n\nLaboratory tests provide controlled comparisons, while real-user monitoring captures actual devices, networks, locations, and user behavior. Both are valuable.\n\nOptimizing a fast operation that does not affect the user is usually less valuable than fixing a measured rendering, loading, or interaction bottleneck.',
+  },
+  {
+    number: 82,
+    question: "What is the difference between requestAnimationFrame and setTimeout?",
+    answer:
+      "`requestAnimationFrame` schedules a callback before the browser’s next repaint.\n\n`setTimeout` schedules a task after a minimum time delay, without synchronizing it with rendering.",
+    explanation:
+      "Use `requestAnimationFrame` for visual updates and JavaScript-driven animations. Use `setTimeout` for general delayed work.\n\n```js\nrequestAnimationFrame(timestamp => {\n  updateAnimation(timestamp);\n});\n```",
+    details:
+      "A `requestAnimationFrame` loop can animate based on elapsed time:\n\n```js\nlet previousTime;\n\nfunction animate(currentTime) {\n  if (previousTime !== undefined) {\n    const elapsed = currentTime - previousTime;\n    updatePosition(elapsed);\n  }\n\n  previousTime = currentTime;\n  requestAnimationFrame(animate);\n}\n\nrequestAnimationFrame(animate);\n```\n\nUsing timestamps makes movement independent of the display’s refresh rate.\n\nThe browser can coordinate animation-frame callbacks with layout, paint, and compositing. It may pause or reduce them in background tabs to save resources.\n\n`setTimeout` provides only a minimum delay:\n\n```js\nsetTimeout(callback, 16);\n```\n\nThe callback may execute later if the call stack or task queue is busy. Repeated 16-millisecond timers are not reliably synchronized with the display.\n\nAnimation frames can be cancelled:\n\n```js\nconst frameId = requestAnimationFrame(animate);\ncancelAnimationFrame(frameId);\n```\n\nTimers use separate cancellation:\n\n```js\nconst timeoutId = setTimeout(callback, 1000);\nclearTimeout(timeoutId);\n```\n\n`requestAnimationFrame` is not automatically appropriate for expensive nonvisual calculations. Long callbacks still block the main thread and can cause dropped frames.\n\n# Errors, Security, and Code Quality Interview Cards",
+  },
+  {
+    number: 83,
+    question: "How do try, catch, finally, and throw work?",
+    answer:
+      "These statements provide structured error handling:\n\n- `try` contains code that may throw an error.\n- `catch` handles an error thrown inside the associated `try`.\n- `finally` runs after `try` and `catch`, whether an error occurred or not.\n- `throw` creates or propagates an exception.",
+    explanation:
+      'Use `try...catch` when code can fail in a way the application can meaningfully handle.\n\n```js\ntry {\n  const data = JSON.parse(input);\n  console.log(data);\n} catch (error) {\n  console.error("Invalid JSON", error);\n} finally {\n  console.log("Parsing attempt finished");\n}\n```',
+    details:
+      'Any JavaScript value can technically be thrown, but an `Error` object should normally be used:\n\n```js\nthrow new Error("Unable to load user");\n```\n\n`Error` objects provide useful information such as:\n\n- `name`\n- `message`\n- `stack`\n- `cause`\n\nCustom validation can throw an error:\n\n```js\nfunction setAge(age) {\n  if (!Number.isInteger(age) || age \u003c 0) {\n    throw new RangeError(\n      "Age must be a non-negative integer"\n    );\n  }\n\n  return age;\n}\n```\n\nA caught error can be handled, transformed, or rethrown:\n\n```js\ntry {\n  await saveUser(user);\n} catch (error) {\n  throw new Error("Could not save user", {\n    cause: error\n  });\n}\n```\n\n`finally` is useful for cleanup:\n\n```js\nsetLoading(true);\n\ntry {\n  await loadData();\n} catch (error) {\n  showError(error);\n} finally {\n  setLoading(false);\n}\n```\n\nA `return` inside `finally` overrides an earlier return or thrown error, so it should generally be avoided:\n\n```js\nfunction example() {\n  try {\n    throw new Error("Failed");\n  } finally {\n    return "Success"; // Suppresses the error\n  }\n}\n```\n\n`try...catch` handles synchronous exceptions and awaited Promise rejections. It does not catch an unawaited Promise rejection:\n\n```js\ntry {\n  fetchData(); // A later rejection is not caught here\n} catch (error) {\n  // Does not handle the Promise rejection\n}\n```\n\nCorrect version:\n\n```js\ntry {\n  await fetchData();\n} catch (error) {\n  console.error(error);\n}\n```',
+  },
+  {
+    number: 84,
+    question: "What is the difference between syntax, runtime, and logical errors?",
+    answer:
+      "- A syntax error means the code does not follow JavaScript’s grammar and cannot be parsed correctly.\n- A runtime error occurs while otherwise valid code is executing.\n- A logical error allows the program to run but produces incorrect behavior or results.",
+    explanation:
+      "Syntax and runtime errors usually produce exceptions. Logical errors may not produce any error message, making tests and debugging particularly important.",
+    details:
+      'A syntax error prevents the affected script from being parsed:\n\n```js\nfunction greet( {\n  console.log("Hello");\n}\n```\n\nA runtime error happens during execution:\n\n```js\nconst user = null;\nconsole.log(user.name);\n// TypeError\n```\n\nOther common runtime errors include:\n\n- `ReferenceError`\n- `TypeError`\n- `RangeError`\n- `URIError`\n- Custom application errors\n\nA logical error produces the wrong result:\n\n```js\nfunction calculateDiscount(price) {\n  return price * 1.2; // Increases the price\n}\n```\n\nThe code is valid and executes successfully, but the business logic is incorrect.\n\nTools for finding these errors include:\n\n- Syntax highlighting and linters\n- Browser developer tools\n- Breakpoints\n- Stack traces\n- Logging\n- Static type checking\n- Automated tests\n- Code review\n\nTests are especially valuable for logical errors because the JavaScript engine cannot know the intended business behavior.',
+  },
+  {
+    number: 85,
+    question: "What is cross-site scripting (XSS), and how can it be prevented?",
+    answer:
+      "Cross-site scripting is a vulnerability in which untrusted content is interpreted and executed as code in another user’s browser within a trusted application’s context.\n\nPrevention requires context-appropriate output encoding, safe DOM APIs, HTML sanitization when HTML is intentionally accepted, framework protections, and defense-in-depth controls.",
+    explanation:
+      "Untrusted text should be inserted with a safe text API instead of being parsed as HTML:\n\n```js\nmessage.textContent = userInput;\n```\n\nAvoid inserting untrusted content directly with `innerHTML`.",
+    details:
+      "Common categories include:\n\n- Stored XSS, where malicious content is persisted\n- Reflected XSS, where malicious input is included in an immediate response\n- DOM-based XSS, where unsafe client-side code writes attacker-controlled data into a dangerous DOM location\n\nUnsafe example:\n\n```js\noutput.innerHTML = location.hash.slice(1);\n```\n\nSafer plain-text version:\n\n```js\noutput.textContent = location.hash.slice(1);\n```\n\nSecurity depends on where the value is inserted. HTML content, attributes, URLs, CSS, and JavaScript have different parsing rules and require context-specific protections.\n\nImportant protections include:\n\n- Use framework output escaping correctly.\n- Use safe sinks such as `textContent`.\n- Sanitize untrusted HTML with a well-maintained sanitizer when HTML must be supported.\n- Validate URL schemes and destinations.\n- Avoid dangerous APIs such as `document.write`.\n- Avoid constructing executable JavaScript from strings.\n- Use Content Security Policy as an additional layer.\n- Consider Trusted Types where supported.\n\nSanitization is different from validation. Validation checks whether input matches expected rules. Sanitization transforms allowed HTML to remove unsafe content.\n\nContent Security Policy can reduce impact but should not be treated as the only XSS defense. Cookie attributes may also reduce certain consequences but do not prevent malicious script execution.\n\nSee the [OWASP Cross-Site Scripting Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).",
+  },
+  {
+    number: 86,
+    question: "What is cross-site request forgery (CSRF), and how can it be prevented?",
+    answer:
+      "Cross-site request forgery is an attack that tricks an authenticated browser into sending an unwanted state-changing request to a trusted application.\n\nIt commonly works when the browser automatically includes authentication credentials, such as session cookies, but the server does not verify that the intended application initiated the request.",
+    explanation:
+      "CSRF prevention is primarily enforced on the server through protections such as unpredictable CSRF tokens, appropriate `SameSite` cookies, and origin validation.",
+    details:
+      'A malicious page might attempt to trigger an authenticated action:\n\n```html\n\u003cform\n  action="https://bank.example/transfer"\n  method="POST"\n>\n  \u003cinput name="amount" value="1000">\n  \u003cinput name="destination" value="attacker">\n\u003c/form>\n```\n\nIf the browser automatically sends the victim’s session cookie and the server accepts the request without additional verification, the action may succeed.\n\nCommon protections include:\n\n- Synchronizer CSRF tokens\n- Properly implemented signed double-submit cookies\n- `SameSite` cookie attributes\n- Verification of `Origin` or `Referer`\n- Reauthentication for highly sensitive actions\n- Custom request headers where appropriate\n- Avoiding state changes through safe methods such as `GET`\n\nA token-based request may look like:\n\n```js\nawait fetch("/api/profile", {\n  method: "PATCH",\n  headers: {\n    "Content-Type": "application/json",\n    "X-CSRF-Token": csrfToken\n  },\n  credentials: "same-origin",\n  body: JSON.stringify(profile)\n});\n```\n\nThe server must verify that the token is valid, secret, unpredictable, and associated with the correct session.\n\n`SameSite` is valuable, but it should generally be treated as defense in depth unless the application meets strict conditions allowing it to stand alone.\n\nCORS is not a complete CSRF defense. Some cross-origin requests can be sent without CORS permission even when JavaScript cannot read the response.\n\nXSS can often defeat CSRF protections because malicious script running within the trusted origin can access application capabilities. Both vulnerabilities must be addressed.\n\nSee the [OWASP Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).',
+  },
+  {
+    number: 87,
+    question: "Why is using eval dangerous?",
+    answer:
+      "`eval()` parses and executes a string as JavaScript code.\n\nIt is dangerous because untrusted input can become executable code, it makes program behavior harder to analyze, and it prevents many engine and build-time optimizations.",
+    explanation:
+      "Never pass user-controlled or externally controlled content to `eval`.\n\n```js\neval(userInput); // Dangerous\n```\n\nPrefer normal JavaScript operations, data parsing, or explicit mappings.",
+    details:
+      'Code injection can occur when data is combined with executable source:\n\n```js\nconst expression = getUserInput();\nconst result = eval(expression);\n```\n\nAn attacker may supply code that reads page data, changes application behavior, or performs authenticated actions.\n\nSafer alternatives depend on the intended task.\n\nParse JSON with:\n\n```js\nconst data = JSON.parse(jsonText);\n```\n\nAccess a dynamic property with bracket notation:\n\n```js\nconst value = object[propertyName];\n```\n\nSelect a known operation with a mapping:\n\n```js\nconst operations = {\n  add: (a, b) => a + b,\n  subtract: (a, b) => a - b\n};\n\nconst operation = operations[operationName];\n\nif (!operation) {\n  throw new Error("Unsupported operation");\n}\n\nconst result = operation(first, second);\n```\n\nSet a timer with a function rather than a string:\n\n```js\nsetTimeout(() => {\n  runTask();\n}, 1000);\n```\n\nAvoid:\n\n```js\nsetTimeout("runTask()", 1000);\n```\n\nThe `Function` constructor has similar code-generation risks:\n\n```js\nnew Function(userInput);\n```\n\nIndirect `eval` changes scope behavior but does not make untrusted code safe.\n\nSee the [MDN `eval()` reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval).',
+  },
+  {
+    number: 88,
+    question: "What is strict mode?",
+    answer:
+      'Strict mode is a restricted JavaScript execution mode that converts some silent mistakes into errors, prevents certain unsafe behavior, and simplifies language semantics.\n\nIt can be enabled for a classic script or individual function with `"use strict"`. ES modules and class bodies use strict mode automatically.',
+    explanation:
+      'Strict mode catches accidental global-variable creation:\n\n```js\n"use strict";\n\nusername = "Alex";\n// ReferenceError\n```',
+    details:
+      'In non-strict classic code, assigning to an undeclared identifier may create a property on the global object. Strict mode rejects it.\n\nStrict mode also changes standalone function `this`:\n\n```js\n"use strict";\n\nfunction showThis() {\n  console.log(this);\n}\n\nshowThis(); // undefined\n```\n\nWithout strict mode in an older classic browser script, `this` may become the global object.\n\nOther strict-mode behaviors include:\n\n- Rejecting assignments to non-writable properties\n- Rejecting deletion of plain identifiers\n- Preventing duplicate parameter names in ordinary function syntax\n- Reserving certain identifiers\n- Restricting some `eval` behavior\n- Removing some historically error-prone semantics\n\nEnable it for an entire classic script by placing the directive first:\n\n```js\n"use strict";\n\nfunction run() {\n  // Strict mode applies here\n}\n```\n\nOr for one function:\n\n```js\nfunction run() {\n  "use strict";\n  // Strict only inside this function\n}\n```\n\nBlocks cannot independently enable strict mode.\n\nModern projects using ES modules already receive strict-mode behavior:\n\n```html\n\u003cscript type="module" src="app.js">\u003c/script>\n```\n\nSee the [MDN strict mode reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode).',
+  },
+  {
+    number: 89,
+    question: "What is optional chaining?",
+    answer:
+      "Optional chaining uses `?.` to access a property, call a function, or read an indexed value only when the preceding value is not `null` or `undefined`.\n\nIf the preceding value is nullish, the expression short-circuits and returns `undefined`.",
+    explanation:
+      "It avoids errors when optional intermediate values may be missing.\n\n```js\nconst city = user.address?.city;\n```\n\nIf `user.address` is `null` or `undefined`, `city` becomes `undefined`.",
+    details:
+      'Optional property access:\n\n```js\nuser.profile?.name;\n```\n\nOptional element access:\n\n```js\nusers?.[0];\ndictionary?.[key];\n```\n\nOptional function call:\n\n```js\noptions.onComplete?.();\n```\n\nOptional chaining checks only for `null` and `undefined`. Other falsy values remain valid:\n\n```js\nconst data = {\n  count: 0,\n  label: ""\n};\n\ndata.count?.toString(); // "0"\n```\n\nChaining can continue across multiple optional levels:\n\n```js\nconst country =\n  response.data?.user?.address?.country;\n```\n\nBe careful with grouping:\n\n```js\nuser?.profile.name;\n```\n\nThis protects access to `user`, but if `user` exists and `profile` is nullish, accessing `.name` still fails. Safer version:\n\n```js\nuser?.profile?.name;\n```\n\nOptional chaining cannot be used on the left side of assignment:\n\n```js\nuser?.name = "Alex"; // SyntaxError\n```\n\nIt should not hide required-data errors. If a value must exist, explicit validation may communicate the contract better.',
+  },
+  {
+    number: 90,
+    question: "What is nullish coalescing?",
+    answer:
+      "The nullish coalescing operator `??` returns its right-hand operand only when its left-hand operand is `null` or `undefined`.\n\nUnlike `||`, it does not replace other falsy values such as `0`, `false`, or an empty string.",
+    explanation:
+      "It is useful when falsy values are valid data:\n\n```js\nconst count = 0;\n\ncount || 10; // 10\ncount ?? 10; // 0\n```",
+    details:
+      'Examples:\n\n```js\nnull ?? "default";      // "default"\nundefined ?? "default"; // "default"\nfalse ?? true;          // false\n0 ?? 100;               // 0\n"" ?? "untitled";       // ""\n```\n\nNullish coalescing is often combined with optional chaining:\n\n```js\nconst city =\n  user.address?.city ?? "Unknown city";\n```\n\nThe right-hand expression is evaluated only when needed:\n\n```js\nconst value = cachedValue ?? calculateValue();\n```\n\n`calculateValue()` runs only if `cachedValue` is `null` or `undefined`.\n\nNullish assignment updates a variable only when it is nullish:\n\n```js\nsettings.theme ??= "light";\n```\n\nJavaScript does not allow `??` to be mixed directly with `&&` or `||` without parentheses:\n\n```js\nvalue || fallback ?? defaultValue;\n// SyntaxError\n```\n\nThe intended grouping must be explicit:\n\n```js\n(value || fallback) ?? defaultValue;\n```',
+  },
+  {
+    number: 91,
+    question: "What are common ways to test JavaScript code?",
+    answer:
+      "JavaScript code can be tested through automated unit, integration, component, end-to-end, accessibility, performance, and visual tests.\n\nStatic analysis, type checking, linting, and manual exploratory testing complement automated tests but test different qualities.",
+    explanation:
+      "Effective test suites focus on observable behavior and combine fast focused tests with a smaller number of realistic full-system tests.",
+    details:
+      'Common testing layers include:\n\n- Unit tests for isolated logic\n- Integration tests for cooperating modules\n- Component tests for UI behavior\n- End-to-end tests for complete user journeys\n- Contract tests for service boundaries\n- Visual regression tests for unexpected layout changes\n- Accessibility tests for detectable accessibility issues\n- Performance tests for speed and resource budgets\n\nA simple behavior-focused test might look like:\n\n```js\nfunction calculateTotal(items) {\n  return items.reduce(\n    (total, item) => total + item.price,\n    0\n  );\n}\n\ntest("calculates the total price", () => {\n  const items = [\n    { price: 10 },\n    { price: 15 }\n  ];\n\n  expect(calculateTotal(items)).toBe(25);\n});\n```\n\nUI tests should generally interact with the interface as a user would:\n\n```js\nconst button = screen.getByRole("button", {\n  name: "Save"\n});\n\nawait user.click(button);\n\nexpect(\n  screen.getByText("Saved successfully")\n).toBeVisible();\n```\n\nUseful testing principles include:\n\n- Test behavior rather than implementation details.\n- Keep tests deterministic.\n- Avoid unnecessary mocks.\n- Test success, failure, empty, and boundary cases.\n- Give tests descriptive names.\n- Ensure failures clearly identify broken behavior.\n- Run important tests automatically in continuous integration.\n\nAutomated accessibility tools identify many issues but cannot replace manual keyboard, screen-reader, and usability testing.',
+  },
+  {
+    number: 92,
+    question: "What is the difference between unit, integration, and end-to-end testing?",
+    answer:
+      "- Unit tests verify a small piece of logic in isolation.\n- Integration tests verify that multiple parts work correctly together.\n- End-to-end tests verify complete user workflows through the running application.\n\nThe levels differ in scope, realism, speed, maintenance cost, and diagnostic precision.",
+    explanation:
+      "A balanced test strategy uses each level for the behavior it can verify most effectively.",
+    details:
+      'A unit test might verify a formatting function:\n\n```js\ntest("formats a full name", () => {\n  expect(\n    formatName({\n      first: "Alex",\n      last: "Smith"\n    })\n  ).toBe("Alex Smith");\n});\n```\n\nUnit tests are typically:\n\n- Fast\n- Focused\n- Easy to run frequently\n- Good at identifying the source of a failure\n\nAn integration test might render a form, submit it, and verify its interaction with a mocked or local API layer:\n\n```js\ntest("submits valid profile data", async () => {\n  render(\u003cProfileForm />);\n\n  await user.type(\n    screen.getByLabelText("Name"),\n    "Alex"\n  );\n\n  await user.click(\n    screen.getByRole("button", {\n      name: "Save"\n    })\n  );\n\n  expect(api.saveProfile).toHaveBeenCalledWith({\n    name: "Alex"\n  });\n});\n```\n\nIntegration tests cover boundaries that isolated unit tests may miss.\n\nAn end-to-end test might:\n\n1. Open the application in a real browser.\n2. Sign in.\n3. Add an item to a cart.\n4. Complete checkout.\n5. Verify the confirmation page.\n\nEnd-to-end tests provide strong confidence in important user journeys but are generally slower, more expensive to maintain, and harder to debug.\n\nNot every function needs a unit test, and not every variation needs an end-to-end test. High-value business rules benefit from focused tests, while critical user journeys benefit from a smaller number of reliable end-to-end tests.\n\n# Practical Interview Question Cards',
+  },
+  {
+    number: 93,
+    question: "How would you reverse a string?",
+    answer:
+      'For simple strings, convert the string to an array, reverse the array, and join it again.\n\n```js\nfunction reverseString(value) {\n  return [...value].reverse().join("");\n}\n```',
+    explanation:
+      'Strings are immutable, so the function creates and returns a new string.\n\n```js\nreverseString("hello"); // "olleh"\n```',
+    details:
+      'Spread syntax handles Unicode code points better than `split("")`:\n\n```js\n[..."A😀B"];\n// ["A", "😀", "B"]\n```\n\nBy comparison, `split("")` separates the emoji into UTF-16 code units:\n\n```js\n"A😀B".split("");\n// ["A", "\\uD83D", "\\uDE00", "B"]\n```\n\nA manual implementation can use a loop:\n\n```js\nfunction reverseString(value) {\n  let result = "";\n\n  for (const character of value) {\n    result = character + result;\n  }\n\n  return result;\n}\n```\n\nBoth versions have linear time complexity, `O(n)`, and require additional memory.\n\nSome visible characters consist of multiple Unicode code points, such as letters with combining marks or family emojis. Correctly reversing user-perceived characters requires grapheme segmentation:\n\n```js\nfunction reverseGraphemes(value, locale = "en") {\n  const segmenter = new Intl.Segmenter(locale, {\n    granularity: "grapheme"\n  });\n\n  return [...segmenter.segment(value)]\n    .map(segment => segment.segment)\n    .reverse()\n    .join("");\n}\n```\n\nIn an interview, clarify whether the expected solution must handle basic characters, Unicode code points, or complete grapheme clusters.',
+  },
+  {
+    number: 94,
+    question: "How would you check whether a string is a palindrome?",
+    answer:
+      'Normalize the string according to the requirements and compare it with its reversed form.\n\n```js\nfunction isPalindrome(value) {\n  const normalized = value\n    .toLowerCase()\n    .replace(/[^a-z0-9]/g, "");\n\n  return (\n    normalized ===\n    [...normalized].reverse().join("")\n  );\n}\n```',
+    explanation:
+      'A palindrome reads the same forward and backward.\n\n```js\nisPalindrome("Racecar"); // true\nisPalindrome("Hello");   // false\n```',
+    details:
+      'A two-pointer solution avoids creating a reversed string:\n\n```js\nfunction isPalindrome(value) {\n  const normalized = value\n    .toLowerCase()\n    .replace(/[^a-z0-9]/g, "");\n\n  let left = 0;\n  let right = normalized.length - 1;\n\n  while (left \u003c right) {\n    if (normalized[left] !== normalized[right]) {\n      return false;\n    }\n\n    left++;\n    right--;\n  }\n\n  return true;\n}\n```\n\nTime complexity is `O(n)`. The normalization step still creates an additional string.\n\nRequirements should be clarified:\n\n- Should letter casing be ignored?\n- Should spaces and punctuation be ignored?\n- Should accented characters be normalized?\n- Should all Unicode letters and numbers be supported?\n- Is an empty string considered a palindrome?\n\nA Unicode-aware normalization can use property escapes:\n\n```js\nconst normalized = value\n  .normalize("NFC")\n  .toLocaleLowerCase()\n  .replace(/[^\\p{L}\\p{N}]/gu, "");\n```\n\nThis retains Unicode letters and numbers instead of only ASCII characters.',
+  },
+  {
+    number: 95,
+    question: "How would you flatten a nested array?",
+    answer:
+      "Use `flat(Infinity)` when arrays may have any nesting depth.\n\n```js\nfunction flatten(array) {\n  return array.flat(Infinity);\n}\n```",
+    explanation:
+      "`flat` creates a new array and removes the specified number of nested array levels.\n\n```js\nflatten([1, [2, [3, 4]]]);\n// [1, 2, 3, 4]\n```",
+    details:
+      "A recursive implementation can demonstrate the underlying algorithm:\n\n```js\nfunction flatten(array) {\n  const result = [];\n\n  for (const value of array) {\n    if (Array.isArray(value)) {\n      result.push(...flatten(value));\n    } else {\n      result.push(value);\n    }\n  }\n\n  return result;\n}\n```\n\nA reducer version is also possible:\n\n```js\nfunction flatten(array) {\n  return array.reduce((result, value) => {\n    if (Array.isArray(value)) {\n      return result.concat(flatten(value));\n    }\n\n    result.push(value);\n    return result;\n  }, []);\n}\n```\n\nDeep recursion may exceed the call stack. An iterative solution avoids that risk:\n\n```js\nfunction flatten(array) {\n  const stack = [...array].reverse();\n  const result = [];\n\n  while (stack.length > 0) {\n    const value = stack.pop();\n\n    if (Array.isArray(value)) {\n      stack.push(...value.slice().reverse());\n    } else {\n      result.push(value);\n    }\n  }\n\n  return result;\n}\n```\n\nTime complexity is `O(n)`, where `n` includes all nested values. The result requires `O(n)` additional space.",
+  },
+  {
+    number: 96,
+    question: "How would you group an array of objects by a property?",
+    answer:
+      "Iterate over the array and store each object in a collection associated with its property value.\n\n```js\nfunction groupBy(items, property) {\n  return items.reduce((groups, item) => {\n    const key = item[property];\n\n    groups[key] ??= [];\n    groups[key].push(item);\n\n    return groups;\n  }, {});\n}\n```",
+    explanation:
+      'Each property value becomes a key whose value is an array of matching objects.\n\n```js\ngroupBy(\n  [\n    { name: "Alex", role: "admin" },\n    { name: "Sam", role: "user" },\n    { name: "Lee", role: "admin" }\n  ],\n  "role"\n);\n```',
+    details:
+      'The result is:\n\n```js\n{\n  admin: [\n    { name: "Alex", role: "admin" },\n    { name: "Lee", role: "admin" }\n  ],\n  user: [\n    { name: "Sam", role: "user" }\n  ]\n}\n```\n\nA callback makes the function more flexible:\n\n```js\nfunction groupBy(items, getKey) {\n  return items.reduce((groups, item) => {\n    const key = getKey(item);\n\n    groups[key] ??= [];\n    groups[key].push(item);\n\n    return groups;\n  }, {});\n}\n\ngroupBy(users, user => user.role);\n```\n\nA `Map` supports keys of any type and avoids object-key coercion:\n\n```js\nfunction groupByMap(items, getKey) {\n  const groups = new Map();\n\n  for (const item of items) {\n    const key = getKey(item);\n    const group = groups.get(key) ?? [];\n\n    group.push(item);\n    groups.set(key, group);\n  }\n\n  return groups;\n}\n```\n\nModern JavaScript environments may provide `Object.groupBy()` and `Map.groupBy()`:\n\n```js\nconst groups = Object.groupBy(\n  users,\n  user => user.role\n);\n```\n\nCheck runtime compatibility when using newer built-in methods.',
+  },
+  {
+    number: 97,
+    question: "How would you implement debounce?",
+    answer:
+      "Return a wrapper function that resets a timer after every call. Execute the original function only when no new call occurs during the delay.\n\n```js\nfunction debounce(callback, delay) {\n  let timeoutId;\n\n  return function (...args) {\n    clearTimeout(timeoutId);\n\n    timeoutId = setTimeout(() => {\n      callback.apply(this, args);\n    }, delay);\n  };\n}\n```",
+    explanation:
+      'Debouncing is useful when only the final call matters, such as waiting for a user to stop typing before searching.\n\n```js\nconst search = debounce(fetchResults, 300);\ninput.addEventListener("input", search);\n```',
+    details:
+      "`apply` preserves the wrapper’s dynamic `this` and forwards its arguments.\n\nA version with cancellation and flushing:\n\n```js\nfunction debounce(callback, delay) {\n  let timeoutId;\n  let latestArgs;\n  let latestThis;\n\n  function debounced(...args) {\n    latestArgs = args;\n    latestThis = this;\n\n    clearTimeout(timeoutId);\n\n    timeoutId = setTimeout(() => {\n      timeoutId = undefined;\n      callback.apply(latestThis, latestArgs);\n    }, delay);\n  }\n\n  debounced.cancel = () => {\n    clearTimeout(timeoutId);\n    timeoutId = undefined;\n    latestArgs = undefined;\n    latestThis = undefined;\n  };\n\n  debounced.flush = () => {\n    if (timeoutId === undefined) {\n      return;\n    }\n\n    clearTimeout(timeoutId);\n    timeoutId = undefined;\n    callback.apply(latestThis, latestArgs);\n  };\n\n  return debounced;\n}\n```\n\nImportant design choices include:\n\n- Leading or trailing execution\n- Preserving `this`\n- Forwarding arguments\n- Returning results\n- Cancellation\n- Maximum wait time\n- Handling async callbacks\n\nA production implementation should also clean up pending timers when the owning UI component is removed.",
+  },
+  {
+    number: 98,
+    question: "How would you implement throttle?",
+    answer:
+      "Return a wrapper that permits the original function to execute at most once during each specified interval.\n\n```js\nfunction throttle(callback, interval) {\n  let lastExecutionTime = 0;\n\n  return function (...args) {\n    const currentTime = Date.now();\n\n    if (\n      currentTime - lastExecutionTime >= interval\n    ) {\n      lastExecutionTime = currentTime;\n      callback.apply(this, args);\n    }\n  };\n}\n```",
+    explanation:
+      "Throttling is useful when regular updates are needed during a frequent event such as scrolling, resizing, or pointer movement.",
+    details:
+      'The basic implementation executes on the leading edge but may discard the final call.\n\nA leading-and-trailing implementation preserves a final call:\n\n```js\nfunction throttle(callback, interval) {\n  let lastExecutionTime = 0;\n  let timeoutId;\n  let latestArgs;\n  let latestThis;\n\n  return function (...args) {\n    const currentTime = Date.now();\n    const remaining =\n      interval - (currentTime - lastExecutionTime);\n\n    latestArgs = args;\n    latestThis = this;\n\n    if (remaining \u003c= 0) {\n      clearTimeout(timeoutId);\n      timeoutId = undefined;\n      lastExecutionTime = currentTime;\n\n      callback.apply(latestThis, latestArgs);\n    } else if (timeoutId === undefined) {\n      timeoutId = setTimeout(() => {\n        timeoutId = undefined;\n        lastExecutionTime = Date.now();\n\n        callback.apply(latestThis, latestArgs);\n      }, remaining);\n    }\n  };\n}\n```\n\nDebounce and throttle solve different problems:\n\n- Debounce waits for activity to stop.\n- Throttle produces periodic updates while activity continues.\n\nFor visual updates, `requestAnimationFrame` can act as a rendering-aware throttle:\n\n```js\nlet frameRequested = false;\n\nwindow.addEventListener("scroll", () => {\n  if (frameRequested) {\n    return;\n  }\n\n  frameRequested = true;\n\n  requestAnimationFrame(() => {\n    updateInterface(window.scrollY);\n    frameRequested = false;\n  });\n});\n```',
+  },
+  {
+    number: 99,
+    question: "How would you implement a deep clone?",
+    answer:
+      "In modern JavaScript, use `structuredClone()` when the input contains supported structured-clone values.\n\n```js\nconst copy = structuredClone(original);\n```\n\nA custom implementation is necessary only when the application has specific cloning rules or unsupported values.",
+    explanation:
+      'A deep clone creates independent nested data, unlike spread syntax, which copies only the top level.\n\n```js\nconst copy = structuredClone(original);\ncopy.settings.theme = "dark";\n```',
+    details:
+      '`structuredClone()` supports many built-in types:\n\n- Objects and arrays\n- `Date`\n- `Map`\n- `Set`\n- Typed arrays\n- `ArrayBuffer`\n- Circular references\n\nIt does not clone every kind of value. Functions and DOM nodes are notable unsupported examples.\n\nA basic custom implementation:\n\n```js\nfunction deepClone(value, seen = new WeakMap()) {\n  if (\n    value === null ||\n    typeof value !== "object"\n  ) {\n    return value;\n  }\n\n  if (seen.has(value)) {\n    return seen.get(value);\n  }\n\n  if (value instanceof Date) {\n    return new Date(value.getTime());\n  }\n\n  if (value instanceof Map) {\n    const copy = new Map();\n    seen.set(value, copy);\n\n    for (const [key, item] of value) {\n      copy.set(\n        deepClone(key, seen),\n        deepClone(item, seen)\n      );\n    }\n\n    return copy;\n  }\n\n  if (value instanceof Set) {\n    const copy = new Set();\n    seen.set(value, copy);\n\n    for (const item of value) {\n      copy.add(deepClone(item, seen));\n    }\n\n    return copy;\n  }\n\n  const copy = Array.isArray(value)\n    ? []\n    : Object.create(Object.getPrototypeOf(value));\n\n  seen.set(value, copy);\n\n  for (const key of Reflect.ownKeys(value)) {\n    copy[key] = deepClone(value[key], seen);\n  }\n\n  return copy;\n}\n```\n\nEven this implementation does not preserve every possible property descriptor, internal slot, or built-in type.\n\nJSON conversion is not a general-purpose deep clone:\n\n```js\nJSON.parse(JSON.stringify(value));\n```\n\nIt loses or changes values such as `undefined`, `Date`, `Map`, `Set`, `BigInt`, symbols, functions, and circular references.\n\nIn an interview, explain the supported data types before presenting a custom clone.',
+  },
+  {
+    number: 100,
+    question: "How would you implement a simplified version of Promise.all?",
+    answer:
+      "Convert the input into an array, resolve each value with `Promise.resolve`, store results by input index, and resolve when all operations fulfill.\n\nReject immediately when any input rejects.\n\n```js\nfunction promiseAll(iterable) {\n  const values = Array.from(iterable);\n\n  return new Promise((resolve, reject) => {\n    if (values.length === 0) {\n      resolve([]);\n      return;\n    }\n\n    const results = new Array(values.length);\n    let completed = 0;\n\n    values.forEach((value, index) => {\n      Promise.resolve(value).then(result => {\n        results[index] = result;\n        completed++;\n\n        if (completed === values.length) {\n          resolve(results);\n        }\n      }, reject);\n    });\n  });\n}\n```",
+    explanation:
+      "Results must remain in input order even when the operations finish in a different order.",
+    details:
+      'Example:\n\n```js\nconst slow = new Promise(resolve => {\n  setTimeout(() => resolve("slow"), 100);\n});\n\nconst fast = Promise.resolve("fast");\n\npromiseAll([slow, fast, 42]).then(console.log);\n// ["slow", "fast", 42]\n```\n\nThe important behaviors are:\n\n- Accept an iterable\n- Accept both Promises and ordinary values\n- Preserve input order\n- Fulfill when every value fulfills\n- Reject when the first rejection is observed\n- Fulfill with an empty array for empty input\n\n`Promise.resolve(value)` also adopts compatible thenable values:\n\n```js\nPromise.resolve({\n  then(resolve) {\n    resolve("thenable result");\n  }\n});\n```\n\nRejecting the combined Promise does not cancel the other operations:\n\n```js\npromiseAll([\n  fetch("/first"),\n  Promise.reject(new Error("Failed")),\n  fetch("/third")\n]);\n```\n\nThe Fetch operations may continue even though the combined Promise has rejected.\n\nA fully specification-compatible implementation has additional details involving iterator behavior, Promise subclasses, thenables, and error handling. Interview implementations are normally expected to demonstrate the core behavior.',
+  },
+  {
+    number: 101,
+    question: "How would you retry a failed asynchronous operation?",
+    answer:
+      "Wrap the operation in a loop, catch failures, and try again until it succeeds or reaches the maximum number of attempts.\n\nInclude a delay, preferably exponential backoff with jitter, and retry only failures that are likely to be temporary.",
+    explanation:
+      "Not every error should be retried. Validation failures and most client errors will not improve through repetition.\n\n```js\nasync function retry(operation, attempts = 3) {\n  let lastError;\n\n  for (let attempt = 1; attempt \u003c= attempts; attempt++) {\n    try {\n      return await operation();\n    } catch (error) {\n      lastError = error;\n    }\n  }\n\n  throw lastError;\n}\n```",
+    details:
+      'A more complete implementation:\n\n```js\nfunction wait(milliseconds, signal) {\n  return new Promise((resolve, reject) => {\n    const timeoutId = setTimeout(\n      resolve,\n      milliseconds\n    );\n\n    signal?.addEventListener(\n      "abort",\n      () => {\n        clearTimeout(timeoutId);\n        reject(signal.reason);\n      },\n      { once: true }\n    );\n  });\n}\n\nasync function retry(\n  operation,\n  {\n    attempts = 3,\n    initialDelay = 300,\n    factor = 2,\n    shouldRetry = () => true,\n    signal\n  } = {}\n) {\n  let lastError;\n\n  for (let attempt = 1; attempt \u003c= attempts; attempt++) {\n    signal?.throwIfAborted();\n\n    try {\n      return await operation({\n        attempt,\n        signal\n      });\n    } catch (error) {\n      lastError = error;\n\n      if (\n        attempt === attempts ||\n        !shouldRetry(error)\n      ) {\n        throw error;\n      }\n\n      const baseDelay =\n        initialDelay * factor ** (attempt - 1);\n\n      const jitter = Math.random() * baseDelay * 0.2;\n\n      await wait(baseDelay + jitter, signal);\n    }\n  }\n\n  throw lastError;\n}\n```\n\nExponential backoff increases the delay:\n\n```text\n300 ms → 600 ms → 1200 ms\n```\n\nJitter prevents many clients from retrying simultaneously.\n\nGood candidates for retry may include temporary network failures, rate limits, and some server errors. Respect server guidance such as a `Retry-After` header.\n\nBe careful when retrying non-idempotent operations. Repeating a payment or creation request could duplicate an action unless the API supports idempotency keys.',
+  },
+  {
+    number: 102,
+    question: "How would you build an event emitter?",
+    answer:
+      "Store listeners by event name and provide methods to subscribe, unsubscribe, and emit events.\n\nA `Map` of event names to `Set` collections prevents duplicate listener entries and supports efficient removal.\n\n```js\nclass EventEmitter {\n  #events = new Map();\n\n  on(eventName, listener) {\n    const listeners =\n      this.#events.get(eventName) ?? new Set();\n\n    listeners.add(listener);\n    this.#events.set(eventName, listeners);\n\n    return () => this.off(eventName, listener);\n  }\n\n  off(eventName, listener) {\n    const listeners = this.#events.get(eventName);\n\n    if (!listeners) {\n      return;\n    }\n\n    listeners.delete(listener);\n\n    if (listeners.size === 0) {\n      this.#events.delete(eventName);\n    }\n  }\n\n  emit(eventName, ...args) {\n    const listeners = this.#events.get(eventName);\n\n    if (!listeners) {\n      return;\n    }\n\n    for (const listener of [...listeners]) {\n      listener(...args);\n    }\n  }\n}\n```",
+    explanation:
+      "Event emitters allow components to communicate without requiring the producer to know each consumer directly.",
+    details:
+      'Usage:\n\n```js\nconst emitter = new EventEmitter();\n\nconst unsubscribe = emitter.on(\n  "user:updated",\n  user => {\n    console.log(user.name);\n  }\n);\n\nemitter.emit("user:updated", {\n  name: "Alex"\n});\n\nunsubscribe();\n```\n\nCopying the listener set during emission provides predictable behavior if a listener removes itself while the event is being processed:\n\n```js\nfor (const listener of [...listeners]) {\n  listener(...args);\n}\n```\n\nA `once` method can automatically unsubscribe:\n\n```js\nonce(eventName, listener) {\n  const unsubscribe = this.on(\n    eventName,\n    (...args) => {\n      unsubscribe();\n      listener(...args);\n    }\n  );\n\n  return unsubscribe;\n}\n```\n\nDesign decisions include:\n\n- Should duplicate listeners be allowed?\n- Should listener errors stop later listeners?\n- Should listeners run synchronously or asynchronously?\n- What happens when listeners are added during emission?\n- Should wildcard events be supported?\n- Is there a maximum-listener warning?\n\nLong-lived emitters can cause memory leaks when consumers forget to unsubscribe. Returning a cleanup function makes correct lifecycle management easier.',
+  },
+  {
+    number: 103,
+    question: "How would you cache the result of a function?",
+    answer:
+      "Wrap the function with a cache that stores results using the function arguments as keys. When the same input appears again, return the stored result instead of recomputing it.\n\nThis technique is called memoization.\n\n```js\nfunction memoize(callback) {\n  const cache = new Map();\n\n  return function (argument) {\n    if (cache.has(argument)) {\n      return cache.get(argument);\n    }\n\n    const result = callback.call(this, argument);\n    cache.set(argument, result);\n\n    return result;\n  };\n}\n```",
+    explanation:
+      "Memoization is most valuable for deterministic, expensive functions that receive repeated inputs.",
+    details:
+      'A multi-argument implementation can use nested maps without converting arguments to strings:\n\n```js\nfunction memoize(callback) {\n  const root = new Map();\n  const resultSymbol = Symbol("result");\n\n  return function (...args) {\n    let current = root;\n\n    for (const argument of args) {\n      if (!current.has(argument)) {\n        current.set(argument, new Map());\n      }\n\n      current = current.get(argument);\n    }\n\n    if (current.has(resultSymbol)) {\n      return current.get(resultSymbol);\n    }\n\n    const result = callback.apply(this, args);\n    current.set(resultSymbol, result);\n\n    return result;\n  };\n}\n```\n\nStringifying arguments is simple but unreliable for general values:\n\n```js\nconst key = JSON.stringify(args);\n```\n\nProblems include:\n\n- Property-order differences\n- Unsupported values\n- Circular references\n- Large serialization costs\n- Semantically different values producing similar keys\n\nAsync functions require special consideration. Caching the Promise prevents duplicate concurrent work:\n\n```js\nfunction memoizeAsync(callback) {\n  const cache = new Map();\n\n  return function (key) {\n    if (!cache.has(key)) {\n      const promise = callback.call(this, key);\n\n      cache.set(key, promise);\n\n      promise.catch(() => {\n        cache.delete(key);\n      });\n    }\n\n    return cache.get(key);\n  };\n}\n```\n\nRemoving rejected Promises allows a later call to retry.\n\nProduction caches may also need:\n\n- Expiration\n- Size limits\n- Least-recently-used eviction\n- Manual invalidation\n- Weak references for object keys\n- Protection against stale data\n\nMemoization should not be used for impure functions whose result changes despite identical arguments.',
+  },
+  {
+    number: 104,
+    question: "How would you diagnose and improve a slow frontend application?",
+    answer:
+      "Begin by measuring the user-visible problem, reproduce it consistently, and use browser tools to identify whether the main bottleneck is network loading, JavaScript execution, rendering, memory, or backend latency.\n\nApply a targeted improvement and measure again to verify the result.",
+    explanation:
+      "Performance work should follow evidence:\n\n```text\nMeasure → identify bottleneck → optimize → verify\n```\n\nA faster internal operation is not valuable unless it improves the user experience or prevents a meaningful resource problem.",
+    details:
+      'Start by clarifying the symptom:\n\n- Is the initial page slow?\n- Is an interaction delayed?\n- Is scrolling or animation uneven?\n- Does performance degrade over time?\n- Is the problem limited to certain devices or networks?\n- Is the backend response slow?\n\nUseful browser tools include:\n\n- Network panel\n- Performance profiler\n- Memory profiler\n- Rendering diagnostics\n- Lighthouse\n- Coverage tools\n- Framework-specific profilers\n- Bundle analyzers\n\nFor slow initial loading, inspect:\n\n- Large JavaScript bundles\n- Render-blocking resources\n- Slow API responses\n- Unoptimized images or fonts\n- Missing compression or caching\n- Excessive third-party scripts\n- Duplicate dependencies\n\nPotential improvements include:\n\n- Code splitting\n- Lazy loading\n- Tree shaking\n- Image optimization\n- Resource caching\n- Preloading critical assets\n- Reducing third-party code\n- Server-side or static rendering where appropriate\n\nFor slow interactions, inspect the main-thread timeline for long tasks:\n\n```js\nperformance.mark("operation-start");\n\nperformOperation();\n\nperformance.mark("operation-end");\n\nperformance.measure(\n  "operation",\n  "operation-start",\n  "operation-end"\n);\n```\n\nPotential improvements include:\n\n- Reducing unnecessary work\n- Breaking long tasks into smaller units\n- Moving CPU-heavy work to Web Workers\n- Debouncing or throttling frequent events\n- Virtualizing large lists\n- Avoiding unnecessary component renders\n- Caching expensive calculations\n\nFor rendering problems, look for:\n\n- Layout thrashing\n- Large DOM trees\n- Expensive CSS selectors\n- Frequent style recalculation\n- Large paint areas\n- Animations using layout-triggering properties\n\nFor degradation over time, inspect:\n\n- Forgotten event listeners\n- Active timers\n- Detached DOM nodes\n- Unbounded caches\n- Retained subscriptions\n- Repeatedly created resources\n\nCompare results before and after the change using the same conditions. Confirm improvements with real-user monitoring when possible because local development hardware may not represent actual users.',
   },
 ];
