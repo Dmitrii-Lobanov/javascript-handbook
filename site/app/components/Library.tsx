@@ -184,7 +184,9 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
                   <strong>{chapter.title}</strong>
                   <small>{chapter.part}</small>
                 </div>
-                {chapter.slug && <Link href={`/chapters/${chapter.slug}`}>Read →</Link>}
+                {chapter.slug && (
+                  <Link href={`/javascript/handbook/chapters/${chapter.slug}`}>Read →</Link>
+                )}
               </li>
             ))}
           </ul>
@@ -203,7 +205,7 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
 
 function ChapterCard({ chapter, isComplete }: { chapter: Chapter; isComplete: boolean }) {
   return (
-    <Link className="chapter-card" href={`/chapters/${chapter.slug}`}>
+    <Link className="chapter-card" href={`/javascript/handbook/chapters/${chapter.slug}`}>
       <div className="chapter-card-top">
         <span className="chapter-number">
           {chapter.kind === "summary" ? "Review" : String(chapter.number).padStart(2, "0")}

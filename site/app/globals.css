@@ -236,6 +236,61 @@ button {
   background: var(--paper);
   transform: translateY(-1px);
 }
+.technology-nav {
+  min-height: 54px;
+  padding: 0 max(1.25rem, calc((100vw - 1180px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 72px;
+  z-index: 19;
+}
+.technology-nav a {
+  text-decoration: none;
+}
+.technology-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+.technology-name > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 900 0.62rem/1 monospace;
+}
+.technology-nav > div {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+}
+.technology-nav > div a {
+  display: flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.technology-nav > div a:hover {
+  color: var(--ink);
+}
+.technology-nav > div a.active {
+  border-bottom-color: var(--teal);
+  color: var(--teal);
+}
 .hero {
   max-width: 1180px;
   margin: 0 auto;
@@ -294,6 +349,121 @@ button {
 }
 .wiki-home {
   min-height: calc(100vh - 72px);
+}
+.technology-page {
+  min-height: calc(100vh - 126px);
+}
+.technology-hero {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(4rem, 8vw, 7rem) 1.5rem clamp(3.5rem, 7vw, 5.5rem);
+  display: grid;
+  grid-template-columns: auto minmax(0, 760px);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+}
+.technology-hero-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(120px, 17vw, 190px);
+  aspect-ratio: 1;
+  border-radius: 30px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 900 clamp(2.8rem, 6vw, 5rem)/1 monospace;
+  box-shadow:
+    8px 8px 0 color-mix(in srgb, var(--ink) 85%, transparent),
+    0 25px 60px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.technology-hero h1 {
+  margin: 0.65rem 0 1rem;
+  font:
+    700 clamp(4rem, 9vw, 7.5rem)/0.9 Georgia,
+    serif;
+  letter-spacing: -0.065em;
+}
+.technology-hero p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.65;
+}
+.technology-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin-top: 1.8rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.technology-stats strong {
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 1.25rem;
+}
+.technology-resources {
+  padding: clamp(3.5rem, 7vw, 6rem) max(1.5rem, calc((100vw - 1180px) / 2));
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.technology-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.technology-resource-card {
+  display: flex;
+  min-height: 280px;
+  flex-direction: column;
+  padding: clamp(1.3rem, 3vw, 1.8rem);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  text-decoration: none;
+}
+.technology-resource-card.available {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.technology-resource-card.available:hover {
+  transform: translateY(-3px);
+  border-color: var(--teal);
+  box-shadow: 0 15px 35px color-mix(in srgb, var(--ink) 9%, transparent);
+}
+.resource-type {
+  color: var(--teal);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.technology-resource-card h3 {
+  margin: 1.4rem 0 0.75rem;
+  font:
+    700 clamp(1.6rem, 3vw, 2.2rem)/1.1 Georgia,
+    serif;
+}
+.technology-resource-card p {
+  max-width: 520px;
+  margin: 0 0 1.4rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.technology-resource-card > div {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.technology-resource-card > div strong {
+  color: var(--ink);
+}
+.resource-link {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  font-size: 0.8rem;
+  font-weight: 850;
 }
 .wiki-hero {
   max-width: 1180px;
@@ -1305,7 +1475,7 @@ button {
 }
 .chapter-sidebar {
   position: sticky;
-  top: 104px;
+  top: 158px;
   align-self: start;
 }
 .back-link {
@@ -1788,6 +1958,22 @@ button {
     height: 64px;
     padding: 0 1rem;
   }
+  .technology-nav {
+    top: 64px;
+    gap: 0.7rem;
+    padding: 0 1rem;
+  }
+  .technology-name {
+    font-size: 0.75rem;
+  }
+  .technology-name > span {
+    width: 25px;
+    height: 25px;
+  }
+  .technology-nav > div a {
+    padding: 0 0.5rem;
+    font-size: 0.68rem;
+  }
   .brand-copy,
   .header-actions > a {
     display: none;
@@ -1803,6 +1989,25 @@ button {
   }
   .wiki-hero {
     padding-top: 4rem;
+  }
+  .technology-hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding-top: 3.5rem;
+  }
+  .technology-hero-mark {
+    width: 100px;
+    border-radius: 22px;
+    font-size: 2.5rem;
+  }
+  .technology-hero h1 {
+    font-size: clamp(3.5rem, 19vw, 5rem);
+  }
+  .technology-resource-grid {
+    grid-template-columns: 1fr;
+  }
+  .technology-resource-card {
+    min-height: 250px;
   }
   .wiki-hero h1 {
     font-size: clamp(3rem, 15vw, 4.8rem);

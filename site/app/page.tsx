@@ -13,14 +13,14 @@ const modes = [
     label: "Learn",
     title: "Structured handbooks",
     description: "Build durable mental models through connected, interview-focused chapters.",
-    href: "/learn/javascript",
+    href: "/javascript/handbook",
     status: "Available",
   },
   {
     label: "Q&A",
     title: "Practice explanations",
     description: "Start concise, then reveal reasoning and senior-level follow-up detail.",
-    href: "/questions",
+    href: "/javascript/q-and-a",
     status: "Available",
   },
   {
@@ -45,7 +45,7 @@ const tracks = [
     title: "JavaScript",
     description: "Runtime internals, language semantics, browser behavior, and performance.",
     meta: `${chapters.filter((chapter) => chapter.kind === "chapter").length} chapters · ${questionAnswers.length} answers`,
-    href: "/learn/javascript",
+    href: "/javascript",
     state: "active",
   },
   {
@@ -100,10 +100,10 @@ export default function WikiHome() {
           quick references, and deliberate practice in one place.
         </p>
         <div className="wiki-actions">
-          <Link className="primary-action" href="/learn/javascript">
+          <Link className="primary-action" href="/javascript/handbook">
             Start with JavaScript <span aria-hidden="true">→</span>
           </Link>
-          <Link className="secondary-action" href="/questions">
+          <Link className="secondary-action" href="/javascript/q-and-a">
             Open interview Q&amp;A
           </Link>
         </div>

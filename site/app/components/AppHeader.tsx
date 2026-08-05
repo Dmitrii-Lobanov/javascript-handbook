@@ -7,10 +7,7 @@ import { useEffect, useState } from "react";
 export function AppHeader() {
   const [dark, setDark] = useState(false);
   const pathname = usePathname();
-  const isQuestions = pathname.startsWith("/questions");
-  const isLearn = pathname.startsWith("/learn") || pathname.startsWith("/chapters");
-  const isReference = pathname.startsWith("/reference");
-  const isPractice = pathname.startsWith("/practice");
+  const isJavaScript = pathname.startsWith("/javascript");
 
   useEffect(() => {
     const saved = localStorage.getItem("handbook-theme");
@@ -40,32 +37,18 @@ export function AppHeader() {
       <nav className="header-actions" aria-label="Primary navigation">
         <div className="section-switch" aria-label="Choose application section">
           <Link
-            className={isLearn ? "active" : ""}
-            href="/learn/javascript"
-            aria-current={isLearn ? "page" : undefined}
+            className={pathname === "/" ? "active" : ""}
+            href="/"
+            aria-current={pathname === "/" ? "page" : undefined}
           >
-            Learn
+            Wiki
           </Link>
           <Link
-            className={isQuestions ? "active" : ""}
-            href="/questions"
-            aria-current={isQuestions ? "page" : undefined}
+            className={isJavaScript ? "active" : ""}
+            href="/javascript"
+            aria-current={isJavaScript ? "page" : undefined}
           >
-            Q&amp;A
-          </Link>
-          <Link
-            className={isReference ? "active" : ""}
-            href="/reference"
-            aria-current={isReference ? "page" : undefined}
-          >
-            Reference
-          </Link>
-          <Link
-            className={isPractice ? "active" : ""}
-            href="/practice"
-            aria-current={isPractice ? "page" : undefined}
-          >
-            Practice
+            JavaScript
           </Link>
         </div>
         <a
