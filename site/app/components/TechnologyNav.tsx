@@ -1,62 +1,48 @@
 import Link from "next/link";
+import { getTrack, type LearningTrack } from "../lib/tracks";
 
-type JavaScriptSection = "overview" | "handbook" | "q-and-a";
+function TrackNav({ track, active }: { track: LearningTrack; active: string }) {
+  const items = [
+    { slug: "overview", label: "Overview", href: `/${track.slug}` },
+    ...track.resources.map((resource) => ({
+      slug: resource.slug,
+      label: resource.label,
+      href: `/${track.slug}/${resource.slug}`,
+    })),
+  ];
+
+  return (
+    <nav className="technology-nav" aria-label={`${track.title} sections`}>
+      <Link className="technology-name" href={`/${track.slug}`}>
+        <span>{track.mark}</span>
+        {track.shortTitle ?? track.title}
+      </Link>
+      <div>
+        {items.map((item) => (
+          <Link
+            className={active === item.slug ? "active" : ""}
+            href={item.href}
+            aria-current={active === item.slug ? "page" : undefined}
+            key={item.slug}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+type JavaScriptSection = "overview" | "handbook" | "q-and-a" | "practice";
 
 export function JavaScriptNav({ active }: { active: JavaScriptSection }) {
-  const items: Array<{ id: JavaScriptSection; label: string; href: string }> = [
-    { id: "overview", label: "Overview", href: "/javascript" },
-    { id: "handbook", label: "Handbook", href: "/javascript/handbook" },
-    { id: "q-and-a", label: "Q&A", href: "/javascript/q-and-a" },
-  ];
-
-  return (
-    <nav className="technology-nav" aria-label="JavaScript sections">
-      <Link className="technology-name" href="/javascript">
-        <span>JS</span>
-        JavaScript
-      </Link>
-      <div>
-        {items.map((item) => (
-          <Link
-            className={active === item.id ? "active" : ""}
-            href={item.href}
-            aria-current={active === item.id ? "page" : undefined}
-            key={item.id}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
+  return <TrackNav track={getTrack("javascript")!} active={active} />;
 }
 
-type ReactSection = "overview" | "q-and-a";
+type ReactSection = "overview" | "handbook" | "q-and-a" | "practice";
 
 export function ReactNav({ active }: { active: ReactSection }) {
-  const items: Array<{ id: ReactSection; label: string; href: string }> = [
-    { id: "overview", label: "Overview", href: "/react" },
-    { id: "q-and-a", label: "Q&A", href: "/react/q-and-a" },
-  ];
-
-  return (
-    <nav className="technology-nav" aria-label="React sections">
-      <Link className="technology-name" href="/react">
-        <span>RE</span>
-        React
-      </Link>
-      <div>
-        {items.map((item) => (
-          <Link
-            className={active === item.id ? "active" : ""}
-            href={item.href}
-            aria-current={active === item.id ? "page" : undefined}
-            key={item.id}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
+  return <TrackNav track={getTrack("react")!} active={active} />;
 }
+
+export { TrackNav };

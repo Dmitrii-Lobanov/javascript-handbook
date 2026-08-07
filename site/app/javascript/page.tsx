@@ -69,22 +69,15 @@ export default function JavaScriptPage() {
               </div>
               <span className="resource-link">Practice answers →</span>
             </Link>
-            <article className="technology-resource-card">
-              <span className="resource-type">Reference</span>
-              <h3>JavaScript Quick Reference</h3>
-              <p>
-                Comparison tables, syntax reminders, runtime terminology, and debugging checklists.
-              </p>
-              <div>Planned</div>
-            </article>
-            <article className="technology-resource-card">
+            <Link className="technology-resource-card available" href="/javascript/practice">
               <span className="resource-type">Practice</span>
               <h3>JavaScript Practice Lab</h3>
               <p>
                 Output prediction, debugging scenarios, implementation tasks, and mock interviews.
               </p>
-              <div>Planned</div>
-            </article>
+              <div>Roadmap ready · Content planned</div>
+              <span className="resource-link">View roadmap →</span>
+            </Link>
           </div>
         </section>
       </main>

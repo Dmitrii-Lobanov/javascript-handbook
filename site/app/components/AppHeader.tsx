@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { learningTracks } from "../lib/tracks";
 
 export function AppHeader() {
   const [dark, setDark] = useState(false);
+  const tracksMenuRef = useRef<HTMLDetailsElement>(null);
   const pathname = usePathname();
-  const isJavaScript = pathname.startsWith("/javascript");
-  const isReact = pathname.startsWith("/react");
+  const activeTrack = learningTracks.find((track) => pathname.startsWith(`/${track.slug}`));
 
   useEffect(() => {
     const saved = localStorage.getItem("handbook-theme");
@@ -17,6 +18,31 @@ export function AppHeader() {
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
     setDark(shouldUseDark);
     document.documentElement.dataset.theme = shouldUseDark ? "dark" : "light";
+  }, []);
+
+  useEffect(() => {
+    function closeTracksMenu(event: PointerEvent) {
+      const menu = tracksMenuRef.current;
+      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) {
+        menu.open = false;
+      }
+    }
+
+    function closeTracksMenuWithKeyboard(event: KeyboardEvent) {
+      const menu = tracksMenuRef.current;
+      if (event.key === "Escape" && menu?.open) {
+        menu.open = false;
+        menu.querySelector("summary")?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", closeTracksMenu);
+    document.addEventListener("keydown", closeTracksMenuWithKeyboard);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeTracksMenu);
+      document.removeEventListener("keydown", closeTracksMenuWithKeyboard);
+    };
   }, []);
 
   function toggleTheme() {
@@ -36,51 +62,73 @@ export function AppHeader() {
         </span>
       </Link>
       <nav className="header-actions" aria-label="Primary navigation">
-        <div className="section-switch" aria-label="Choose application section">
-          <Link
-            className={pathname === "/" ? "active" : ""}
-            href="/"
-            aria-current={pathname === "/" ? "page" : undefined}
-          >
-            Wiki
-          </Link>
-          <Link
-            className={isJavaScript ? "active" : ""}
-            href="/javascript"
-            aria-current={isJavaScript ? "page" : undefined}
-          >
-            JavaScript
-          </Link>
-          <Link
-            className={isReact ? "active" : ""}
-            href="/react"
-            aria-current={isReact ? "page" : undefined}
-          >
-            React
-          </Link>
-        </div>
-        <a
-          className="nav-author"
-          href="https://github.com/Dmitrii-Lobanov"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Frontend Wiki created by Dmitrii Lobanov — GitHub profile"
+        <Link
+          className={`header-link ${pathname === "/" ? "active" : ""}`}
+          href="/"
+          aria-current={pathname === "/" ? "page" : undefined}
         >
-          <span className="nav-author-avatar" aria-hidden="true">
-            DL
-          </span>
-          <span className="nav-author-name">
-            <small>Wiki author</small>
-            <strong>Dmitrii Lobanov</strong>
-          </span>
-          <span className="nav-author-arrow" aria-hidden="true">
-            ↗
-          </span>
+          Home
+        </Link>
+        <details ref={tracksMenuRef} className={`tracks-menu ${activeTrack ? "active" : ""}`}>
+          <summary>
+            {activeTrack?.shortTitle ?? activeTrack?.title ?? "Tracks"}
+            <span className="tracks-menu-chevron" aria-hidden="true" />
+          </summary>
+          <div className="tracks-menu-panel">
+            <div className="tracks-menu-heading">
+              <div>
+                <strong>Learning tracks</strong>
+                <small>Handbook · Q&amp;A · Practice</small>
+              </div>
+              <Link href="/#tracks-title">View all</Link>
+            </div>
+            <div className="tracks-menu-grid">
+              {learningTracks.map((track) => (
+                <Link
+                  className={activeTrack?.slug === track.slug ? "active" : ""}
+                  href={`/${track.slug}`}
+                  key={track.slug}
+                >
+                  <span>{track.mark}</span>
+                  <span>
+                    <strong>{track.shortTitle ?? track.title}</strong>
+                    <small>
+                      {track.status === "available"
+                        ? "Available"
+                        : track.status === "expanding"
+                          ? "Expanding"
+                          : `Phase ${track.phase}`}
+                    </small>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </details>
+        <Link
+          className={`header-link ${pathname.startsWith("/practice") ? "active" : ""}`}
+          href="/practice"
+        >
+          Practice
+        </Link>
+        <Link
+          className={`header-link ${pathname.startsWith("/reference") ? "active" : ""}`}
+          href="/reference"
+        >
+          Reference
+        </Link>
+        <a
+          className="header-feedback"
+          href="mailto:dmitriilobanov3@gmail.com?subject=Frontend%20Interview%20Hub%20feedback"
+        >
+          Send feedback
         </a>
         <a
+          className="header-github"
           href="https://github.com/Dmitrii-Lobanov/javascript-handbook"
           target="_blank"
           rel="noreferrer"
+          aria-label="Frontend Interview Hub on GitHub"
         >
           GitHub
         </a>

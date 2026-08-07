@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { chapters, questionAnswers } from "@/generated/content";
+import { chapters, questionAnswers, reactQuestionAnswers } from "@/generated/content";
+import { learningTracks } from "./lib/tracks";
 
 export const metadata: Metadata = {
   title: "Frontend Engineering Wiki",
@@ -39,54 +40,9 @@ const modes = [
   },
 ];
 
-const tracks = [
-  {
-    mark: "JS",
-    title: "JavaScript",
-    description: "Runtime internals, language semantics, browser behavior, and performance.",
-    meta: `${chapters.filter((chapter) => chapter.kind === "chapter").length} chapters · ${questionAnswers.length} answers`,
-    href: "/javascript",
-    state: "active",
-  },
-  {
-    mark: "RE",
-    title: "React",
-    description: "Rendering, state, effects, scheduling, performance, and component design.",
-    meta: "Handbook and Q&A planned",
-    href: "/react",
-    state: "next",
-  },
-  {
-    mark: "TS",
-    title: "TypeScript",
-    description: "Type modeling, inference, generics, narrowing, and production patterns.",
-    meta: "Track planned",
-    state: "planned",
-  },
-  {
-    mark: "BR",
-    title: "Browser & DOM",
-    description: "Events, rendering, storage, networking, accessibility, and platform APIs.",
-    meta: "Track planned",
-    state: "planned",
-  },
-  {
-    mark: "PF",
-    title: "Performance",
-    description: "Measurement, main-thread work, loading, rendering, and memory diagnosis.",
-    meta: "Track planned",
-    state: "planned",
-  },
-  {
-    mark: "AR",
-    title: "Frontend Architecture",
-    description: "Boundaries, state ownership, data flow, resilience, and system design.",
-    meta: "Track planned",
-    state: "planned",
-  },
-];
-
 export default function WikiHome() {
+  const answerCount = questionAnswers.length + reactQuestionAnswers.length;
+
   return (
     <main className="wiki-home">
       <section className="wiki-hero">
@@ -114,11 +70,11 @@ export default function WikiHome() {
             <span>chapters available</span>
           </div>
           <div>
-            <strong>{questionAnswers.length}</strong>
+            <strong>{answerCount}</strong>
             <span>answers available</span>
           </div>
           <div>
-            <strong>{tracks.length}</strong>
+            <strong>{learningTracks.length}</strong>
             <span>knowledge tracks</span>
           </div>
         </div>
@@ -150,45 +106,31 @@ export default function WikiHome() {
         <div className="wiki-section-heading">
           <span className="eyebrow">Knowledge tracks</span>
           <h2 id="tracks-title">Grow beyond one handbook</h2>
-          <p>JavaScript is available now. The interface is ready for the next frontend domains.</p>
+          <p>Follow the phased curriculum or jump directly to the subject you need.</p>
         </div>
         <div className="track-grid">
-          {tracks.map((track) => {
-            const content = (
-              <>
-                <span className={`track-mark ${track.state}`}>{track.mark}</span>
-                <div>
-                  <div className="track-title-row">
-                    <h3>{track.title}</h3>
-                    <small>
-                      {track.state === "active"
-                        ? "Available"
-                        : track.state === "next"
-                          ? "Up next"
-                          : "Planned"}
-                    </small>
-                  </div>
-                  <p>{track.description}</p>
-                  <span className="track-meta">{track.meta}</span>
+          {learningTracks.map((track) => (
+            <Link className="track-card available" href={`/${track.slug}`} key={track.title}>
+              <span className={`track-mark ${track.status}`}>{track.mark}</span>
+              <div>
+                <div className="track-title-row">
+                  <h3>{track.title}</h3>
+                  <small>
+                    {track.status === "available"
+                      ? "Available"
+                      : track.status === "expanding"
+                        ? "Expanding"
+                        : `Phase ${track.phase}`}
+                  </small>
                 </div>
-                {track.href && (
-                  <span className="track-arrow" aria-hidden="true">
-                    →
-                  </span>
-                )}
-              </>
-            );
-
-            return track.href ? (
-              <Link className="track-card available" href={track.href} key={track.title}>
-                {content}
-              </Link>
-            ) : (
-              <article className="track-card" key={track.title}>
-                {content}
-              </article>
-            );
-          })}
+                <p>{track.description}</p>
+                <span className="track-meta">
+                  {track.resources.map((resource) => resource.label).join(" · ")}
+                </span>
+              </div>
+              <span className="track-arrow" aria-hidden="true">→</span>
+            </Link>
+          ))}
         </div>
       </section>
     </main>

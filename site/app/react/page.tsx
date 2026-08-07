@@ -5,7 +5,7 @@ import { reactQuestionAnswers, reactQuestionRoadmap } from "@/generated/content"
 
 export const metadata: Metadata = {
   title: "React",
-  description: "The planned React frontend engineering knowledge track.",
+  description: "React handbook roadmap, 120 interview questions, and practice resources.",
 };
 
 export default function ReactPage() {
@@ -23,7 +23,7 @@ export default function ReactPage() {
             RE
           </span>
           <div>
-            <span className="eyebrow">Technology track · Up next</span>
+            <span className="eyebrow">Technology track · Expanding</span>
             <h1>React</h1>
             <p>
               A dedicated track for rendering, state, effects, scheduling, performance, component
@@ -43,18 +43,19 @@ export default function ReactPage() {
         <section className="technology-resources" aria-labelledby="react-resources-title">
           <div className="wiki-section-heading">
             <span className="eyebrow">React resources</span>
-            <h2 id="react-resources-title">Structure ready for content</h2>
-            <p>The React handbook and Q&amp;A sources now have dedicated repository folders.</p>
+            <h2 id="react-resources-title">Choose your learning mode</h2>
+            <p>Build the mental model, rehearse explanations, then apply the ideas.</p>
           </div>
           <div className="technology-resource-grid">
-            <article className="technology-resource-card">
+            <Link className="technology-resource-card available" href="/react/handbook">
               <span className="resource-type">Learn</span>
               <h3>React Handbook</h3>
               <p>
                 Connected chapters covering React's mental models, runtime behavior, and trade-offs.
               </p>
-              <div>Planned</div>
-            </article>
+              <div>Roadmap ready · Content planned</div>
+              <span className="resource-link">View roadmap →</span>
+            </Link>
             <Link className="technology-resource-card available" href="/react/q-and-a">
               <span className="resource-type">Interview Q&amp;A</span>
               <h3>React Questions &amp; Answers</h3>
@@ -63,6 +64,13 @@ export default function ReactPage() {
                 <strong>{reactQuestionAnswers.length}</strong> of {questionCount} answers available
               </div>
               <span className="resource-link">Practice answers →</span>
+            </Link>
+            <Link className="technology-resource-card available" href="/react/practice">
+              <span className="resource-type">Practice</span>
+              <h3>React Practice</h3>
+              <p>Debugging, performance, accessibility, and component-design exercises.</p>
+              <div>Roadmap ready · Content planned</div>
+              <span className="resource-link">View roadmap →</span>
             </Link>
           </div>
         </section>
