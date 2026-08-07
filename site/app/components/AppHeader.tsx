@@ -21,6 +21,12 @@ export function AppHeader() {
   }, []);
 
   useEffect(() => {
+    if (tracksMenuRef.current) {
+      tracksMenuRef.current.open = false;
+    }
+  }, [pathname]);
+
+  useEffect(() => {
     function closeTracksMenu(event: PointerEvent) {
       const menu = tracksMenuRef.current;
       if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) {
@@ -52,6 +58,12 @@ export function AppHeader() {
     localStorage.setItem("handbook-theme", next ? "dark" : "light");
   }
 
+  function closeTracksMenu() {
+    if (tracksMenuRef.current) {
+      tracksMenuRef.current.open = false;
+    }
+  }
+
   return (
     <header className="site-header">
       <Link className="brand" href="/" aria-label="Frontend Engineering Wiki home">
@@ -80,13 +92,16 @@ export function AppHeader() {
                 <strong>Learning tracks</strong>
                 <small>Handbook · Q&amp;A · Practice</small>
               </div>
-              <Link href="/#tracks-title">View all</Link>
+              <Link href="/#tracks-title" onClick={closeTracksMenu}>
+                View all
+              </Link>
             </div>
             <div className="tracks-menu-grid">
               {learningTracks.map((track) => (
                 <Link
                   className={activeTrack?.slug === track.slug ? "active" : ""}
                   href={`/${track.slug}`}
+                  onClick={closeTracksMenu}
                   key={track.slug}
                 >
                   <span>{track.mark}</span>
