@@ -1619,7 +1619,7 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       "Immutable updates make state changes easier to track and are especially useful in frontend state management.\n\n```js\nconst original = [1, 2];\nconst updated = [...original, 3];\n```",
     details:
-      'Common mutating array methods include:\n\n- `push`\n- `pop`\n- `shift`\n- `unshift`\n- `splice`\n- `sort`\n- `reverse`\n- `fill`\n\n```js\nconst numbers = [3, 1, 2];\nnumbers.sort();\n\nconsole.log(numbers); // [1, 2, 3]\n```\n\nCommon non-mutating array methods include:\n\n- `map`\n- `filter`\n- `slice`\n- `concat`\n- `toSorted`\n- `toReversed`\n- `toSpliced`\n\n```js\nconst numbers = [3, 1, 2];\nconst sorted = numbers.toSorted();\n\nconsole.log(numbers); // [3, 1, 2]\nconsole.log(sorted);  // [1, 2, 3]\n```\n\nObjects can be updated immutably with spread syntax:\n\n```js\nconst user = {\n  name: "Alex",\n  role: "user"\n};\n\nconst updatedUser = {\n  ...user,\n  role: "admin"\n};\n```\n\nNested updates require copying every changed level:\n\n```js\nconst state = {\n  user: {\n    settings: {\n      theme: "light"\n    }\n  }\n};\n\nconst updatedState = {\n  ...state,\n  user: {\n    ...state.user,\n    settings: {\n      ...state.user.settings,\n      theme: "dark"\n    }\n  }\n};\n```\n\n`const` does not make an object immutable:\n\n```js\nconst user = { name: "Alex" };\nuser.name = "Sam"; // Allowed\n```\n\n`Object.freeze()` prevents direct changes to an object’s own properties, but it is shallow:\n\n```js\nconst settings = Object.freeze({\n  nested: {\n    theme: "light"\n  }\n});\n\nsettings.nested.theme = "dark"; // Nested object is not frozen\n```\n\nImmutability can improve predictability, change detection, undo functionality, memoization, and debugging. However, copying large structures also has a performance and memory cost, so the appropriate strategy depends on the application.\n\n# Arrays and Collections Interview Cards',
+      'Common mutating array methods include:\n\n- `push`\n- `pop`\n- `shift`\n- `unshift`\n- `splice`\n- `sort`\n- `reverse`\n- `fill`\n\n```js\nconst numbers = [3, 1, 2];\nnumbers.sort();\n\nconsole.log(numbers); // [1, 2, 3]\n```\n\nCommon non-mutating array methods include:\n\n- `map`\n- `filter`\n- `slice`\n- `concat`\n- `toSorted`\n- `toReversed`\n- `toSpliced`\n\n```js\nconst numbers = [3, 1, 2];\nconst sorted = numbers.toSorted();\n\nconsole.log(numbers); // [3, 1, 2]\nconsole.log(sorted);  // [1, 2, 3]\n```\n\nObjects can be updated immutably with spread syntax:\n\n```js\nconst user = {\n  name: "Alex",\n  role: "user"\n};\n\nconst updatedUser = {\n  ...user,\n  role: "admin"\n};\n```\n\nNested updates require copying every changed level:\n\n```js\nconst state = {\n  user: {\n    settings: {\n      theme: "light"\n    }\n  }\n};\n\nconst updatedState = {\n  ...state,\n  user: {\n    ...state.user,\n    settings: {\n      ...state.user.settings,\n      theme: "dark"\n    }\n  }\n};\n```\n\n`const` does not make an object immutable:\n\n```js\nconst user = { name: "Alex" };\nuser.name = "Sam"; // Allowed\n```\n\n`Object.freeze()` prevents direct changes to an object’s own properties, but it is shallow:\n\n```js\nconst settings = Object.freeze({\n  nested: {\n    theme: "light"\n  }\n});\n\nsettings.nested.theme = "dark"; // Nested object is not frozen\n```\n\nImmutability can improve predictability, change detection, undo functionality, memoization, and debugging. However, copying large structures also has a performance and memory cost, so the appropriate strategy depends on the application.',
   },
   {
     number: 33,
@@ -1709,7 +1709,7 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       'They are useful for attaching metadata or tracking objects without extending those objects’ lifetimes.\n\n```js\nconst metadata = new WeakMap();\n\nconst element = document.querySelector("button");\nmetadata.set(element, { clicks: 0 });\n```',
     details:
-      'A regular `Map` strongly retains its keys:\n\n```js\nconst cache = new Map();\n\nlet user = { id: 1 };\ncache.set(user, "cached");\n\nuser = null;\n```\n\nThe object remains reachable through `cache`, so it cannot be garbage-collected.\n\nA `WeakMap` does not keep its keys alive:\n\n```js\nconst cache = new WeakMap();\n\nlet user = { id: 1 };\ncache.set(user, "cached");\n\nuser = null;\n```\n\nIf no other references remain, the object and its associated entry may be collected.\n\nCommon `WeakMap` operations are:\n\n```js\nweakMap.set(object, value);\nweakMap.get(object);\nweakMap.has(object);\nweakMap.delete(object);\n```\n\nCommon `WeakSet` operations are:\n\n```js\nweakSet.add(object);\nweakSet.has(object);\nweakSet.delete(object);\n```\n\nWeak collections are not iterable and do not expose `size` or `clear`. Garbage collection is unpredictable, so JavaScript cannot provide a reliable list of their current entries.\n\nA `WeakMap` can store private metadata associated with an object:\n\n```js\nconst privateData = new WeakMap();\n\nclass User {\n  constructor(name) {\n    privateData.set(this, { name });\n  }\n\n  getName() {\n    return privateData.get(this).name;\n  }\n}\n```\n\nA `WeakSet` can track whether particular objects have been processed:\n\n```js\nconst processed = new WeakSet();\n\nfunction process(object) {\n  if (processed.has(object)) {\n    return;\n  }\n\n  processed.add(object);\n  // Process the object\n}\n```\n\nWeak collections are specialized tools. Use `Map` or `Set` when iteration, primitive keys, or collection size is required.\n\n# Asynchronous JavaScript Interview Cards',
+      'A regular `Map` strongly retains its keys:\n\n```js\nconst cache = new Map();\n\nlet user = { id: 1 };\ncache.set(user, "cached");\n\nuser = null;\n```\n\nThe object remains reachable through `cache`, so it cannot be garbage-collected.\n\nA `WeakMap` does not keep its keys alive:\n\n```js\nconst cache = new WeakMap();\n\nlet user = { id: 1 };\ncache.set(user, "cached");\n\nuser = null;\n```\n\nIf no other references remain, the object and its associated entry may be collected.\n\nCommon `WeakMap` operations are:\n\n```js\nweakMap.set(object, value);\nweakMap.get(object);\nweakMap.has(object);\nweakMap.delete(object);\n```\n\nCommon `WeakSet` operations are:\n\n```js\nweakSet.add(object);\nweakSet.has(object);\nweakSet.delete(object);\n```\n\nWeak collections are not iterable and do not expose `size` or `clear`. Garbage collection is unpredictable, so JavaScript cannot provide a reliable list of their current entries.\n\nA `WeakMap` can store private metadata associated with an object:\n\n```js\nconst privateData = new WeakMap();\n\nclass User {\n  constructor(name) {\n    privateData.set(this, { name });\n  }\n\n  getName() {\n    return privateData.get(this).name;\n  }\n}\n```\n\nA `WeakSet` can track whether particular objects have been processed:\n\n```js\nconst processed = new WeakSet();\n\nfunction process(object) {\n  if (processed.has(object)) {\n    return;\n  }\n\n  processed.add(object);\n  // Process the object\n}\n```\n\nWeak collections are specialized tools. Use `Map` or `Set` when iteration, primitive keys, or collection size is required.',
   },
   {
     number: 42,
@@ -1829,7 +1829,7 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       "Sequential awaits unnecessarily delay independent operations:\n\n```js\nconst user = await fetchUser();\nconst products = await fetchProducts();\n```\n\nParallel version:\n\n```js\nconst [user, products] = await Promise.all([\n  fetchUser(),\n  fetchProducts()\n]);\n```",
     details:
-      "Suppose each operation takes one second.\n\nSequential execution takes approximately two seconds:\n\n```js\nconst user = await fetchUser();\nconst products = await fetchProducts();\n```\n\nThe second operation does not begin until the first finishes.\n\nParallel execution takes approximately one second:\n\n```js\nconst userPromise = fetchUser();\nconst productsPromise = fetchProducts();\n\nconst [user, products] = await Promise.all([\n  userPromise,\n  productsPromise\n]);\n```\n\nOnly independent operations should run in parallel. Dependent operations must wait for the required value:\n\n```js\nconst user = await fetchUser();\nconst orders = await fetchOrders(user.id);\n```\n\nWhen processing an array in parallel:\n\n```js\nconst users = await Promise.all(\n  userIds.map(id => fetchUser(id))\n);\n```\n\nAvoid `forEach` with async callbacks:\n\n```js\n// Does not wait for completion\nuserIds.forEach(async id => {\n  await fetchUser(id);\n});\n```\n\nUnrestricted parallelism can overload a browser, network, or server when the input is large. A concurrency limit may be necessary:\n\n```js\nasync function processInBatches(items, batchSize) {\n  const results = [];\n\n  for (\n    let index = 0;\n    index \u003c items.length;\n    index += batchSize\n  ) {\n    const batch = items.slice(index, index + batchSize);\n\n    const batchResults = await Promise.all(\n      batch.map(item => processItem(item))\n    );\n\n    results.push(...batchResults);\n  }\n\n  return results;\n}\n```\n\nParallel execution improves total duration when operations are independent, but it does not make the individual operations themselves execute faster.\n\n# Browser and DOM Interview Cards",
+      "Suppose each operation takes one second.\n\nSequential execution takes approximately two seconds:\n\n```js\nconst user = await fetchUser();\nconst products = await fetchProducts();\n```\n\nThe second operation does not begin until the first finishes.\n\nParallel execution takes approximately one second:\n\n```js\nconst userPromise = fetchUser();\nconst productsPromise = fetchProducts();\n\nconst [user, products] = await Promise.all([\n  userPromise,\n  productsPromise\n]);\n```\n\nOnly independent operations should run in parallel. Dependent operations must wait for the required value:\n\n```js\nconst user = await fetchUser();\nconst orders = await fetchOrders(user.id);\n```\n\nWhen processing an array in parallel:\n\n```js\nconst users = await Promise.all(\n  userIds.map(id => fetchUser(id))\n);\n```\n\nAvoid `forEach` with async callbacks:\n\n```js\n// Does not wait for completion\nuserIds.forEach(async id => {\n  await fetchUser(id);\n});\n```\n\nUnrestricted parallelism can overload a browser, network, or server when the input is large. A concurrency limit may be necessary:\n\n```js\nasync function processInBatches(items, batchSize) {\n  const results = [];\n\n  for (\n    let index = 0;\n    index \u003c items.length;\n    index += batchSize\n  ) {\n    const batch = items.slice(index, index + batchSize);\n\n    const batchResults = await Promise.all(\n      batch.map(item => processItem(item))\n    );\n\n    results.push(...batchResults);\n  }\n\n  return results;\n}\n```\n\nParallel execution improves total duration when operations are independent, but it does not make the individual operations themselves execute faster.",
   },
   {
     number: 54,
@@ -2009,7 +2009,7 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       'Workers cannot directly access the DOM. They communicate with the main thread by exchanging messages.\n\n```js\nconst worker = new Worker("./worker.js");\n\nworker.postMessage({ values: [1, 2, 3] });\n\nworker.addEventListener("message", event => {\n  console.log(event.data);\n});\n```',
     details:
-      'Worker code receives and sends messages:\n\n```js\n// worker.js\nself.addEventListener("message", event => {\n  const result = performExpensiveCalculation(\n    event.data.values\n  );\n\n  self.postMessage(result);\n});\n```\n\nSuitable use cases include:\n\n- Processing large datasets\n- Image or audio manipulation\n- Complex calculations\n- Parsing large files\n- Compression\n- Cryptographic work\n- Background data transformation\n\nWorkers are usually unnecessary for ordinary network requests because Fetch is already asynchronous.\n\nData is normally transferred using the structured clone algorithm, so sending very large values has a cost:\n\n```js\nworker.postMessage(largeObject);\n```\n\nTransferable objects can transfer ownership of certain data without copying:\n\n```js\nworker.postMessage(buffer, [buffer]);\n```\n\nAfter transfer, the original thread can no longer use that buffer.\n\nCommon worker types include:\n\n- Dedicated Workers, used by one page context\n- Shared Workers, potentially shared by multiple contexts\n- Service Workers, used for network interception, caching, and offline capabilities\n\nThese worker types solve different problems and have different lifecycles and APIs.\n\n# Performance and Optimization Interview Cards',
+      'Worker code receives and sends messages:\n\n```js\n// worker.js\nself.addEventListener("message", event => {\n  const result = performExpensiveCalculation(\n    event.data.values\n  );\n\n  self.postMessage(result);\n});\n```\n\nSuitable use cases include:\n\n- Processing large datasets\n- Image or audio manipulation\n- Complex calculations\n- Parsing large files\n- Compression\n- Cryptographic work\n- Background data transformation\n\nWorkers are usually unnecessary for ordinary network requests because Fetch is already asynchronous.\n\nData is normally transferred using the structured clone algorithm, so sending very large values has a cost:\n\n```js\nworker.postMessage(largeObject);\n```\n\nTransferable objects can transfer ownership of certain data without copying:\n\n```js\nworker.postMessage(buffer, [buffer]);\n```\n\nAfter transfer, the original thread can no longer use that buffer.\n\nCommon worker types include:\n\n- Dedicated Workers, used by one page context\n- Shared Workers, potentially shared by multiple contexts\n- Service Workers, used for network interception, caching, and offline capabilities\n\nThese worker types solve different problems and have different lifecycles and APIs.',
   },
   {
     number: 72,
@@ -2119,7 +2119,7 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       "Use `requestAnimationFrame` for visual updates and JavaScript-driven animations. Use `setTimeout` for general delayed work.\n\n```js\nrequestAnimationFrame(timestamp => {\n  updateAnimation(timestamp);\n});\n```",
     details:
-      "A `requestAnimationFrame` loop can animate based on elapsed time:\n\n```js\nlet previousTime;\n\nfunction animate(currentTime) {\n  if (previousTime !== undefined) {\n    const elapsed = currentTime - previousTime;\n    updatePosition(elapsed);\n  }\n\n  previousTime = currentTime;\n  requestAnimationFrame(animate);\n}\n\nrequestAnimationFrame(animate);\n```\n\nUsing timestamps makes movement independent of the display’s refresh rate.\n\nThe browser can coordinate animation-frame callbacks with layout, paint, and compositing. It may pause or reduce them in background tabs to save resources.\n\n`setTimeout` provides only a minimum delay:\n\n```js\nsetTimeout(callback, 16);\n```\n\nThe callback may execute later if the call stack or task queue is busy. Repeated 16-millisecond timers are not reliably synchronized with the display.\n\nAnimation frames can be cancelled:\n\n```js\nconst frameId = requestAnimationFrame(animate);\ncancelAnimationFrame(frameId);\n```\n\nTimers use separate cancellation:\n\n```js\nconst timeoutId = setTimeout(callback, 1000);\nclearTimeout(timeoutId);\n```\n\n`requestAnimationFrame` is not automatically appropriate for expensive nonvisual calculations. Long callbacks still block the main thread and can cause dropped frames.\n\n# Errors, Security, and Code Quality Interview Cards",
+      "A `requestAnimationFrame` loop can animate based on elapsed time:\n\n```js\nlet previousTime;\n\nfunction animate(currentTime) {\n  if (previousTime !== undefined) {\n    const elapsed = currentTime - previousTime;\n    updatePosition(elapsed);\n  }\n\n  previousTime = currentTime;\n  requestAnimationFrame(animate);\n}\n\nrequestAnimationFrame(animate);\n```\n\nUsing timestamps makes movement independent of the display’s refresh rate.\n\nThe browser can coordinate animation-frame callbacks with layout, paint, and compositing. It may pause or reduce them in background tabs to save resources.\n\n`setTimeout` provides only a minimum delay:\n\n```js\nsetTimeout(callback, 16);\n```\n\nThe callback may execute later if the call stack or task queue is busy. Repeated 16-millisecond timers are not reliably synchronized with the display.\n\nAnimation frames can be cancelled:\n\n```js\nconst frameId = requestAnimationFrame(animate);\ncancelAnimationFrame(frameId);\n```\n\nTimers use separate cancellation:\n\n```js\nconst timeoutId = setTimeout(callback, 1000);\nclearTimeout(timeoutId);\n```\n\n`requestAnimationFrame` is not automatically appropriate for expensive nonvisual calculations. Long callbacks still block the main thread and can cause dropped frames.",
   },
   {
     number: 83,
@@ -2219,7 +2219,7 @@ export const questionAnswers: QuestionAnswer[] = [
     explanation:
       "A balanced test strategy uses each level for the behavior it can verify most effectively.",
     details:
-      'A unit test might verify a formatting function:\n\n```js\ntest("formats a full name", () => {\n  expect(\n    formatName({\n      first: "Alex",\n      last: "Smith"\n    })\n  ).toBe("Alex Smith");\n});\n```\n\nUnit tests are typically:\n\n- Fast\n- Focused\n- Easy to run frequently\n- Good at identifying the source of a failure\n\nAn integration test might render a form, submit it, and verify its interaction with a mocked or local API layer:\n\n```js\ntest("submits valid profile data", async () => {\n  render(\u003cProfileForm />);\n\n  await user.type(\n    screen.getByLabelText("Name"),\n    "Alex"\n  );\n\n  await user.click(\n    screen.getByRole("button", {\n      name: "Save"\n    })\n  );\n\n  expect(api.saveProfile).toHaveBeenCalledWith({\n    name: "Alex"\n  });\n});\n```\n\nIntegration tests cover boundaries that isolated unit tests may miss.\n\nAn end-to-end test might:\n\n1. Open the application in a real browser.\n2. Sign in.\n3. Add an item to a cart.\n4. Complete checkout.\n5. Verify the confirmation page.\n\nEnd-to-end tests provide strong confidence in important user journeys but are generally slower, more expensive to maintain, and harder to debug.\n\nNot every function needs a unit test, and not every variation needs an end-to-end test. High-value business rules benefit from focused tests, while critical user journeys benefit from a smaller number of reliable end-to-end tests.\n\n# Practical Interview Question Cards',
+      'A unit test might verify a formatting function:\n\n```js\ntest("formats a full name", () => {\n  expect(\n    formatName({\n      first: "Alex",\n      last: "Smith"\n    })\n  ).toBe("Alex Smith");\n});\n```\n\nUnit tests are typically:\n\n- Fast\n- Focused\n- Easy to run frequently\n- Good at identifying the source of a failure\n\nAn integration test might render a form, submit it, and verify its interaction with a mocked or local API layer:\n\n```js\ntest("submits valid profile data", async () => {\n  render(\u003cProfileForm />);\n\n  await user.type(\n    screen.getByLabelText("Name"),\n    "Alex"\n  );\n\n  await user.click(\n    screen.getByRole("button", {\n      name: "Save"\n    })\n  );\n\n  expect(api.saveProfile).toHaveBeenCalledWith({\n    name: "Alex"\n  });\n});\n```\n\nIntegration tests cover boundaries that isolated unit tests may miss.\n\nAn end-to-end test might:\n\n1. Open the application in a real browser.\n2. Sign in.\n3. Add an item to a cart.\n4. Complete checkout.\n5. Verify the confirmation page.\n\nEnd-to-end tests provide strong confidence in important user journeys but are generally slower, more expensive to maintain, and harder to debug.\n\nNot every function needs a unit test, and not every variation needs an end-to-end test. High-value business rules benefit from focused tests, while critical user journeys benefit from a smaller number of reliable end-to-end tests.',
   },
   {
     number: 93,
@@ -2844,6 +2844,91 @@ export const reactQuestionRoadmap: QuestionRoadmapSection[] = [
       {
         number: 25,
         title: "How do you build accessible React components?",
+      },
+    ],
+  },
+  {
+    title: "JSX and update mechanics",
+    questions: [
+      {
+        number: 104,
+        title: "What does JSX produce, and how is it different from HTML?",
+      },
+      {
+        number: 105,
+        title: "How does React render null, booleans, arrays, strings, and numbers?",
+      },
+      {
+        number: 106,
+        title: "How does React process queued state updates?",
+      },
+      {
+        number: 107,
+        title: "Why can declaring a component inside another component reset state?",
+      },
+      {
+        number: 108,
+        title: "What does flushSync do, and when is it appropriate?",
+      },
+      {
+        number: 109,
+        title: "What happens if a component updates state during rendering?",
+      },
+    ],
+  },
+  {
+    title: "Modern React and concurrency",
+    questions: [
+      {
+        number: 110,
+        title: "What problem does useEffectEvent solve, and when should it not be used?",
+      },
+      {
+        number: 111,
+        title:
+          "How does \u003cActivity> differ from conditional rendering, CSS hiding, and unmounting?",
+      },
+      {
+        number: 112,
+        title: "How do callback refs and ref cleanup work?",
+      },
+      {
+        number: 113,
+        title: "When is useInsertionEffect appropriate?",
+      },
+      {
+        number: 114,
+        title: "What does concurrent rendering mean in React?",
+      },
+      {
+        number: 115,
+        title: "What is tearing, and how does useSyncExternalStore help prevent it?",
+      },
+      {
+        number: 116,
+        title: "How do React Performance Tracks help diagnose slow interactions?",
+      },
+      {
+        number: 117,
+        title: "How should a team adopt React Compiler, and what does it not guarantee?",
+      },
+      {
+        number: 118,
+        title: "What do cache and cacheSignal do in a Server Component environment?",
+      },
+    ],
+  },
+  {
+    title: "Senior interview scenarios",
+    questions: [
+      {
+        number: 119,
+        title: "Hydration fails only for users in certain locales. How would you investigate it?",
+      },
+      {
+        number: 120,
+        title:
+          "A Server Function receives a hidden userId field from a form. What security problem can this create?",
       },
     ],
   },
@@ -3857,5 +3942,177 @@ export const reactQuestionAnswers: QuestionAnswer[] = [
       "Use a native button instead of recreating button behavior with a generic element:\n\n```jsx\n\u003cbutton onClick={save}>\n  Save\n\u003c/button>\n```",
     details:
       'Senior-level accessibility considerations include:\n\n- Keyboard navigation\n- Focus order and focus restoration\n- Accessible names and descriptions\n- Form labels and error associations\n- Live announcements\n- Modal focus management\n- Color contrast\n- Motion preferences\n- Semantic headings and landmarks\n- Screen-reader testing\n\nAvoid:\n\n```jsx\n\u003cdiv onClick={save}>Save\u003c/div>\n```\n\nIt lacks native keyboard behavior and button semantics.\n\nDynamic form errors should be connected to their inputs:\n\n```jsx\n\u003cinput\n  aria-invalid={Boolean(error)}\n  aria-describedby={error ? "name-error" : undefined}\n/>\n\n{error && (\n  \u003cp id="name-error">\n    {error}\n  \u003c/p>\n)}\n```\n\nAutomated accessibility checks are useful but do not replace keyboard and assistive-technology testing.',
+  },
+  {
+    number: 104,
+    question: "What does JSX produce, and how is it different from HTML?",
+    answer:
+      "JSX is syntax that a build tool transforms into calls that create React elements. It describes UI as JavaScript values; it is not an HTML string and it is not inserted into the DOM directly.",
+    explanation:
+      "JSX can embed JavaScript expressions, pass non-string props, and represent custom components. React later uses the resulting element descriptions during rendering and reconciliation.",
+    details:
+      'Conceptually, a JSX expression such as:\n\n```jsx\n\u003cButton tone="primary">Save\u003c/Button>\n```\n\nproduces an element description containing the component type, props, and children. Modern JSX transforms usually call functions from the JSX runtime rather than `React.createElement` directly.\n\nImportant differences from HTML include:\n\n- Component names beginning with a capital letter refer to JavaScript values.\n- Props can contain functions, objects, arrays, and other JavaScript values.\n- Most DOM property names follow JavaScript conventions such as `className`.\n- Expressions use braces; statements cannot appear directly inside JSX.\n- React escapes ordinary text values before placing them in the DOM.\n\nJSX syntax does not determine whether a component runs on the client or server. The renderer and framework establish that execution environment.',
+  },
+  {
+    number: 105,
+    question: "How does React render null, booleans, arrays, strings, and numbers?",
+    answer:
+      "React renders strings and numbers as text, flattens arrays and fragments into children, and renders `null`, `undefined`, and booleans as nothing.",
+    explanation:
+      "This explains why `condition && \u003cPanel />` normally works but `count && \u003cPanel />` can display `0` when `count` is zero.",
+    details:
+      "Avoid relying on the truthiness of a number when the falsy value is renderable:\n\n```jsx\n// May render 0\n{items.length && \u003cResults items={items} />}\n\n// Expresses the condition explicitly\n{items.length > 0 && \u003cResults items={items} />}\n```\n\nArrays may contain elements and other renderable values, but siblings produced from a collection need stable keys. Plain objects are not valid React children because React does not know how they should be represented visually.\n\nOrdinary string interpolation is escaped. Rendering trusted markup through `dangerouslySetInnerHTML` deliberately bypasses that protection and requires a separate sanitization strategy.",
+  },
+  {
+    number: 106,
+    question: "How does React process queued state updates?",
+    answer:
+      "React queues state updates and processes them for a future render. A value update replaces the queued state for that step, while an updater function receives the result of the preceding queued update.",
+    explanation:
+      "Updater functions are required when the next value depends on state already queued in the same batch.",
+    details:
+      "These calls all capture the same `count` snapshot:\n\n```jsx\nsetCount(count + 1);\nsetCount(count + 1);\nsetCount(count + 1);\n```\n\nThese updaters are evaluated in sequence:\n\n```jsx\nsetCount(value => value + 1);\nsetCount(value => value + 1);\nsetCount(value => value + 1);\n```\n\nReact may call updater functions more than once in development to verify purity, so an updater must not mutate data or perform side effects.\n\nThe queue model also explains mixed updates. A replacement can override the preceding queued result, while a later updater operates on the replacement. Prefer one clear update when possible; complicated queues are difficult to review even when their behavior is defined.",
+  },
+  {
+    number: 107,
+    question: "Why can declaring a component inside another component reset state?",
+    answer:
+      "Every render creates a new inner component function. React sees that new function as a different component type, so it replaces the subtree and resets its state.",
+    explanation:
+      "Component identity depends on the type placed at a tree position. A newly created function is not identical to the function from the previous render.",
+    details:
+      'Avoid this pattern:\n\n```jsx\nfunction ProfilePage() {\n  function Editor() {\n    const [name, setName] = useState("");\n    return \u003cinput value={name} onChange={event => setName(event.target.value)} />;\n  }\n\n  return \u003cEditor />;\n}\n```\n\nMove `Editor` to module scope. Pass values through props when it needs information from `ProfilePage`.\n\nDefining a small render helper that is called as an ordinary function is different, but that helper does not create an independent component boundary. Prefer explicit components when independent state, Hooks, memoization, or error boundaries are needed.',
+  },
+  {
+    number: 108,
+    question: "What does flushSync do, and when is it appropriate?",
+    answer:
+      "`flushSync` forces React to synchronously flush updates inside its callback so the DOM is updated before the next statement runs.",
+    explanation:
+      "It is an integration escape hatch for code that must coordinate immediately with browser or third-party APIs. It should not be used as a general way to make state feel synchronous.",
+    details:
+      "A browser API may require updated DOM before a callback returns:\n\n```jsx\nflushSync(() => {\n  setExpanded(true);\n});\n\npanelRef.current.scrollIntoView();\n```\n\nForcing synchronous work can hurt responsiveness, reveal Suspense fallbacks, and flush updates outside the immediate callback. First consider whether the imperative work belongs in a layout Effect, whether the browser API supports a later callback, or whether the state design can avoid the dependency.",
+  },
+  {
+    number: 109,
+    question: "What happens if a component updates state during rendering?",
+    answer:
+      "Updating the component currently rendering schedules another render immediately. React permits limited guarded render-time adjustment, but unconditional updates cause an infinite rendering loop.",
+    explanation:
+      "Rendering should normally calculate UI without causing updates. Most synchronization belongs in an event handler or Effect, and most derived values should be calculated directly.",
+    details:
+      "This is invalid because every render schedules another one:\n\n```jsx\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  setCount(count + 1);\n  return count;\n}\n```\n\nUpdating a different component during render is also unsafe because it couples partially evaluated trees.\n\nA guarded adjustment of the same component can occasionally replace an Effect-based reset, but it should be rare and must converge. Changing a key or deriving the value is usually clearer.",
+  },
+  {
+    number: 110,
+    question: "What problem does useEffectEvent solve, and when should it not be used?",
+    answer:
+      "`useEffectEvent` extracts event-like logic from an Effect so that logic can read the latest committed props and state without making the surrounding Effect re-synchronize.",
+    explanation:
+      "Use it when an external system fires an event whose handler needs current values, but changes to those values should not reconnect or recreate that external system.",
+    details:
+      '```jsx\nconst onConnected = useEffectEvent(() => {\n  showNotification("Connected", theme);\n});\n\nuseEffect(() => {\n  const connection = connect(roomId);\n  connection.on("connected", onConnected);\n  return () => connection.disconnect();\n}, [roomId]);\n```\n\nA theme change affects the notification but should not reconnect the room.\n\nEffect Events:\n\n- Are called only from Effects or other Effect Events\n- Always observe the latest committed values\n- Are not included in dependency arrays\n- Must remain local to the component or custom Hook that owns the Effect\n\nDo not use `useEffectEvent` merely to silence the dependency linter. If a value determines what the Effect synchronizes with, that value remains a dependency.',
+  },
+  {
+    number: 111,
+    question:
+      "How does \u003cActivity> differ from conditional rendering, CSS hiding, and unmounting?",
+    answer:
+      "`\u003cActivity>` can hide a subtree while preserving its state. In hidden mode, React hides the content, cleans up its Effects, and deprioritizes its updates.",
+    explanation:
+      "Conditional rendering removes the subtree and normally loses its state. CSS hiding keeps the subtree and its Effects active. Activity provides a lifecycle-aware middle ground.",
+    details:
+      '```jsx\n\u003cActivity mode={active ? "visible" : "hidden"}>\n  \u003cSearchPage />\n\u003c/Activity>\n```\n\nUseful cases include:\n\n- Preserving state when navigating away and back\n- Preparing likely next content in the background\n- Hiding an expensive interface without leaving subscriptions active\n\nActivity is not automatically the right choice for every conditional. Unmount content when its state should reset or when retaining it wastes resources. Use CSS when content must remain fully active while merely invisible.',
+  },
+  {
+    number: 112,
+    question: "How do callback refs and ref cleanup work?",
+    answer:
+      "A callback ref runs when React attaches a node and can return a cleanup function that runs when the ref is detached or the callback changes.",
+    explanation:
+      "Callback refs are useful when attaching imperative behavior to a changing set of nodes or when setup and cleanup should follow the exact node lifecycle.",
+    details:
+      "```jsx\n\u003cdiv\n  ref={node => {\n    const observer = new ResizeObserver(handleResize);\n    observer.observe(node);\n\n    return () => observer.disconnect();\n  }}\n/>\n```\n\nKeep the callback identity stable when repeated detach-and-attach work is costly. Object refs remain simpler when the code only needs to read a single DOM node.\n\nIn modern React, function components can receive `ref` as a prop in supported patterns. Expose the DOM node only when consumers need it; `useImperativeHandle` can expose a smaller API such as `focus()` or `reset()`.",
+  },
+  {
+    number: 113,
+    question: "When is useInsertionEffect appropriate?",
+    answer:
+      "`useInsertionEffect` is primarily for CSS-in-JS libraries that must insert styles before layout Effects read layout. Application components should almost never need it.",
+    explanation:
+      "Inserting styles in a passive Effect is too late for layout measurement, while inserting them during rendering violates render purity.",
+    details:
+      "`useInsertionEffect` runs around the commit process before layout Effects, but it has important restrictions and is not a faster substitute for `useLayoutEffect`.\n\nPrefer static CSS, extracted styles, or the styling system's documented integration. Use a layout Effect to measure or synchronously adjust committed DOM. Use a passive Effect for ordinary external synchronization that does not need to block paint.",
+  },
+  {
+    number: 114,
+    question: "What does concurrent rendering mean in React?",
+    answer:
+      "Concurrent rendering means React can prepare some updates interruptibly: it may pause, resume, restart, or abandon render work before committing a complete result.",
+    explanation:
+      "It does not mean component functions execute simultaneously on multiple threads. It means rendering work can be scheduled with different priorities while committed UI remains consistent.",
+    details:
+      "Consequences include:\n\n- Render logic must be pure and idempotent.\n- A render is not evidence that a commit occurred.\n- Side effects belong in event handlers or commit-phase Effects.\n- Transitions allow urgent updates to interrupt non-urgent rendering.\n- External mutable stores need a concurrency-safe subscription interface.\n\nReact still commits a coherent tree. Users should not observe a half-committed result merely because rendering was interrupted.",
+  },
+  {
+    number: 115,
+    question: "What is tearing, and how does useSyncExternalStore help prevent it?",
+    answer:
+      "Tearing occurs when different components render inconsistent snapshots of the same external mutable state during one logical update.",
+    explanation:
+      "`useSyncExternalStore` gives React a subscription and repeatable snapshot reader so React can detect changes and keep the committed UI consistent.",
+    details:
+      "The snapshot must be referentially stable until the store actually changes:\n\n```jsx\nconst value = useSyncExternalStore(\n  store.subscribe,\n  store.getSnapshot,\n  store.getServerSnapshot\n);\n```\n\nReturning a freshly allocated object on every `getSnapshot` call makes React believe the store continuously changed. Mutable objects that change without producing a new snapshot are equally problematic.\n\nLibraries usually wrap this API with selectors and equality comparison. Components should use the library integration instead of reading mutable store fields directly during render.",
+  },
+  {
+    number: 116,
+    question: "How do React Performance Tracks help diagnose slow interactions?",
+    answer:
+      "React Performance Tracks add React scheduling and component information to browser performance profiles, connecting user-visible main-thread work to the updates and components that produced it.",
+    explanation:
+      "The Scheduler track shows update priority and scheduling behavior, while the Components track shows rendering and Effect work.",
+    details:
+      "A useful investigation asks:\n\n1. Which interaction feels slow?\n2. Is time spent in network activity, JavaScript, layout, paint, or React work?\n3. Which update scheduled the React work?\n4. Was it blocking or transition work?\n5. Which components rendered or ran Effects?\n6. Did React yield, restart, or wait for paint?\n\nPerformance Tracks complement the React Profiler; they do not replace measurement of the complete browser timeline. Profile a production build under representative device and network conditions.",
+  },
+  {
+    number: 117,
+    question: "How should a team adopt React Compiler, and what does it not guarantee?",
+    answer:
+      "Adopt React Compiler incrementally, verify that the code follows the Rules of React, monitor compiler diagnostics, and confirm behavior and performance with tests and profiling.",
+    explanation:
+      "The Compiler can automatically memoize eligible code, but it does not repair impure components, remove the need for sound state design, or guarantee that every interaction becomes fast.",
+    details:
+      "A practical rollout includes:\n\n- Enable the current Hooks and Compiler lint rules.\n- Fix render-time mutation and other Rules-of-React violations.\n- Compile a limited surface first.\n- Run behavior tests and compare performance profiles.\n- Inspect compilation failures instead of suppressing them broadly.\n- Expand coverage gradually.\n\nExisting `memo`, `useMemo`, and `useCallback` calls do not need to be removed immediately. Manual memoization can still express an intentional identity contract or control a dependency. Remove it only when measurement and testing show that doing so is safe and clearer.",
+  },
+  {
+    number: 118,
+    question: "What do cache and cacheSignal do in a Server Component environment?",
+    answer:
+      "`cache` memoizes work for React's server rendering context so repeated calls with the same arguments can share a result. `cacheSignal` provides an abort signal tied to that cache lifetime.",
+    explanation:
+      "Together they can deduplicate server work and cancel operations whose cached result will no longer be used.",
+    details:
+      "```jsx\nconst getUser = cache(async id => {\n  return database.users.find(id, {\n    signal: cacheSignal()\n  });\n});\n```\n\nDistinguish this mechanism from:\n\n- Browser HTTP caching\n- Framework data caches\n- A durable distributed cache\n- Client-side server-state caching\n\nCache scope and invalidation depend on the rendering environment and framework integration. Never assume memoization is an authorization boundary; every protected operation must still verify the current user and requested resource.",
+  },
+  {
+    number: 119,
+    question: "Hydration fails only for users in certain locales. How would you investigate it?",
+    answer:
+      "Compare the exact server and first client output, then look for locale-sensitive formatting, time-zone differences, browser-only data, invalid HTML, random values, or data that changed between rendering and hydration.",
+    explanation:
+      "Dates and numbers can produce different strings when the server locale or time zone differs from the browser's settings.",
+    details:
+      "A disciplined investigation should:\n\n1. Capture the hydration warning and component stack.\n2. Reproduce with the affected locale and time zone.\n3. Inspect the server HTML before client code changes it.\n4. Identify the first differing node rather than the largest reported subtree.\n5. Make the initial render deterministic.\n\nPossible fixes include formatting with an explicit shared locale and time zone, sending the formatted value from the server, or rendering a deterministic placeholder and updating it after hydration.\n\n`suppressHydrationWarning` is appropriate only for a deliberately unavoidable text difference and works at limited depth. It should not hide an unexplained mismatch.",
+  },
+  {
+    number: 120,
+    question:
+      "A Server Function receives a hidden userId field from a form. What security problem can this create?",
+    answer:
+      "Hidden fields are controlled by the client. Trusting the submitted `userId` can let an attacker act as another user or access a resource they do not own.",
+    explanation:
+      "A Server Function is a public server entry point. It must authenticate the caller, authorize the requested operation, and validate all submitted data.",
+    details:
+      'The server should derive identity from a verified session, not from a user identifier supplied by the browser:\n\n```jsx\n"use server";\n\nasync function updateProfile(formData) {\n  const session = await requireSession();\n  const input = validateProfile(formData);\n\n  await updateAuthorizedProfile(\n    session.user.id,\n    input\n  );\n}\n```\n\nAuthorization must also check ownership or role for the particular resource. UI restrictions, disabled buttons, hidden inputs, TypeScript types, and Client Component boundaries are not security controls.\n\nConsider CSRF protection where the framework and authentication design require it, avoid returning sensitive error detail, and log rejected authorization attempts without exposing secrets.',
   },
 ];

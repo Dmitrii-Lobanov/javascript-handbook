@@ -2455,3 +2455,493 @@
   ```
 
   Automated accessibility checks are useful but do not replace keyboard and assistive-technology testing.
+
+---
+
+## JSX and update mechanics
+
+### Card 104
+
+- question  
+  What does JSX produce, and how is it different from HTML?
+
+- answer  
+  JSX is syntax that a build tool transforms into calls that create React elements. It describes UI as JavaScript values; it is not an HTML string and it is not inserted into the DOM directly.
+
+- explanation  
+  JSX can embed JavaScript expressions, pass non-string props, and represent custom components. React later uses the resulting element descriptions during rendering and reconciliation.
+
+- details  
+  Conceptually, a JSX expression such as:
+
+  ```jsx
+  <Button tone="primary">Save</Button>
+  ```
+
+  produces an element description containing the component type, props, and children. Modern JSX transforms usually call functions from the JSX runtime rather than `React.createElement` directly.
+
+  Important differences from HTML include:
+
+  - Component names beginning with a capital letter refer to JavaScript values.
+  - Props can contain functions, objects, arrays, and other JavaScript values.
+  - Most DOM property names follow JavaScript conventions such as `className`.
+  - Expressions use braces; statements cannot appear directly inside JSX.
+  - React escapes ordinary text values before placing them in the DOM.
+
+  JSX syntax does not determine whether a component runs on the client or server. The renderer and framework establish that execution environment.
+
+---
+
+### Card 105
+
+- question  
+  How does React render `null`, booleans, arrays, strings, and numbers?
+
+- answer  
+  React renders strings and numbers as text, flattens arrays and fragments into children, and renders `null`, `undefined`, and booleans as nothing.
+
+- explanation  
+  This explains why `condition && <Panel />` normally works but `count && <Panel />` can display `0` when `count` is zero.
+
+- details  
+  Avoid relying on the truthiness of a number when the falsy value is renderable:
+
+  ```jsx
+  // May render 0
+  {items.length && <Results items={items} />}
+
+  // Expresses the condition explicitly
+  {items.length > 0 && <Results items={items} />}
+  ```
+
+  Arrays may contain elements and other renderable values, but siblings produced from a collection need stable keys. Plain objects are not valid React children because React does not know how they should be represented visually.
+
+  Ordinary string interpolation is escaped. Rendering trusted markup through `dangerouslySetInnerHTML` deliberately bypasses that protection and requires a separate sanitization strategy.
+
+---
+
+### Card 106
+
+- question  
+  How does React process queued state updates?
+
+- answer  
+  React queues state updates and processes them for a future render. A value update replaces the queued state for that step, while an updater function receives the result of the preceding queued update.
+
+- explanation  
+  Updater functions are required when the next value depends on state already queued in the same batch.
+
+- details  
+  These calls all capture the same `count` snapshot:
+
+  ```jsx
+  setCount(count + 1);
+  setCount(count + 1);
+  setCount(count + 1);
+  ```
+
+  These updaters are evaluated in sequence:
+
+  ```jsx
+  setCount(value => value + 1);
+  setCount(value => value + 1);
+  setCount(value => value + 1);
+  ```
+
+  React may call updater functions more than once in development to verify purity, so an updater must not mutate data or perform side effects.
+
+  The queue model also explains mixed updates. A replacement can override the preceding queued result, while a later updater operates on the replacement. Prefer one clear update when possible; complicated queues are difficult to review even when their behavior is defined.
+
+---
+
+### Card 107
+
+- question  
+  Why can declaring a component inside another component reset state?
+
+- answer  
+  Every render creates a new inner component function. React sees that new function as a different component type, so it replaces the subtree and resets its state.
+
+- explanation  
+  Component identity depends on the type placed at a tree position. A newly created function is not identical to the function from the previous render.
+
+- details  
+  Avoid this pattern:
+
+  ```jsx
+  function ProfilePage() {
+    function Editor() {
+      const [name, setName] = useState("");
+      return <input value={name} onChange={event => setName(event.target.value)} />;
+    }
+
+    return <Editor />;
+  }
+  ```
+
+  Move `Editor` to module scope. Pass values through props when it needs information from `ProfilePage`.
+
+  Defining a small render helper that is called as an ordinary function is different, but that helper does not create an independent component boundary. Prefer explicit components when independent state, Hooks, memoization, or error boundaries are needed.
+
+---
+
+### Card 108
+
+- question  
+  What does `flushSync` do, and when is it appropriate?
+
+- answer  
+  `flushSync` forces React to synchronously flush updates inside its callback so the DOM is updated before the next statement runs.
+
+- explanation  
+  It is an integration escape hatch for code that must coordinate immediately with browser or third-party APIs. It should not be used as a general way to make state feel synchronous.
+
+- details  
+  A browser API may require updated DOM before a callback returns:
+
+  ```jsx
+  flushSync(() => {
+    setExpanded(true);
+  });
+
+  panelRef.current.scrollIntoView();
+  ```
+
+  Forcing synchronous work can hurt responsiveness, reveal Suspense fallbacks, and flush updates outside the immediate callback. First consider whether the imperative work belongs in a layout Effect, whether the browser API supports a later callback, or whether the state design can avoid the dependency.
+
+---
+
+### Card 109
+
+- question  
+  What happens if a component updates state during rendering?
+
+- answer  
+  Updating the component currently rendering schedules another render immediately. React permits limited guarded render-time adjustment, but unconditional updates cause an infinite rendering loop.
+
+- explanation  
+  Rendering should normally calculate UI without causing updates. Most synchronization belongs in an event handler or Effect, and most derived values should be calculated directly.
+
+- details  
+  This is invalid because every render schedules another one:
+
+  ```jsx
+  function Counter() {
+    const [count, setCount] = useState(0);
+    setCount(count + 1);
+    return count;
+  }
+  ```
+
+  Updating a different component during render is also unsafe because it couples partially evaluated trees.
+
+  A guarded adjustment of the same component can occasionally replace an Effect-based reset, but it should be rare and must converge. Changing a key or deriving the value is usually clearer.
+
+---
+
+## Modern React and concurrency
+
+### Card 110
+
+- question  
+  What problem does `useEffectEvent` solve, and when should it not be used?
+
+- answer  
+  `useEffectEvent` extracts event-like logic from an Effect so that logic can read the latest committed props and state without making the surrounding Effect re-synchronize.
+
+- explanation  
+  Use it when an external system fires an event whose handler needs current values, but changes to those values should not reconnect or recreate that external system.
+
+- details  
+  ```jsx
+  const onConnected = useEffectEvent(() => {
+    showNotification("Connected", theme);
+  });
+
+  useEffect(() => {
+    const connection = connect(roomId);
+    connection.on("connected", onConnected);
+    return () => connection.disconnect();
+  }, [roomId]);
+  ```
+
+  A theme change affects the notification but should not reconnect the room.
+
+  Effect Events:
+
+  - Are called only from Effects or other Effect Events
+  - Always observe the latest committed values
+  - Are not included in dependency arrays
+  - Must remain local to the component or custom Hook that owns the Effect
+
+  Do not use `useEffectEvent` merely to silence the dependency linter. If a value determines what the Effect synchronizes with, that value remains a dependency.
+
+---
+
+### Card 111
+
+- question  
+  How does `<Activity>` differ from conditional rendering, CSS hiding, and unmounting?
+
+- answer  
+  `<Activity>` can hide a subtree while preserving its state. In hidden mode, React hides the content, cleans up its Effects, and deprioritizes its updates.
+
+- explanation  
+  Conditional rendering removes the subtree and normally loses its state. CSS hiding keeps the subtree and its Effects active. Activity provides a lifecycle-aware middle ground.
+
+- details  
+  ```jsx
+  <Activity mode={active ? "visible" : "hidden"}>
+    <SearchPage />
+  </Activity>
+  ```
+
+  Useful cases include:
+
+  - Preserving state when navigating away and back
+  - Preparing likely next content in the background
+  - Hiding an expensive interface without leaving subscriptions active
+
+  Activity is not automatically the right choice for every conditional. Unmount content when its state should reset or when retaining it wastes resources. Use CSS when content must remain fully active while merely invisible.
+
+---
+
+### Card 112
+
+- question  
+  How do callback refs and ref cleanup work?
+
+- answer  
+  A callback ref runs when React attaches a node and can return a cleanup function that runs when the ref is detached or the callback changes.
+
+- explanation  
+  Callback refs are useful when attaching imperative behavior to a changing set of nodes or when setup and cleanup should follow the exact node lifecycle.
+
+- details  
+  ```jsx
+  <div
+    ref={node => {
+      const observer = new ResizeObserver(handleResize);
+      observer.observe(node);
+
+      return () => observer.disconnect();
+    }}
+  />
+  ```
+
+  Keep the callback identity stable when repeated detach-and-attach work is costly. Object refs remain simpler when the code only needs to read a single DOM node.
+
+  In modern React, function components can receive `ref` as a prop in supported patterns. Expose the DOM node only when consumers need it; `useImperativeHandle` can expose a smaller API such as `focus()` or `reset()`.
+
+---
+
+### Card 113
+
+- question  
+  When is `useInsertionEffect` appropriate?
+
+- answer  
+  `useInsertionEffect` is primarily for CSS-in-JS libraries that must insert styles before layout Effects read layout. Application components should almost never need it.
+
+- explanation  
+  Inserting styles in a passive Effect is too late for layout measurement, while inserting them during rendering violates render purity.
+
+- details  
+  `useInsertionEffect` runs around the commit process before layout Effects, but it has important restrictions and is not a faster substitute for `useLayoutEffect`.
+
+  Prefer static CSS, extracted styles, or the styling system's documented integration. Use a layout Effect to measure or synchronously adjust committed DOM. Use a passive Effect for ordinary external synchronization that does not need to block paint.
+
+---
+
+### Card 114
+
+- question  
+  What does concurrent rendering mean in React?
+
+- answer  
+  Concurrent rendering means React can prepare some updates interruptibly: it may pause, resume, restart, or abandon render work before committing a complete result.
+
+- explanation  
+  It does not mean component functions execute simultaneously on multiple threads. It means rendering work can be scheduled with different priorities while committed UI remains consistent.
+
+- details  
+  Consequences include:
+
+  - Render logic must be pure and idempotent.
+  - A render is not evidence that a commit occurred.
+  - Side effects belong in event handlers or commit-phase Effects.
+  - Transitions allow urgent updates to interrupt non-urgent rendering.
+  - External mutable stores need a concurrency-safe subscription interface.
+
+  React still commits a coherent tree. Users should not observe a half-committed result merely because rendering was interrupted.
+
+---
+
+### Card 115
+
+- question  
+  What is tearing, and how does `useSyncExternalStore` help prevent it?
+
+- answer  
+  Tearing occurs when different components render inconsistent snapshots of the same external mutable state during one logical update.
+
+- explanation  
+  `useSyncExternalStore` gives React a subscription and repeatable snapshot reader so React can detect changes and keep the committed UI consistent.
+
+- details  
+  The snapshot must be referentially stable until the store actually changes:
+
+  ```jsx
+  const value = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot
+  );
+  ```
+
+  Returning a freshly allocated object on every `getSnapshot` call makes React believe the store continuously changed. Mutable objects that change without producing a new snapshot are equally problematic.
+
+  Libraries usually wrap this API with selectors and equality comparison. Components should use the library integration instead of reading mutable store fields directly during render.
+
+---
+
+### Card 116
+
+- question  
+  How do React Performance Tracks help diagnose slow interactions?
+
+- answer  
+  React Performance Tracks add React scheduling and component information to browser performance profiles, connecting user-visible main-thread work to the updates and components that produced it.
+
+- explanation  
+  The Scheduler track shows update priority and scheduling behavior, while the Components track shows rendering and Effect work.
+
+- details  
+  A useful investigation asks:
+
+  1. Which interaction feels slow?
+  2. Is time spent in network activity, JavaScript, layout, paint, or React work?
+  3. Which update scheduled the React work?
+  4. Was it blocking or transition work?
+  5. Which components rendered or ran Effects?
+  6. Did React yield, restart, or wait for paint?
+
+  Performance Tracks complement the React Profiler; they do not replace measurement of the complete browser timeline. Profile a production build under representative device and network conditions.
+
+---
+
+### Card 117
+
+- question  
+  How should a team adopt React Compiler, and what does it not guarantee?
+
+- answer  
+  Adopt React Compiler incrementally, verify that the code follows the Rules of React, monitor compiler diagnostics, and confirm behavior and performance with tests and profiling.
+
+- explanation  
+  The Compiler can automatically memoize eligible code, but it does not repair impure components, remove the need for sound state design, or guarantee that every interaction becomes fast.
+
+- details  
+  A practical rollout includes:
+
+  - Enable the current Hooks and Compiler lint rules.
+  - Fix render-time mutation and other Rules-of-React violations.
+  - Compile a limited surface first.
+  - Run behavior tests and compare performance profiles.
+  - Inspect compilation failures instead of suppressing them broadly.
+  - Expand coverage gradually.
+
+  Existing `memo`, `useMemo`, and `useCallback` calls do not need to be removed immediately. Manual memoization can still express an intentional identity contract or control a dependency. Remove it only when measurement and testing show that doing so is safe and clearer.
+
+---
+
+### Card 118
+
+- question  
+  What do `cache` and `cacheSignal` do in a Server Component environment?
+
+- answer  
+  `cache` memoizes work for React's server rendering context so repeated calls with the same arguments can share a result. `cacheSignal` provides an abort signal tied to that cache lifetime.
+
+- explanation  
+  Together they can deduplicate server work and cancel operations whose cached result will no longer be used.
+
+- details  
+  ```jsx
+  const getUser = cache(async id => {
+    return database.users.find(id, {
+      signal: cacheSignal()
+    });
+  });
+  ```
+
+  Distinguish this mechanism from:
+
+  - Browser HTTP caching
+  - Framework data caches
+  - A durable distributed cache
+  - Client-side server-state caching
+
+  Cache scope and invalidation depend on the rendering environment and framework integration. Never assume memoization is an authorization boundary; every protected operation must still verify the current user and requested resource.
+
+---
+
+## Senior interview scenarios
+
+### Card 119
+
+- question  
+  Hydration fails only for users in certain locales. How would you investigate it?
+
+- answer  
+  Compare the exact server and first client output, then look for locale-sensitive formatting, time-zone differences, browser-only data, invalid HTML, random values, or data that changed between rendering and hydration.
+
+- explanation  
+  Dates and numbers can produce different strings when the server locale or time zone differs from the browser's settings.
+
+- details  
+  A disciplined investigation should:
+
+  1. Capture the hydration warning and component stack.
+  2. Reproduce with the affected locale and time zone.
+  3. Inspect the server HTML before client code changes it.
+  4. Identify the first differing node rather than the largest reported subtree.
+  5. Make the initial render deterministic.
+
+  Possible fixes include formatting with an explicit shared locale and time zone, sending the formatted value from the server, or rendering a deterministic placeholder and updating it after hydration.
+
+  `suppressHydrationWarning` is appropriate only for a deliberately unavoidable text difference and works at limited depth. It should not hide an unexplained mismatch.
+
+---
+
+### Card 120
+
+- question  
+  A Server Function receives a hidden `userId` field from a form. What security problem can this create?
+
+- answer  
+  Hidden fields are controlled by the client. Trusting the submitted `userId` can let an attacker act as another user or access a resource they do not own.
+
+- explanation  
+  A Server Function is a public server entry point. It must authenticate the caller, authorize the requested operation, and validate all submitted data.
+
+- details  
+  The server should derive identity from a verified session, not from a user identifier supplied by the browser:
+
+  ```jsx
+  "use server";
+
+  async function updateProfile(formData) {
+    const session = await requireSession();
+    const input = validateProfile(formData);
+
+    await updateAuthorizedProfile(
+      session.user.id,
+      input
+    );
+  }
+  ```
+
+  Authorization must also check ownership or role for the particular resource. UI restrictions, disabled buttons, hidden inputs, TypeScript types, and Client Component boundaries are not security controls.
+
+  Consider CSRF protection where the framework and authentication design require it, avoid returning sensitive error detail, and log rejected authorization attempts without exposing secrets.
