@@ -1041,11 +1041,28 @@ button {
 .performance-part li:last-child {
   border-bottom: 0;
 }
-.performance-part li > span:first-child {
+.performance-part li.available {
+  display: block;
+  padding: 0;
+}
+.performance-part li.available > a {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.2rem 1.5rem;
+  text-decoration: none;
+}
+.performance-part li.available > a:hover {
+  background: color-mix(in srgb, var(--teal) 6%, var(--surface));
+}
+.performance-part li > span:first-child,
+.performance-part li.available > a > span:first-child {
   color: var(--muted);
   font: 800 0.78rem/1 monospace;
 }
-.performance-part li.priority > span:first-child {
+.performance-part li.priority > span:first-child,
+.performance-part li.priority > a > span:first-child {
   color: var(--teal);
 }
 .performance-chapter-title {
@@ -2543,6 +2560,12 @@ button {
     grid-column: 1 / -1;
   }
   .performance-part li {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+    gap: 0.8rem;
+    padding: 1rem;
+  }
+  .performance-part li.available > a {
     grid-template-columns: 34px minmax(0, 1fr);
     align-items: start;
     gap: 0.8rem;

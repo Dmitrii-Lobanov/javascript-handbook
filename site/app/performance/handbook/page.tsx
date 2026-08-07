@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TrackNav } from "../../components/TechnologyNav";
 import { getTrack } from "../../lib/tracks";
+import { performanceChapters } from "@/generated/content";
 
 export const metadata: Metadata = {
   title: "Performance Handbook Roadmap",
@@ -80,6 +81,7 @@ const firstRelease = new Set([1, 2, 3, 5, 7, 9, 10, 14]);
 
 export default function PerformanceHandbookPage() {
   const track = getTrack("performance")!;
+  const availableChapterNumbers = new Set(performanceChapters.map((chapter) => chapter.number));
 
   return (
     <>
@@ -99,7 +101,7 @@ export default function PerformanceHandbookPage() {
             </div>
           </div>
           <div className="performance-roadmap-summary" aria-label="Performance handbook statistics">
-            <div><strong>22</strong><span>chapters planned</span></div>
+            <div><strong>{performanceChapters.length}</strong><span>chapter available</span></div>
             <div><strong>6</strong><span>connected parts</span></div>
             <div><strong>8</strong><span>first-release chapters</span></div>
           </div>
@@ -149,8 +151,13 @@ export default function PerformanceHandbookPage() {
                   <small>{part.chapters.length} chapters</small>
                 </header>
                 <ol>
-                  {part.chapters.map(([number, title, description]) => (
-                    <li key={number} className={firstRelease.has(number) ? "priority" : ""}>
+                  {part.chapters.map(([number, title, description]) => {
+                    const availableChapter = performanceChapters.find(
+                      (chapter) => chapter.number === number,
+                    );
+                    const available = availableChapterNumbers.has(number);
+                    const content = (
+                      <>
                       <span>{String(number).padStart(2, "0")}</span>
                       <div>
                         <div className="performance-chapter-title">
@@ -159,9 +166,24 @@ export default function PerformanceHandbookPage() {
                         </div>
                         <p>{description}</p>
                       </div>
-                      <span className="performance-chapter-status">Planned</span>
-                    </li>
-                  ))}
+                      <span className="performance-chapter-status">
+                        {available ? "Available" : "Planned"}
+                      </span>
+                      </>
+                    );
+
+                    return available ? (
+                      <li key={number} className="priority available">
+                        <Link href={`/performance/handbook/chapters/${availableChapter!.slug}`}>
+                          {content}
+                        </Link>
+                      </li>
+                    ) : (
+                      <li key={number} className={firstRelease.has(number) ? "priority" : ""}>
+                        {content}
+                      </li>
+                    );
+                  })}
                 </ol>
               </section>
             ))}

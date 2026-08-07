@@ -6,7 +6,9 @@ const siteRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(siteRoot, "..");
 const javascriptRoot = join(repositoryRoot, "javascript");
 const reactRoot = join(repositoryRoot, "react");
+const performanceRoot = join(repositoryRoot, "performance");
 const bookRoot = join(javascriptRoot, "handbook");
+const performanceBookRoot = join(performanceRoot, "handbook");
 const questionsRoadmapFile = join(javascriptRoot, "q-and-a", "roadmap.md");
 const questionsAnswersFile = join(javascriptRoot, "q-and-a", "answers.md");
 const reactQuestionsAnswersFile = join(reactRoot, "q-and-a", "answers.md");
@@ -95,6 +97,48 @@ const chapters = chapterFiles.map((path) => {
     searchText: plainText.toLowerCase(),
   };
 });
+
+const performanceParts = [
+  { from: 1, number: 1, name: "Performance Reasoning" },
+  { from: 4, number: 2, name: "Loading Performance" },
+  { from: 9, number: 3, name: "Runtime Performance" },
+  { from: 13, number: 4, name: "Application Architecture" },
+  { from: 17, number: 5, name: "Stability and Memory" },
+  { from: 19, number: 6, name: "Performance as Engineering Practice" },
+];
+
+const performanceChapters = existsSync(performanceBookRoot)
+  ? walk(performanceBookRoot)
+      .filter((path) => /\/\d+[^/]*\.md$/.test(path))
+      .sort((left, right) => left.localeCompare(right))
+      .map((path) => {
+        const markdown = readFileSync(path, "utf8").trim();
+        const number = Number(path.match(/\/(\d+)-[^/]+\.md$/)?.[1]);
+        const slug = path.match(/\/(\d+-[^/]+)\.md$/)?.[1] ?? String(number);
+        const title = markdown.match(/^#\s+Chapter\s+\d+\s+[—-]\s+(.+)$/m)?.[1] ?? slug;
+        const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]);
+        const excerptSource = section(markdown, "Why this matters");
+        const excerpt = excerptSource.split(/\n\s*\n/, 1)[0] ?? "";
+        const plainText = stripMarkdown(markdown);
+        const words = plainText.split(/\s+/).filter(Boolean).length;
+        const part = performanceParts.findLast((item) => number >= item.from) ?? performanceParts[0];
+
+        return {
+          number,
+          slug,
+          title,
+          kind: "chapter",
+          partNumber: part.number,
+          partName: part.name,
+          markdown,
+          headings,
+          quickRefresher: stripMarkdown(section(markdown, "Quick refresher")),
+          excerpt: stripMarkdown(excerpt),
+          readingMinutes: Math.max(1, Math.ceil(words / 220)),
+          searchText: plainText.toLowerCase(),
+        };
+      })
+  : [];
 
 const toc = readFileSync(join(bookRoot, "table-of-contents.md"), "utf8");
 const roadmap = [];
@@ -219,6 +263,7 @@ const generated =
   `export type QuestionRoadmapSection = { title: string; questions: Array<{ number: number; title: string }> };\n\n` +
   `export type QuestionAnswer = { number: number; question: string; answer: string; explanation: string; details: string };\n\n` +
   `export const chapters: Chapter[] = ${JSON.stringify(chapters).replaceAll("<", "\\u003c")};\n\n` +
+  `export const performanceChapters: Chapter[] = ${JSON.stringify(performanceChapters).replaceAll("<", "\\u003c")};\n\n` +
   `export const roadmap: RoadmapPart[] = ${JSON.stringify(roadmap, null, 2).replaceAll("<", "\\u003c")};\n\n` +
   `export const questionRoadmap: QuestionRoadmapSection[] = ${JSON.stringify(questionRoadmap, null, 2).replaceAll("<", "\\u003c")};\n\n` +
   `export const questionAnswers: QuestionAnswer[] = ${JSON.stringify(questionAnswers, null, 2).replaceAll("<", "\\u003c")};\n\n` +
