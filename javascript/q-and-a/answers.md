@@ -1,5 +1,3 @@
-# JavaScript Fundamentals Interview Cards
-
 ## Card 1
 
 - question  
@@ -1321,8 +1319,6 @@
 
   Browser modules use strict mode automatically, have their own scope, and are deferred by default.
 
-  # Functions and Objects Interview Cards
-
 ## Card 18
 
 - question  
@@ -2534,8 +2530,6 @@
 
   Immutability can improve predictability, change detection, undo functionality, memoization, and debugging. However, copying large structures also has a performance and memory cost, so the appropriate strategy depends on the application.
 
-  # Arrays and Collections Interview Cards
-
 ## Card 33
 
 - question  
@@ -3301,8 +3295,6 @@
   ```
 
   Weak collections are specialized tools. Use `Map` or `Set` when iteration, primitive keys, or collection size is required.
-
-  # Asynchronous JavaScript Interview Cards
 
 ## Card 42
 
@@ -4335,8 +4327,6 @@
   ```
 
   Parallel execution improves total duration when operations are independent, but it does not make the individual operations themselves execute faster.
-
-  # Browser and DOM Interview Cards
 
 ## Card 54
 
@@ -5458,8 +5448,6 @@
 
   These worker types solve different problems and have different lifecycles and APIs.
 
-  # Performance and Optimization Interview Cards
-
 ## Card 72
 
 - question  
@@ -6171,8 +6159,6 @@
   ```
 
   `requestAnimationFrame` is not automatically appropriate for expensive nonvisual calculations. Long callbacks still block the main thread and can cause dropped frames.
-
-  # Errors, Security, and Code Quality Interview Cards
 
 ## Card 83
 
@@ -6929,8 +6915,6 @@
   End-to-end tests provide strong confidence in important user journeys but are generally slower, more expensive to maintain, and harder to debug.
 
   Not every function needs a unit test, and not every variation needs an end-to-end test. High-value business rules benefit from focused tests, while critical user journeys benefit from a smaller number of reliable end-to-end tests.
-
-  # Practical Interview Question Cards
 
 ## Card 93
 
