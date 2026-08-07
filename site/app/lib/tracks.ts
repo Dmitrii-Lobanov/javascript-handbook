@@ -146,10 +146,10 @@ export const learningTracks: LearningTrack[] = [
     mark: "PF",
     title: "Performance",
     description: "Measurement-led work across loading, rendering, interaction, and memory.",
-    status: "planned",
+    status: "expanding",
     phase: 3,
     resources: [
-      { slug: "handbook", label: "Handbook", title: "Performance Handbook", description: "Connect metrics and profiles to user-visible outcomes." },
+      { slug: "handbook", label: "Handbook", title: "Performance Handbook", description: "Connect metrics and profiles to user-visible outcomes.", available: true },
       { slug: "investigations", label: "Investigations", title: "Performance Investigations", description: "Diagnose network, main-thread, rendering, and memory bottlenecks." },
       { slug: "exercises", label: "Practice", title: "Optimization Exercises", description: "Apply targeted improvements and verify their impact." },
     ],

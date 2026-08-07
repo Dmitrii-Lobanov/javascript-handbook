@@ -43,7 +43,9 @@ export default async function TrackOverview({
             <p>{track.description}</p>
             <div className="technology-stats">
               <span><strong>{track.resources.length}</strong> learning modes</span>
-              <span><strong>Planned</strong> content status</span>
+              <span>
+                <strong>{track.status === "expanding" ? "Expanding" : "Planned"}</strong> content status
+              </span>
             </div>
           </div>
         </section>
@@ -64,8 +66,10 @@ export default async function TrackOverview({
                 <span className="resource-type">{resource.label}</span>
                 <h3>{resource.title}</h3>
                 <p>{resource.description}</p>
-                <div>Roadmap ready · Content planned</div>
-                <span className="resource-link">View roadmap →</span>
+                <div>{resource.available ? "Roadmap available" : "Roadmap ready · Content planned"}</div>
+                <span className="resource-link">
+                  {resource.available ? "Open roadmap →" : "View roadmap →"}
+                </span>
               </Link>
             ))}
           </div>
