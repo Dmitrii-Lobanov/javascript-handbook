@@ -41,8 +41,9 @@ export default async function ChapterPage({ params }: { params: Promise<{ slug: 
           </Link>
           <span className="sidebar-label"> Part {chapter.partNumber}</span>
           <h2>{chapter.partName}</h2>
-          <nav aria-label="Chapter table of contents">
+          <nav aria-label="Chapter table of contents" tabIndex={0}>
             <span>On this page</span>
+            <span className="sr-only">Use Tab to move through sections and arrow keys to scroll.</span>
             <ol>
               {chapter.headings.map((heading) => {
                 const id = heading

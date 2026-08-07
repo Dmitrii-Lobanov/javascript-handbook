@@ -1994,6 +1994,20 @@ button {
     serif;
   margin: 0.5rem 0 2rem;
 }
+.chapter-sidebar nav {
+  max-height: calc(100vh - 310px);
+  padding: 0.25rem 0.75rem 1.5rem 0.2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.chapter-sidebar nav:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--teal);
+  outline-offset: 4px;
+}
 .chapter-sidebar nav > span {
   font-size: 0.68rem;
   text-transform: uppercase;
@@ -2014,10 +2028,16 @@ button {
   line-height: 1.35;
   text-decoration: none;
 }
-.chapter-sidebar li a:hover {
+.chapter-sidebar li a:hover,
+.chapter-sidebar li a:focus-visible {
   color: var(--teal);
   border-left: 2px solid var(--teal);
   margin-left: -1px;
+}
+.chapter-sidebar li a:focus-visible {
+  border-radius: 0 5px 5px 0;
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
 }
 .chapter-hero {
   padding: 2.5rem 0 3rem;
@@ -2467,6 +2487,8 @@ button {
   }
   .chapter-sidebar nav {
     display: none;
+    max-height: none;
+    overflow: visible;
   }
   .back-link {
     margin-bottom: 1.5rem;
