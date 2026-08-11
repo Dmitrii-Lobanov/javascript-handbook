@@ -9,6 +9,7 @@ const reactRoot = join(repositoryRoot, "react");
 const performanceRoot = join(repositoryRoot, "performance");
 const bookRoot = join(javascriptRoot, "handbook");
 const performanceBookRoot = join(performanceRoot, "handbook");
+const reactPracticeRoot = join(reactRoot, "practice", "articles");
 const questionsRoadmapFile = join(javascriptRoot, "q-and-a", "roadmap.md");
 const questionsAnswersFile = join(javascriptRoot, "q-and-a", "answers.md");
 const reactQuestionsAnswersFile = join(reactRoot, "q-and-a", "answers.md");
@@ -140,6 +141,38 @@ const performanceChapters = existsSync(performanceBookRoot)
       })
   : [];
 
+const reactPracticeArticles = existsSync(reactPracticeRoot)
+  ? walk(reactPracticeRoot)
+      .filter((path) => /\/\d+[^/]*\.md$/.test(path))
+      .sort((left, right) => left.localeCompare(right))
+      .map((path) => {
+        const markdown = readFileSync(path, "utf8").trim();
+        const number = Number(path.match(/\/(\d+)-[^/]+\.md$/)?.[1]);
+        const slug = path.match(/\/(\d+-[^/]+)\.md$/)?.[1] ?? String(number);
+        const title = markdown.match(/^#\s+(.+)$/m)?.[1] ?? slug;
+        const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]);
+        const excerptSource = section(markdown, "The interview prompt");
+        const excerpt = excerptSource.split(/\n\s*\n/, 1)[0] ?? "";
+        const plainText = stripMarkdown(markdown);
+        const words = plainText.split(/\s+/).filter(Boolean).length;
+
+        return {
+          number,
+          slug,
+          title,
+          kind: "chapter",
+          partNumber: 1,
+          partName: "React Live Coding",
+          markdown,
+          headings,
+          quickRefresher: "",
+          excerpt: stripMarkdown(excerpt),
+          readingMinutes: Math.max(1, Math.ceil(words / 220)),
+          searchText: plainText.toLowerCase(),
+        };
+      })
+  : [];
+
 const toc = readFileSync(join(bookRoot, "table-of-contents.md"), "utf8");
 const roadmap = [];
 let currentPart = null;
@@ -264,6 +297,7 @@ const generated =
   `export type QuestionAnswer = { number: number; question: string; answer: string; explanation: string; details: string };\n\n` +
   `export const chapters: Chapter[] = ${JSON.stringify(chapters).replaceAll("<", "\\u003c")};\n\n` +
   `export const performanceChapters: Chapter[] = ${JSON.stringify(performanceChapters).replaceAll("<", "\\u003c")};\n\n` +
+  `export const reactPracticeArticles: Chapter[] = ${JSON.stringify(reactPracticeArticles).replaceAll("<", "\\u003c")};\n\n` +
   `export const roadmap: RoadmapPart[] = ${JSON.stringify(roadmap, null, 2).replaceAll("<", "\\u003c")};\n\n` +
   `export const questionRoadmap: QuestionRoadmapSection[] = ${JSON.stringify(questionRoadmap, null, 2).replaceAll("<", "\\u003c")};\n\n` +
   `export const questionAnswers: QuestionAnswer[] = ${JSON.stringify(questionAnswers, null, 2).replaceAll("<", "\\u003c")};\n\n` +

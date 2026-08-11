@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 
 const tasks = [
   {
+    slug: "01-accessible-autocomplete",
     title: "Accessible autocomplete",
     description:
       "Build responsive search suggestions while handling debouncing, stale responses, keyboard selection, and combobox semantics.",
@@ -18,6 +19,7 @@ const tasks = [
     concepts: ["Async state", "Effects", "A11y"],
   },
   {
+    slug: "02-data-table",
     title: "Sortable data table",
     description:
       "Model sorting, filtering, row selection, and pagination without duplicating derived state or losing table semantics.",
@@ -26,6 +28,7 @@ const tasks = [
     concepts: ["Derived state", "Composition", "Performance"],
   },
   {
+    slug: "03-accessible-modal-dialog",
     title: "Accessible modal dialog",
     description:
       "Design a reusable dialog with portals, Escape handling, focus containment, focus restoration, and safe dismissal behavior.",
@@ -34,6 +37,7 @@ const tasks = [
     concepts: ["Portals", "Refs", "Focus"],
   },
   {
+    slug: "04-reusable-tabs",
     title: "Reusable tabs",
     description:
       "Create controlled and uncontrolled tabs with a composable API, stable relationships, and complete keyboard navigation.",
@@ -42,6 +46,7 @@ const tasks = [
     concepts: ["Composition", "Context", "A11y"],
   },
   {
+    slug: "05-infinite-scrolling-feed",
     title: "Infinite scrolling feed",
     description:
       "Load cursor-based pages without duplicate requests, stale results, missing records, or inaccessible navigation behavior.",
@@ -50,6 +55,7 @@ const tasks = [
     concepts: ["Pagination", "Observer", "Async state"],
   },
   {
+    slug: "06-file-explorer-tree",
     title: "File explorer tree",
     description:
       "Render and update recursive data while preserving expansion state, stable identity, selection, and keyboard navigation.",
@@ -58,6 +64,7 @@ const tasks = [
     concepts: ["Recursion", "Tree state", "Keys"],
   },
   {
+    slug: "07-toast-notification-system",
     title: "Toast notification system",
     description:
       "Build a provider and Hook API with queues, auto-dismiss timers, exit behavior, deduplication, and live announcements.",
@@ -66,6 +73,7 @@ const tasks = [
     concepts: ["Context", "Reducers", "Timers"],
   },
   {
+    slug: "08-multi-step-form",
     title: "Multi-step form",
     description:
       "Coordinate field values, validation, conditional steps, drafts, server errors, and accessible focus management.",
@@ -74,6 +82,7 @@ const tasks = [
     concepts: ["Forms", "State machine", "Validation"],
   },
   {
+    slug: "09-reorderable-list",
     title: "Reorderable list",
     description:
       "Implement drag-and-drop and keyboard reordering with immutable updates, optimistic persistence, and stable item identity.",
@@ -82,6 +91,7 @@ const tasks = [
     concepts: ["Pointer events", "Optimistic UI", "A11y"],
   },
   {
+    slug: "10-async-resource-explorer",
     title: "Async resource explorer",
     description:
       "Fetch, search, filter, and inspect remote data while handling cancellation, caching, retries, URL state, and waterfalls.",
@@ -145,11 +155,13 @@ export default function ReactPracticePage() {
           </div>
 
           <div className="react-task-grid">
-            {tasks.map((task, index) => (
-              <article className="react-task-card" key={task.title}>
+            {tasks.map((task, index) => {
+              const available = index === 0;
+              const content = (
+                <>
                 <div className="react-task-card-top">
                   <span>{String(index + 1).padStart(2, "0")}</span>
-                  <small>Article planned</small>
+                  <small>{available ? "Available" : "Article planned"}</small>
                 </div>
                 <h3>{task.title}</h3>
                 <p>{task.description}</p>
@@ -160,8 +172,22 @@ export default function ReactPracticePage() {
                   <span>{task.difficulty}</span>
                   <span>{task.duration}</span>
                 </div>
-              </article>
-            ))}
+                {available && <span className="react-task-card-link">Read the walkthrough →</span>}
+                </>
+              );
+
+              return available ? (
+                <Link
+                  className="react-task-card available"
+                  href={`/react/practice/articles/${task.slug}`}
+                  key={task.title}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <article className="react-task-card" key={task.title}>{content}</article>
+              );
+            })}
           </div>
         </section>
       </main>

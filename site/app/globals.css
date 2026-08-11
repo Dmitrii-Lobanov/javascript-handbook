@@ -1183,6 +1183,18 @@ button {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--surface);
+  text-decoration: none;
+}
+.react-task-card.available {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.react-task-card.available:hover {
+  border-color: var(--teal);
+  box-shadow: 0 16px 38px color-mix(in srgb, var(--ink) 10%, transparent);
+  transform: translateY(-3px);
 }
 .react-task-card-top {
   display: flex;
@@ -1238,6 +1250,12 @@ button {
   color: var(--muted);
   font-size: 0.7rem;
   font-weight: 750;
+}
+.react-task-card-link {
+  margin-top: 1rem;
+  color: var(--teal);
+  font-size: 0.76rem;
+  font-weight: 850;
 }
 .site-footer {
   padding: clamp(3rem, 6vw, 5rem) max(1.5rem, calc((100vw - 1180px) / 2)) 1.5rem;
