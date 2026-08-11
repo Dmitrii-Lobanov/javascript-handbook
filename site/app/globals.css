@@ -1108,6 +1108,137 @@ button {
   font-weight: 850;
   text-decoration: none;
 }
+.react-practice-page {
+  min-height: calc(100vh - 126px);
+}
+.react-practice-hero {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(4.5rem, 9vw, 7.5rem) 1.5rem clamp(3.5rem, 7vw, 5rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  align-items: end;
+  gap: clamp(3rem, 8vw, 7rem);
+}
+.react-practice-hero h1 {
+  max-width: 870px;
+  margin: 0.9rem 0 1.3rem;
+  font: 700 clamp(3.2rem, 7vw, 6.3rem)/0.94 Georgia, serif;
+  letter-spacing: -0.055em;
+}
+.react-practice-hero > div:first-child > p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.65;
+}
+.react-practice-stats {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+.react-practice-stats > div {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.react-practice-stats strong {
+  font: 800 2rem/1 Georgia, serif;
+}
+.react-practice-stats span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.react-practice-method {
+  padding: clamp(2.5rem, 5vw, 4rem) max(1.5rem, calc((100vw - 1180px) / 2));
+  border-block: 1px solid var(--line);
+  background: var(--surface);
+}
+.react-practice-method h2 {
+  margin: 0.55rem 0 0.7rem;
+  font: 700 clamp(2rem, 4vw, 3.4rem)/1 Georgia, serif;
+  letter-spacing: -0.035em;
+}
+.react-practice-method p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.react-practice-catalog {
+  padding: clamp(4rem, 8vw, 7rem) max(1.5rem, calc((100vw - 1180px) / 2));
+  scroll-margin-top: 8.5rem;
+}
+.react-task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.react-task-card {
+  display: flex;
+  min-height: 320px;
+  flex-direction: column;
+  padding: clamp(1.25rem, 3vw, 1.65rem);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.react-task-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.react-task-card-top > span {
+  color: var(--teal);
+  font: 850 0.78rem/1 monospace;
+}
+.react-task-card-top small {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.react-task-card h3 {
+  margin: 2rem 0 0.75rem;
+  font: 700 clamp(1.5rem, 3vw, 2rem)/1.1 Georgia, serif;
+}
+.react-task-card > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.react-task-card ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 1.3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.react-task-card li {
+  padding: 0.3rem 0.55rem;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--teal) 9%, var(--paper));
+  color: var(--teal);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+.react-task-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
 .site-footer {
   padding: clamp(3rem, 6vw, 5rem) max(1.5rem, calc((100vw - 1180px) / 2)) 1.5rem;
   border-top: 1px solid var(--line);
@@ -2456,10 +2587,19 @@ button {
   .performance-roadmap-hero {
     grid-template-columns: 1fr;
   }
+  .react-practice-hero {
+    grid-template-columns: 1fr;
+  }
   .performance-roadmap-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .performance-roadmap-summary > div {
+    border-right: 1px solid var(--line);
+  }
+  .react-practice-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .react-practice-stats > div {
     border-right: 1px solid var(--line);
   }
   .performance-model ol {
@@ -2563,6 +2703,9 @@ button {
   .performance-roadmap-hero h1 {
     font-size: clamp(3rem, 15vw, 4.6rem);
   }
+  .react-practice-hero h1 {
+    font-size: clamp(3rem, 15vw, 4.6rem);
+  }
   .performance-model ol {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2603,6 +2746,12 @@ button {
   .performance-roadmap-next {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .react-task-grid {
+    grid-template-columns: 1fr;
+  }
+  .react-task-card {
+    min-height: 290px;
   }
   .hero {
     padding-top: 4rem;

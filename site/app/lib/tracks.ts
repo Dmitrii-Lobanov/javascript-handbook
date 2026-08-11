@@ -56,7 +56,7 @@ export const learningTracks: LearningTrack[] = [
     resources: [
       { slug: "handbook", label: "Handbook", title: "React Handbook", description: "Mental models, runtime behavior, and architectural tradeoffs." },
       { slug: "q-and-a", label: "Q&A", title: "React Questions & Answers", description: "120 curated questions from fundamentals to senior scenarios.", available: true },
-      { slug: "practice", label: "Practice", title: "React Practice", description: "Debugging, performance, accessibility, and design exercises." },
+      { slug: "practice", label: "Practice", title: "React Practice", description: "Explanatory articles for senior live-coding interview tasks.", available: true },
     ],
   },
   {
