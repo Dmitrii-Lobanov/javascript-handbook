@@ -161,23 +161,66 @@ This API makes the data source injectable. The component does not know the endpo
 
 Do not extract `useAutocomplete` merely to show that you know custom Hooks. Extract it when multiple renderers need the behavior or when the component becomes difficult to reason about. A custom Hook shares behavior, not markup or accessibility semantics.
 
-## Minimum viable implementation
+## Step-by-step React solution
 
-Build in vertical slices rather than attempting every feature simultaneously.
+Build one working vertical slice at a time. Every step below has a visible result and introduces only one new source of complexity.
 
-### Step 1: render and select local suggestions
+The sequence is intentional:
 
-Start with a controlled input and a simple list. Confirm that typing updates the value and clicking a result selects it.
+```text
+Controlled input
+    ↓
+Local suggestions
+    ↓
+Asynchronous search
+    ↓
+Race protection
+    ↓
+Debounced requests
+    ↓
+Keyboard navigation
+    ↓
+Combobox semantics
+```
+
+If the interview ends early, you still have a working checkpoint and can explain the next step.
+
+### Step 1: build the synchronous version
+
+Start without networking, debouncing, keyboard state, or ARIA. Validate the central data flow:
+
+```text
+input text → filtered suggestions → selected person
+```
 
 ```tsx
-function PeopleAutocomplete({ people, onSelect }) {
+import { useState } from "react";
+
+type Person = {
+  id: string;
+  name: string;
+  role: string;
+};
+
+type Props = {
+  people: Person[];
+  onSelect: (person: Person) => void;
+};
+
+export function PeopleAutocomplete({ people, onSelect }: Props) {
   const [inputValue, setInputValue] = useState("");
 
-  const results = people.filter(person =>
-    person.name
-      .toLocaleLowerCase()
-      .includes(inputValue.toLocaleLowerCase()),
-  );
+  const normalizedQuery = inputValue.trim().toLocaleLowerCase();
+  const results = normalizedQuery
+    ? people.filter(person =>
+        person.name.toLocaleLowerCase().includes(normalizedQuery),
+      )
+    : [];
+
+  function selectPerson(person: Person) {
+    setInputValue(person.name);
+    onSelect(person);
+  }
 
   return (
     <div>
@@ -187,39 +230,431 @@ function PeopleAutocomplete({ people, onSelect }) {
         value={inputValue}
         onChange={event => setInputValue(event.target.value)}
       />
-      <ul>
-        {results.map(person => (
-          <li key={person.id}>
-            <button type="button" onClick={() => onSelect(person)}>
-              {person.name}
-            </button>
-          </li>
-        ))}
-      </ul>
+
+      {results.length > 0 && (
+        <ul>
+          {results.map(person => (
+            <li key={person.id}>
+              <button type="button" onClick={() => selectPerson(person)}>
+                <strong>{person.name}</strong>
+                <span>{person.role}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 ```
 
-This is not yet a combobox, but it validates the basic data flow.
+At this stage, explain two decisions:
 
-### Step 2: introduce asynchronous results
+- filtered results are derived during rendering instead of synchronized through an Effect;
+- `person.id` provides stable identity, while an array index would describe position rather than the person.
 
-Replace local filtering with a request synchronized to the effective query. The request needs cleanup because responses can arrive out of order.
+Verify before continuing:
 
-### Step 3: add keyboard behavior
+- typing immediately updates the input;
+- matching people appear;
+- selecting a person updates the input and calls `onSelect`.
 
-Introduce `activeIndex`, keep DOM focus in the input, and use `aria-activedescendant` to identify the active option.
+### Step 2: replace local filtering with asynchronous search
 
-### Step 4: add accessible states
+Change the API so the component receives a search function:
 
-Connect the input to the listbox, expose expanded state, mark the active option, and announce loading or result counts through a status region.
+```ts
+type Props = {
+  searchPeople: (query: string) => Promise<Person[]>;
+  onSelect: (person: Person) => void;
+};
+```
 
-This sequence produces working checkpoints. If time expires, the candidate can show a coherent partial solution and explain the remaining work.
+Add explicit request state:
 
-## Step-by-step React solution
+```tsx
+type SearchState =
+  | { status: "idle"; results: Person[] }
+  | { status: "loading"; results: Person[] }
+  | { status: "success"; results: Person[] }
+  | { status: "error"; results: Person[]; message: string };
 
-The complete interview-sized implementation follows.
+const [searchState, setSearchState] = useState<SearchState>({
+  status: "idle",
+  results: [],
+});
+```
+
+Now synchronize results with `inputValue`:
+
+```tsx
+useEffect(() => {
+  const query = inputValue.trim();
+
+  if (query.length < 2) {
+    setSearchState({ status: "idle", results: [] });
+    return;
+  }
+
+  setSearchState({ status: "loading", results: [] });
+
+  searchPeople(query)
+    .then(results => {
+      setSearchState({ status: "success", results });
+    })
+    .catch(() => {
+      setSearchState({
+        status: "error",
+        results: [],
+        message: "Suggestions could not be loaded.",
+      });
+    });
+}, [inputValue, searchPeople]);
+```
+
+Render the status and remote results:
+
+```tsx
+{searchState.status === "loading" && <p>Loading…</p>}
+{searchState.status === "error" && <p>{searchState.message}</p>}
+{searchState.status === "success" && searchState.results.length === 0 && (
+  <p>No people found.</p>
+)}
+
+{searchState.results.length > 0 && (
+  <ul>
+    {searchState.results.map(person => (
+      <li key={person.id}>
+        <button type="button" onClick={() => selectPerson(person)}>
+          {person.name}
+        </button>
+      </li>
+    ))}
+  </ul>
+)}
+```
+
+This version demonstrates loading, success, empty, and error states, but it contains an important bug: responses can arrive out of order.
+
+### Step 3: protect against stale responses
+
+Consider this sequence:
+
+```text
+search("rea") starts
+search("react") starts
+search("react") resolves
+search("rea") resolves later and replaces the correct results
+```
+
+Extend the search contract with an abort signal:
+
+```ts
+type Props = {
+  searchPeople: (
+    query: string,
+    signal: AbortSignal,
+  ) => Promise<Person[]>;
+  onSelect: (person: Person) => void;
+};
+```
+
+Then give every Effect execution its own controller and cleanup guard:
+
+```tsx
+useEffect(() => {
+  const query = inputValue.trim();
+
+  if (query.length < 2) {
+    setSearchState({ status: "idle", results: [] });
+    return;
+  }
+
+  const controller = new AbortController();
+  let ignore = false;
+
+  setSearchState(previous => ({
+    status: "loading",
+    results: previous.results,
+  }));
+
+  searchPeople(query, controller.signal)
+    .then(results => {
+      if (ignore) return;
+      setSearchState({ status: "success", results });
+    })
+    .catch(error => {
+      const aborted =
+        error instanceof DOMException && error.name === "AbortError";
+
+      if (ignore || aborted) return;
+
+      setSearchState({
+        status: "error",
+        results: [],
+        message: "Suggestions could not be loaded.",
+      });
+    });
+
+  return () => {
+    ignore = true;
+    controller.abort();
+  };
+}, [inputValue, searchPeople]);
+```
+
+Why use both mechanisms?
+
+- `controller.abort()` asks the underlying operation to stop doing unnecessary work.
+- `ignore` guarantees that this Effect execution cannot commit state after cleanup, even if the supplied search function does not fully honor cancellation.
+
+The component is now correct under out-of-order responses, but it still starts a request for nearly every key press.
+
+### Step 4: debounce the query, not the input
+
+Do not debounce `inputValue`. It controls what the user sees in the input and must update immediately.
+
+Extract the timing concern into a small reusable hook. The hook delays a value; it does not know anything about autocomplete or requests:
+
+```tsx
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+```
+
+Use the hook to derive a query for external work while keeping the controlled input immediate:
+
+```tsx
+const [inputValue, setInputValue] = useState("");
+const debouncedQuery = useDebounce(inputValue.trim(), 250);
+```
+
+Then change the request Effect to use `debouncedQuery`:
+
+```tsx
+useEffect(() => {
+  if (debouncedQuery.length < 2) {
+    setSearchState({ status: "idle", results: [] });
+    return;
+  }
+
+  const controller = new AbortController();
+  let ignore = false;
+
+  setSearchState(previous => ({
+    status: "loading",
+    results: previous.results,
+  }));
+
+  searchPeople(debouncedQuery, controller.signal)
+    .then(results => {
+      if (!ignore) {
+        setSearchState({ status: "success", results });
+      }
+    })
+    .catch(error => {
+      const aborted =
+        error instanceof DOMException && error.name === "AbortError";
+
+      if (!ignore && !aborted) {
+        setSearchState({
+          status: "error",
+          results: [],
+          message: "Suggestions could not be loaded.",
+        });
+      }
+    });
+
+  return () => {
+    ignore = true;
+    controller.abort();
+  };
+}, [debouncedQuery, searchPeople]);
+```
+
+Verify this distinction explicitly:
+
+- the text field changes on every key press;
+- the request starts only after 250 milliseconds without another input change;
+- replacing one query with another cleans up the previous request.
+
+### Step 5: add active-option state and keyboard navigation
+
+Introduce one new state value:
+
+```tsx
+const [activeIndex, setActiveIndex] = useState(-1);
+```
+
+Reset it whenever the query or result set changes:
+
+```tsx
+function handleInputChange(value: string) {
+  setInputValue(value);
+  setActiveIndex(-1);
+}
+
+// After accepting new results:
+setSearchState({ status: "success", results });
+setActiveIndex(-1);
+```
+
+Implement the keyboard contract:
+
+```tsx
+function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+  const results = searchState.results;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    setDismissed(true);
+    setActiveIndex(-1);
+    return;
+  }
+
+  if (results.length === 0) return;
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    setDismissed(false);
+    setActiveIndex(index =>
+      index < results.length - 1 ? index + 1 : 0,
+    );
+    return;
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    setDismissed(false);
+    setActiveIndex(index =>
+      index > 0 ? index - 1 : results.length - 1,
+    );
+    return;
+  }
+
+  if (event.key === "Enter" && activeIndex >= 0) {
+    event.preventDefault();
+    selectPerson(results[activeIndex]);
+  }
+}
+```
+
+Add `dismissed` because closing through Escape is a user decision that cannot be derived from the query and results:
+
+```tsx
+const [dismissed, setDismissed] = useState(false);
+
+const canShowPopup =
+  !dismissed &&
+  inputValue.trim().length >= 2 &&
+  searchState.status !== "idle";
+```
+
+Keep the active option visible in a scrollable result list:
+
+```tsx
+const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
+
+useEffect(() => {
+  if (activeIndex >= 0) {
+    optionRefs.current[activeIndex]?.scrollIntoView({
+      block: "nearest",
+    });
+  }
+}, [activeIndex]);
+```
+
+At this checkpoint, pointer and keyboard selection both work. Accessibility semantics are the final step, not a separate afterthought.
+
+### Step 6: add combobox semantics and announcements
+
+Generate stable relationships for the input, listbox, options, and status message:
+
+```tsx
+const reactId = useId();
+const inputId = `${reactId}-input`;
+const listboxId = `${reactId}-listbox`;
+const statusId = `${reactId}-status`;
+
+const activePerson =
+  activeIndex >= 0 ? searchState.results[activeIndex] : undefined;
+
+const activeOptionId = activePerson
+  ? `${reactId}-option-${activePerson.id}`
+  : undefined;
+```
+
+Update the input:
+
+```tsx
+<input
+  id={inputId}
+  role="combobox"
+  aria-autocomplete="list"
+  aria-expanded={canShowPopup}
+  aria-controls={listboxId}
+  aria-activedescendant={activeOptionId}
+  aria-describedby={statusId}
+  autoComplete="off"
+  value={inputValue}
+  onChange={event => handleInputChange(event.target.value)}
+  onKeyDown={handleKeyDown}
+  onFocus={() => setDismissed(false)}
+/>
+```
+
+Keep DOM focus in this input. `aria-activedescendant` moves the assistive-technology focus among suggestions without taking away native text editing.
+
+Update the suggestion list:
+
+```tsx
+<ul id={listboxId} role="listbox" aria-label="People suggestions">
+  {searchState.results.map((person, index) => {
+    const active = index === activeIndex;
+
+    return (
+      <li
+        id={`${reactId}-option-${person.id}`}
+        role="option"
+        aria-selected={active}
+        key={person.id}
+        ref={node => {
+          optionRefs.current[index] = node;
+        }}
+        onMouseDown={event => event.preventDefault()}
+        onClick={() => selectPerson(person)}
+      >
+        <strong>{person.name}</strong>
+        <span>{person.role}</span>
+      </li>
+    );
+  })}
+</ul>
+```
+
+Finally, announce asynchronous changes without moving focus:
+
+```tsx
+<div id={statusId} role="status" className="sr-only">
+  {statusMessage}
+</div>
+```
+
+This completes the step-by-step implementation. The final assembled component appears below for reference.
+
+## Complete interview-sized implementation
+
+The following version combines all six steps in one component.
 
 ```tsx
 import {
@@ -252,6 +687,20 @@ type Props = {
   minimumQueryLength?: number;
 };
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function PeopleAutocomplete({
   label,
   searchPeople,
@@ -264,7 +713,7 @@ export function PeopleAutocomplete({
   const statusId = `${reactId}-status`;
 
   const [inputValue, setInputValue] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const debouncedQuery = useDebounce(inputValue.trim(), 250);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [dismissed, setDismissed] = useState(false);
   const [searchState, setSearchState] = useState<SearchState>({
@@ -273,14 +722,6 @@ export function PeopleAutocomplete({
   });
 
   const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedQuery(inputValue.trim());
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [inputValue]);
 
   useEffect(() => {
     if (debouncedQuery.length < minimumQueryLength) {
@@ -478,6 +919,8 @@ export function PeopleAutocomplete({
 ### The raw input and debounced query are separate
 
 The input must update immediately on every key press. Debouncing the state bound to `value` would make typing feel delayed. Instead, the raw input is urgent UI state and the debounced query controls only external synchronization.
+
+`useDebounce` owns only the timer lifecycle and remains reusable for other delayed values. The autocomplete still owns query normalization (`trim`), the delay choice, minimum-length rules, networking, and rendering. Keeping those responsibilities outside the hook avoids turning a small timing primitive into a feature-specific abstraction.
 
 ### The Effect synchronizes with the current query
 
