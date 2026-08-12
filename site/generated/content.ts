@@ -1249,6 +1249,406 @@ export const reactChapters: Chapter[] = [
     searchText:
       "chapter 32 — transitions and deferred updates quick refresher transitions mark updates as non urgent so urgent interactions can remain responsive. usedeferredvalue lets a subtree lag behind a rapidly changing value. why this matters concurrent scheduling can improve responsiveness when expensive ui updates compete with typing or navigation. it does not make the expensive work faster or replace debouncing. core mental model keep the controlled input urgent and defer the expensive result update: the input reflects every key immediately while results may temporarily render an older query. indicate stale content visually when that distinction matters. use starttransition when you control the state update: transition work is interruptible and can be restarted by urgent updates. therefore rendering must remain pure. do not use transitions to control text inputs, and do not wrap work that must complete immediately. debouncing waits for inactivity and reduces how often work starts. deferral allows work to begin but gives urgent updates priority. they solve different problems and may sometimes be combined. common traps expecting transitions to reduce computation time. marking the controlled input update as non urgent. confusing ispending with a network loading state. using deferral instead of fixing an unnecessarily expensive tree. hiding stale content without communicating pending state. interview answer transitions separate urgent updates, such as input feedback, from non urgent rendering that may be interrupted. starttransition marks an update i control; usedeferredvalue gives a subtree a deferred version of a value. they improve scheduling rather than computation, so i still reduce expensive work and use debouncing separately when i need to limit external requests. check yourself how does usedeferredvalue(query) differ from debouncing query before a network request?",
   },
+  {
+    number: 33,
+    slug: "33-client-and-server-rendering",
+    title: "Client and Server Rendering",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 33 — Client and Server Rendering\n\n## Quick refresher\n\nClient rendering builds UI in the browser. Server rendering produces initial HTML on the server; client JavaScript can then hydrate it. Modern applications commonly combine strategies by route and component.\n\n## Why this matters\n\nRendering location affects startup cost, SEO, caching, data access, interactivity, and operational complexity.\n\n## Core mental model\n\n```text\nCSR: shell → JavaScript → data → UI\nSSR: request → server HTML → browser display → hydration\n```\n\nCSR supports rich navigation but can delay useful content behind JavaScript and data waterfalls. SSR can show content earlier and access server resources directly, but adds server work, hydration cost, and consistency requirements. Static generation moves rendering to build or revalidation time.\n\nChoose per route: public content may favor server or static output; highly interactive authenticated screens may rely more on client behavior. Measure complete navigation and interaction, not only HTML arrival.\n\n## Common traps\n\n- Calling SSR automatically faster.\n- Treating the application as entirely client- or server-rendered.\n- Ignoring hydration and client JavaScript cost.\n- Fetching the same data again unnecessarily after hydration.\n\n## Interview answer\n\nI choose rendering boundaries from user journeys, data location, cacheability, and interaction needs. Server rendering can improve initial delivery, while client rendering supports continued interaction. Hybrid architectures usually work best, provided we measure HTML, JavaScript, hydration, and navigation together.\n\n## Check yourself\n\nWhy can fast server HTML still lead to a slow interactive experience?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Client rendering builds UI in the browser. Server rendering produces initial HTML on the server; client JavaScript can then hydrate it. Modern applications commonly combine strategies by route and component.",
+    excerpt:
+      "Rendering location affects startup cost, SEO, caching, data access, interactivity, and operational complexity.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 33 — client and server rendering quick refresher client rendering builds ui in the browser. server rendering produces initial html on the server; client javascript can then hydrate it. modern applications commonly combine strategies by route and component. why this matters rendering location affects startup cost, seo, caching, data access, interactivity, and operational complexity. core mental model csr supports rich navigation but can delay useful content behind javascript and data waterfalls. ssr can show content earlier and access server resources directly, but adds server work, hydration cost, and consistency requirements. static generation moves rendering to build or revalidation time. choose per route: public content may favor server or static output; highly interactive authenticated screens may rely more on client behavior. measure complete navigation and interaction, not only html arrival. common traps calling ssr automatically faster. treating the application as entirely client or server rendered. ignoring hydration and client javascript cost. fetching the same data again unnecessarily after hydration. interview answer i choose rendering boundaries from user journeys, data location, cacheability, and interaction needs. server rendering can improve initial delivery, while client rendering supports continued interaction. hybrid architectures usually work best, provided we measure html, javascript, hydration, and navigation together. check yourself why can fast server html still lead to a slow interactive experience?",
+  },
+  {
+    number: 34,
+    slug: "34-hydration",
+    title: "Hydration",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 34 — Hydration\n\n## Quick refresher\n\nHydration attaches React behavior to server-rendered HTML by rendering the same initial tree on the client and connecting it to existing DOM.\n\n## Why this matters\n\nThe page may look ready before it can respond. Hydration mismatches can cause warnings, discarded work, incorrect UI, and layout shifts.\n\n## Core mental model\n\nThe server and first client render must agree. Avoid nondeterministic render output:\n\n```tsx\n// Risky during initial render\nreturn \u003cspan>{new Date().toLocaleTimeString()}\u003c/span>;\n```\n\nDifferences can come from time, random values, locale, browser-only APIs, invalid HTML, or data changing between server and client. Provide deterministic initial data, defer browser-only synchronization to an Effect, or isolate client-only UI deliberately.\n\nHydration also has a performance cost because React must load code and recreate the component tree. Suspense boundaries can allow selective hydration and prioritize interaction with ready regions.\n\n## Common traps\n\n- Using `typeof window` branches that change initial markup.\n- Suppressing mismatch warnings instead of fixing the cause.\n- Confusing visible HTML with usable UI.\n- Rendering the whole page as client-only to avoid one mismatch.\n\n## Interview answer\n\nHydration connects client React to server HTML, so the initial output must be deterministic and equivalent. I eliminate time, random, locale, and browser-only differences or isolate them behind intentional boundaries. I also measure hydration as JavaScript and main-thread work, not merely correctness.\n\n## Check yourself\n\nHow would you render a browser-local preference without producing a hydration mismatch?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Hydration attaches React behavior to server rendered HTML by rendering the same initial tree on the client and connecting it to existing DOM.",
+    excerpt:
+      "The page may look ready before it can respond. Hydration mismatches can cause warnings, discarded work, incorrect UI, and layout shifts.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 34 — hydration quick refresher hydration attaches react behavior to server rendered html by rendering the same initial tree on the client and connecting it to existing dom. why this matters the page may look ready before it can respond. hydration mismatches can cause warnings, discarded work, incorrect ui, and layout shifts. core mental model the server and first client render must agree. avoid nondeterministic render output: differences can come from time, random values, locale, browser only apis, invalid html, or data changing between server and client. provide deterministic initial data, defer browser only synchronization to an effect, or isolate client only ui deliberately. hydration also has a performance cost because react must load code and recreate the component tree. suspense boundaries can allow selective hydration and prioritize interaction with ready regions. common traps using typeof window branches that change initial markup. suppressing mismatch warnings instead of fixing the cause. confusing visible html with usable ui. rendering the whole page as client only to avoid one mismatch. interview answer hydration connects client react to server html, so the initial output must be deterministic and equivalent. i eliminate time, random, locale, and browser only differences or isolate them behind intentional boundaries. i also measure hydration as javascript and main thread work, not merely correctness. check yourself how would you render a browser local preference without producing a hydration mismatch?",
+  },
+  {
+    number: 35,
+    slug: "35-server-components",
+    title: "Server Components",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 35 — Server Components\n\n## Quick refresher\n\nServer Components execute on the server and send a serialized UI representation rather than their component JavaScript to the browser. Client Components provide state, Effects, event handlers, and browser APIs.\n\n## Why this matters\n\nThe boundary changes bundle composition, data access, component APIs, and where interactivity belongs.\n\n## Core mental model\n\nServer Components can access server data directly and compose Client Components:\n\n```tsx\nasync function ProductPage({ id }: { id: string }) {\n  const product = await db.product.find(id);\n  return \u003cAddToCart productId={product.id} />;\n}\n```\n\nValues crossing into a Client Component must be serializable. A client boundary pulls its imported client-side dependency graph into the browser, so keep it as narrow as practical. Server Components are not the same as SSR: SSR produces HTML, while Server Components define a server/client module and data boundary; frameworks may use both.\n\nThey cannot use client Hooks or handle browser events. Mutations require an explicit server action or API mechanism with authorization and validation.\n\n## Common traps\n\n- Marking large trees as client components for one interactive leaf.\n- Passing functions or nonserializable objects across the boundary.\n- Treating Server Components as secure without authorization checks.\n- Equating Server Components with server-rendered HTML.\n\n## Interview answer\n\nServer Components keep data access and noninteractive rendering on the server while Client Components define interactive islands. I keep client boundaries narrow, pass serializable props, and compose server content through them where possible. They complement rather than replace SSR, caching, and secure mutation design.\n\n## Check yourself\n\nWhy can moving a client boundary upward increase the browser bundle?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Server Components execute on the server and send a serialized UI representation rather than their component JavaScript to the browser. Client Components provide state, Effects, event handlers, and browser APIs.",
+    excerpt:
+      "The boundary changes bundle composition, data access, component APIs, and where interactivity belongs.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 35 — server components quick refresher server components execute on the server and send a serialized ui representation rather than their component javascript to the browser. client components provide state, effects, event handlers, and browser apis. why this matters the boundary changes bundle composition, data access, component apis, and where interactivity belongs. core mental model server components can access server data directly and compose client components: values crossing into a client component must be serializable. a client boundary pulls its imported client side dependency graph into the browser, so keep it as narrow as practical. server components are not the same as ssr: ssr produces html, while server components define a server/client module and data boundary; frameworks may use both. they cannot use client hooks or handle browser events. mutations require an explicit server action or api mechanism with authorization and validation. common traps marking large trees as client components for one interactive leaf. passing functions or nonserializable objects across the boundary. treating server components as secure without authorization checks. equating server components with server rendered html. interview answer server components keep data access and noninteractive rendering on the server while client components define interactive islands. i keep client boundaries narrow, pass serializable props, and compose server content through them where possible. they complement rather than replace ssr, caching, and secure mutation design. check yourself why can moving a client boundary upward increase the browser bundle?",
+  },
+  {
+    number: 36,
+    slug: "36-suspense-and-streaming",
+    title: "Suspense and Streaming",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 36 — Suspense and Streaming\n\n## Quick refresher\n\nSuspense coordinates a fallback while a supported child is not ready. Streaming lets the server send completed parts of a response progressively.\n\n## Why this matters\n\nBoundary placement controls reveal order, perceived loading, layout stability, and failure isolation.\n\n## Core mental model\n\n```tsx\n\u003cSuspense fallback={\u003cProfileSkeleton />}>\n  \u003cProfile />\n  \u003cSuspense fallback={\u003cFeedSkeleton />}>\n    \u003cFeed />\n  \u003c/Suspense>\n\u003c/Suspense>\n```\n\nPlace boundaries around regions that can load meaningfully and independently. Too few boundaries block large sections; too many create flicker and visual fragmentation. Skeletons should preserve approximate layout.\n\nSuspense does not make arbitrary fetching code Suspense-aware. Use a framework or data source designed to integrate with it. Pair boundaries with error boundaries because loading and failure are separate states.\n\nStreaming improves progressive delivery but does not remove network, database, JavaScript, or hydration costs.\n\n## Common traps\n\n- Wrapping every component in Suspense.\n- Assuming Suspense catches errors.\n- Causing sequential data waterfalls inside nested components.\n- Replacing already visible content with a disruptive fallback during an update.\n\n## Interview answer\n\nSuspense coordinates loading UI; streaming allows ready server output to arrive incrementally. I choose boundaries from UX reveal order and independent recovery regions, avoid data waterfalls, preserve layout, and pair loading boundaries with error handling. I use framework-supported data integration rather than ad hoc promises.\n\n## Check yourself\n\nWhen should two loading regions share a Suspense boundary rather than reveal independently?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Suspense coordinates a fallback while a supported child is not ready. Streaming lets the server send completed parts of a response progressively.",
+    excerpt:
+      "Boundary placement controls reveal order, perceived loading, layout stability, and failure isolation.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 36 — suspense and streaming quick refresher suspense coordinates a fallback while a supported child is not ready. streaming lets the server send completed parts of a response progressively. why this matters boundary placement controls reveal order, perceived loading, layout stability, and failure isolation. core mental model place boundaries around regions that can load meaningfully and independently. too few boundaries block large sections; too many create flicker and visual fragmentation. skeletons should preserve approximate layout. suspense does not make arbitrary fetching code suspense aware. use a framework or data source designed to integrate with it. pair boundaries with error boundaries because loading and failure are separate states. streaming improves progressive delivery but does not remove network, database, javascript, or hydration costs. common traps wrapping every component in suspense. assuming suspense catches errors. causing sequential data waterfalls inside nested components. replacing already visible content with a disruptive fallback during an update. interview answer suspense coordinates loading ui; streaming allows ready server output to arrive incrementally. i choose boundaries from ux reveal order and independent recovery regions, avoid data waterfalls, preserve layout, and pair loading boundaries with error handling. i use framework supported data integration rather than ad hoc promises. check yourself when should two loading regions share a suspense boundary rather than reveal independently?",
+  },
+  {
+    number: 37,
+    slug: "37-data-fetching-architecture",
+    title: "Data-Fetching Architecture",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 37 — Data-Fetching Architecture\n\n## Quick refresher\n\nData architecture defines where fetching begins, who owns cache state, how duplicate requests are avoided, and how freshness and errors are represented.\n\n## Why this matters\n\nFetching in leaf Effects often creates waterfalls, duplicate requests, poor server rendering, and manual race-condition handling.\n\n## Core mental model\n\nSeparate three concerns:\n\n```text\nresource identity → cache/freshness policy → UI boundary\n```\n\nStart requests as high and early as the route permits, run independent requests in parallel, and use framework or server-state primitives for caching and deduplication. A cache key must include every input that changes the resource.\n\nDistinguish server state from client UI state. Server state has remote ownership, freshness, errors, and invalidation; copying it into local state usually creates synchronization problems.\n\nEffects remain appropriate for imperative external synchronization, but raw fetching Effects need cancellation and stale-response protection.\n\n## Common traps\n\n- Fetching sequentially through nested component Effects.\n- Using one global loading boolean for independent resources.\n- Treating cached data as permanently fresh.\n- Invalidating an entire cache after every mutation.\n\n## Interview answer\n\nI model resource identity and freshness explicitly, start independent work in parallel, and use the framework or a server-state cache for deduplication, retries, and SSR integration. Components consume resource states at meaningful loading and error boundaries. Local state remains for client-owned interaction state rather than duplicating server data.\n\n## Check yourself\n\nWhy does lifting a request to a route often remove a component data waterfall?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Data architecture defines where fetching begins, who owns cache state, how duplicate requests are avoided, and how freshness and errors are represented.",
+    excerpt:
+      "Fetching in leaf Effects often creates waterfalls, duplicate requests, poor server rendering, and manual race condition handling.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 37 — data fetching architecture quick refresher data architecture defines where fetching begins, who owns cache state, how duplicate requests are avoided, and how freshness and errors are represented. why this matters fetching in leaf effects often creates waterfalls, duplicate requests, poor server rendering, and manual race condition handling. core mental model separate three concerns: start requests as high and early as the route permits, run independent requests in parallel, and use framework or server state primitives for caching and deduplication. a cache key must include every input that changes the resource. distinguish server state from client ui state. server state has remote ownership, freshness, errors, and invalidation; copying it into local state usually creates synchronization problems. effects remain appropriate for imperative external synchronization, but raw fetching effects need cancellation and stale response protection. common traps fetching sequentially through nested component effects. using one global loading boolean for independent resources. treating cached data as permanently fresh. invalidating an entire cache after every mutation. interview answer i model resource identity and freshness explicitly, start independent work in parallel, and use the framework or a server state cache for deduplication, retries, and ssr integration. components consume resource states at meaningful loading and error boundaries. local state remains for client owned interaction state rather than duplicating server data. check yourself why does lifting a request to a route often remove a component data waterfall?",
+  },
+  {
+    number: 38,
+    slug: "38-mutations-and-optimistic-updates",
+    title: "Mutations and Optimistic Updates",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 38 — Mutations and Optimistic Updates\n\n## Quick refresher\n\nA mutation changes server-owned data. An optimistic update shows the expected result before confirmation, then reconciles success or rolls back failure.\n\n## Why this matters\n\nOptimism improves perceived responsiveness but introduces concurrency, rollback, identity, and error-handling problems.\n\n## Core mental model\n\n```text\ncapture previous state → apply optimistic state → send mutation\n                                      ↙ success     ↘ failure\n                               reconcile result    rollback\n```\n\nGive optimistic records temporary IDs and track pending state. Prefer operation-specific rollback over replacing an entire cache snapshot, which could erase newer successful changes. Server responses remain authoritative.\n\nOptimism is best for likely-successful, understandable, reversible actions. Destructive, financial, permission-sensitive, or conflict-heavy actions may require confirmation or pessimistic UI.\n\nPrevent duplicate submissions, make server operations idempotent when possible, and announce pending or failed state accessibly.\n\n## Common traps\n\n- Assuming requests finish in submission order.\n- Losing later edits during rollback.\n- Leaving temporary and server IDs duplicated.\n- Showing success for an operation that cannot safely be reversed.\n\n## Interview answer\n\nFor an optimistic mutation I record enough information to reconcile or roll back that operation, update the cache immediately, prevent accidental duplicates, and replace temporary data with the authoritative response. I handle concurrent mutations explicitly and reserve optimism for actions with high success probability and understandable recovery.\n\n## Check yourself\n\nWhy is restoring one old cache snapshot unsafe when multiple optimistic mutations overlap?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "A mutation changes server owned data. An optimistic update shows the expected result before confirmation, then reconciles success or rolls back failure.",
+    excerpt:
+      "Optimism improves perceived responsiveness but introduces concurrency, rollback, identity, and error handling problems.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 38 — mutations and optimistic updates quick refresher a mutation changes server owned data. an optimistic update shows the expected result before confirmation, then reconciles success or rolls back failure. why this matters optimism improves perceived responsiveness but introduces concurrency, rollback, identity, and error handling problems. core mental model give optimistic records temporary ids and track pending state. prefer operation specific rollback over replacing an entire cache snapshot, which could erase newer successful changes. server responses remain authoritative. optimism is best for likely successful, understandable, reversible actions. destructive, financial, permission sensitive, or conflict heavy actions may require confirmation or pessimistic ui. prevent duplicate submissions, make server operations idempotent when possible, and announce pending or failed state accessibly. common traps assuming requests finish in submission order. losing later edits during rollback. leaving temporary and server ids duplicated. showing success for an operation that cannot safely be reversed. interview answer for an optimistic mutation i record enough information to reconcile or roll back that operation, update the cache immediately, prevent accidental duplicates, and replace temporary data with the authoritative response. i handle concurrent mutations explicitly and reserve optimism for actions with high success probability and understandable recovery. check yourself why is restoring one old cache snapshot unsafe when multiple optimistic mutations overlap?",
+  },
+  {
+    number: 39,
+    slug: "39-forms-and-actions",
+    title: "Forms and Actions",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      '# Chapter 39 — Forms and Actions\n\n## Quick refresher\n\nForms combine field ownership, validation, submission, pending state, errors, and accessibility. Native form semantics provide submission, keyboard behavior, and progressive enhancement.\n\n## Why this matters\n\nForm architecture is a frequent interview topic because naive controlled state can create complexity without improving the user experience.\n\n## Core mental model\n\nUse the platform first:\n\n```tsx\n\u003cform action={saveProfile}>\n  \u003clabel htmlFor="name">Name\u003c/label>\n  \u003cinput id="name" name="name" required />\n  \u003cbutton type="submit">Save\u003c/button>\n\u003c/form>\n```\n\nUncontrolled native fields are often sufficient when values are needed at submission. Use controlled fields when rendering depends on each change or values must coordinate live. Validate at appropriate layers: native constraints for immediate basics, client logic for UX, and server validation as the authority.\n\nActions can coordinate submission and pending state with framework support, but authorization, validation, and idempotency remain server responsibilities. Preserve user input on failure and connect errors to fields through accessible descriptions.\n\n## Common traps\n\n- Controlling every field by default.\n- Validating only in the browser.\n- Disabling submission without explaining pending state.\n- Clearing input after a failed request.\n\n## Interview answer\n\nI start from semantic HTML forms, choose controlled state only when live coordination requires it, and keep the server authoritative for validation and permissions. The UI represents idle, pending, success, and error states, prevents duplicate submissions, preserves input on failure, and associates messages with their fields.\n\n## Check yourself\n\nWhen is an uncontrolled input simpler and more robust than controlled state?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Forms combine field ownership, validation, submission, pending state, errors, and accessibility. Native form semantics provide submission, keyboard behavior, and progressive enhancement.",
+    excerpt:
+      "Form architecture is a frequent interview topic because naive controlled state can create complexity without improving the user experience.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 39 — forms and actions quick refresher forms combine field ownership, validation, submission, pending state, errors, and accessibility. native form semantics provide submission, keyboard behavior, and progressive enhancement. why this matters form architecture is a frequent interview topic because naive controlled state can create complexity without improving the user experience. core mental model use the platform first: uncontrolled native fields are often sufficient when values are needed at submission. use controlled fields when rendering depends on each change or values must coordinate live. validate at appropriate layers: native constraints for immediate basics, client logic for ux, and server validation as the authority. actions can coordinate submission and pending state with framework support, but authorization, validation, and idempotency remain server responsibilities. preserve user input on failure and connect errors to fields through accessible descriptions. common traps controlling every field by default. validating only in the browser. disabling submission without explaining pending state. clearing input after a failed request. interview answer i start from semantic html forms, choose controlled state only when live coordination requires it, and keep the server authoritative for validation and permissions. the ui represents idle, pending, success, and error states, prevents duplicate submissions, preserves input on failure, and associates messages with their fields. check yourself when is an uncontrolled input simpler and more robust than controlled state?",
+  },
+  {
+    number: 40,
+    slug: "40-choosing-state-management-tools",
+    title: "Choosing State-Management Tools",
+    kind: "chapter",
+    partNumber: 5,
+    partName: "Modern React Architecture",
+    markdown:
+      "# Chapter 40 — Choosing State-Management Tools\n\n## Quick refresher\n\nChoose a state tool from ownership, lifetime, sharing, update frequency, persistence, and synchronization requirements—not popularity.\n\n## Why this matters\n\nApplications contain different state categories that should not be forced into one global store.\n\n## Core mental model\n\n```text\nlocal UI state      → useState / useReducer\nsubtree dependency  → props / context\nshareable location  → URL\nremote server state → framework cache / query library\nexternal live state → external store subscription\n```\n\nKeep transient input, disclosure, and selection near their owner. Put filters and navigation state in the URL when they should survive refresh or be shareable. Use a server-state cache for remote freshness and invalidation. Use an external client store when many distant consumers need selective high-frequency updates or state must outlive component trees.\n\nEvaluate debugging, SSR, persistence, selectors, bundle cost, team familiarity, and migration—not only API convenience.\n\n## Common traps\n\n- Putting server responses into a generic global store.\n- Using context for high-frequency selective subscriptions.\n- Keeping shareable filters only in memory.\n- Adopting a library before defining state ownership.\n\n## Interview answer\n\nI classify state first. Local interaction state stays local, subtree dependencies use props or context, shareable navigation state belongs in the URL, and remote data uses a server-state cache. I introduce an external store when lifetime or subscription granularity requires it, then compare SSR, debugging, performance, and team costs.\n\n## Check yourself\n\nWhere should product-search filters live if users must share and restore the result page?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Choose a state tool from ownership, lifetime, sharing, update frequency, persistence, and synchronization requirements—not popularity.",
+    excerpt:
+      "Applications contain different state categories that should not be forced into one global store.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 40 — choosing state management tools quick refresher choose a state tool from ownership, lifetime, sharing, update frequency, persistence, and synchronization requirements—not popularity. why this matters applications contain different state categories that should not be forced into one global store. core mental model keep transient input, disclosure, and selection near their owner. put filters and navigation state in the url when they should survive refresh or be shareable. use a server state cache for remote freshness and invalidation. use an external client store when many distant consumers need selective high frequency updates or state must outlive component trees. evaluate debugging, ssr, persistence, selectors, bundle cost, team familiarity, and migration—not only api convenience. common traps putting server responses into a generic global store. using context for high frequency selective subscriptions. keeping shareable filters only in memory. adopting a library before defining state ownership. interview answer i classify state first. local interaction state stays local, subtree dependencies use props or context, shareable navigation state belongs in the url, and remote data uses a server state cache. i introduce an external store when lifetime or subscription granularity requires it, then compare ssr, debugging, performance, and team costs. check yourself where should product search filters live if users must share and restore the result page?",
+  },
+  {
+    number: 41,
+    slug: "41-testing-user-observable-behavior",
+    title: "Testing User-Observable Behavior",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      '# Chapter 41 — Testing User-Observable Behavior\n\n## Quick refresher\n\nTest what users can perceive and do: rendered content, accessible roles and names, interactions, navigation, and outcomes.\n\n## Why this matters\n\nTests coupled to component internals resist refactoring while missing real accessibility and integration problems.\n\n## Core mental model\n\n```tsx\nrender(\u003cLogin />);\nawait user.type(screen.getByLabelText(/email/i), "a@example.com");\nawait user.click(screen.getByRole("button", { name: /sign in/i }));\nexpect(await screen.findByText(/welcome/i)).toBeVisible();\n```\n\nPrefer role, label, and visible-text queries because they resemble user access and expose missing semantics. Mock at system boundaries such as network requests, not internal Hooks. Assert outcomes rather than state variables or function call sequences.\n\nImplementation tests remain appropriate for pure algorithms or stable library contracts, but UI confidence comes primarily from behavior.\n\n## Common traps\n\n- Selecting elements by CSS class or test ID first.\n- Calling event handlers directly.\n- Asserting internal component state.\n- Mocking so much that no real integration remains.\n\n## Interview answer\n\nI test UI through accessible queries and realistic interactions, then assert user-visible outcomes. I mock external boundaries rather than internal implementation and keep pure logic tests separate. This produces refactor-resistant tests and makes accessibility failures more visible.\n\n## Check yourself\n\nWhy is `getByRole("button", { name: "Save" })` usually better than a test ID?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Test what users can perceive and do: rendered content, accessible roles and names, interactions, navigation, and outcomes.",
+    excerpt:
+      "Tests coupled to component internals resist refactoring while missing real accessibility and integration problems.",
+    readingMinutes: 1,
+    searchText:
+      'chapter 41 — testing user observable behavior quick refresher test what users can perceive and do: rendered content, accessible roles and names, interactions, navigation, and outcomes. why this matters tests coupled to component internals resist refactoring while missing real accessibility and integration problems. core mental model prefer role, label, and visible text queries because they resemble user access and expose missing semantics. mock at system boundaries such as network requests, not internal hooks. assert outcomes rather than state variables or function call sequences. implementation tests remain appropriate for pure algorithms or stable library contracts, but ui confidence comes primarily from behavior. common traps selecting elements by css class or test id first. calling event handlers directly. asserting internal component state. mocking so much that no real integration remains. interview answer i test ui through accessible queries and realistic interactions, then assert user visible outcomes. i mock external boundaries rather than internal implementation and keep pure logic tests separate. this produces refactor resistant tests and makes accessibility failures more visible. check yourself why is getbyrole("button", { name: "save" }) usually better than a test id?',
+  },
+  {
+    number: 42,
+    slug: "42-test-boundaries",
+    title: "Unit, Integration, and E2E Boundaries",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      "# Chapter 42 — Unit, Integration, and E2E Boundaries\n\n## Quick refresher\n\nUnit tests isolate small logic, integration tests combine cooperating UI and services, and end-to-end tests exercise critical journeys in a real browser and deployed-like system.\n\n## Why this matters\n\nConfidence comes from choosing the cheapest boundary that can reveal the relevant failure.\n\n## Core mental model\n\nUse many fast tests for pure complex logic, integration tests for component behavior and data flow, and a smaller E2E suite for critical cross-system journeys. Avoid rigid ratios; risk determines coverage.\n\n```text\nformatting rule → unit\nautocomplete request and keyboard behavior → integration\nsign-in through redirected dashboard → E2E\n```\n\nContract tests can verify boundaries between frontend and APIs. Visual regression tests help with appearance but do not replace behavioral assertions.\n\n## Common traps\n\n- Testing every component in isolation.\n- Recreating browser behavior in unit mocks.\n- Covering all edge cases only through slow E2E tests.\n- Treating line coverage as confidence.\n\n## Interview answer\n\nI choose boundaries by failure risk. Pure decision logic gets unit tests, most React behavior gets integration tests through public UI, and a focused E2E suite protects critical journeys and infrastructure integration. I avoid duplicating identical assertions at every layer.\n\n## Check yourself\n\nWhich test boundary best verifies that a form displays a server validation error beside the correct field?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Unit tests isolate small logic, integration tests combine cooperating UI and services, and end to end tests exercise critical journeys in a real browser and deployed like system.",
+    excerpt:
+      "Confidence comes from choosing the cheapest boundary that can reveal the relevant failure.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 42 — unit, integration, and e2e boundaries quick refresher unit tests isolate small logic, integration tests combine cooperating ui and services, and end to end tests exercise critical journeys in a real browser and deployed like system. why this matters confidence comes from choosing the cheapest boundary that can reveal the relevant failure. core mental model use many fast tests for pure complex logic, integration tests for component behavior and data flow, and a smaller e2e suite for critical cross system journeys. avoid rigid ratios; risk determines coverage. contract tests can verify boundaries between frontend and apis. visual regression tests help with appearance but do not replace behavioral assertions. common traps testing every component in isolation. recreating browser behavior in unit mocks. covering all edge cases only through slow e2e tests. treating line coverage as confidence. interview answer i choose boundaries by failure risk. pure decision logic gets unit tests, most react behavior gets integration tests through public ui, and a focused e2e suite protects critical journeys and infrastructure integration. i avoid duplicating identical assertions at every layer. check yourself which test boundary best verifies that a form displays a server validation error beside the correct field?",
+  },
+  {
+    number: 43,
+    slug: "43-testing-asynchronous-ui",
+    title: "Testing Asynchronous UI",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      '# Chapter 43 — Testing Asynchronous UI\n\n## Quick refresher\n\nAsync UI tests trigger behavior, wait for an observable outcome, and control external nondeterminism without depending on arbitrary time delays.\n\n## Why this matters\n\nIncorrect waiting produces flaky tests, missed race conditions, and false positives wrapped in React update warnings.\n\n## Core mental model\n\n```tsx\nawait user.click(screen.getByRole("button", { name: /load/i }));\nexpect(screen.getByRole("status")).toHaveTextContent(/loading/i);\nexpect(await screen.findByText("Ada Lovelace")).toBeVisible();\n```\n\nUse `findBy` for elements that will appear and `waitFor` for retrying an assertion. Mock network behavior at the request boundary and test success, empty, error, cancellation, and out-of-order responses where relevant.\n\nUse fake timers only for timer-owned behavior such as debounce, and advance them intentionally. Do not combine timer control and unresolved promises without understanding both queues.\n\n## Common traps\n\n- Adding sleeps to make a test pass.\n- Wrapping everything in `waitFor`.\n- Forgetting to await user interactions.\n- Testing only the successful response.\n\n## Interview answer\n\nI trigger async UI through user interactions, assert immediate pending feedback, and wait for a specific observable outcome. I control network and timer boundaries deterministically, test failure and stale-response cases, and avoid arbitrary sleeps or implementation-specific state assertions.\n\n## Check yourself\n\nHow would you test that an older autocomplete response cannot replace a newer query?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Async UI tests trigger behavior, wait for an observable outcome, and control external nondeterminism without depending on arbitrary time delays.",
+    excerpt:
+      "Incorrect waiting produces flaky tests, missed race conditions, and false positives wrapped in React update warnings.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 43 — testing asynchronous ui quick refresher async ui tests trigger behavior, wait for an observable outcome, and control external nondeterminism without depending on arbitrary time delays. why this matters incorrect waiting produces flaky tests, missed race conditions, and false positives wrapped in react update warnings. core mental model use findby for elements that will appear and waitfor for retrying an assertion. mock network behavior at the request boundary and test success, empty, error, cancellation, and out of order responses where relevant. use fake timers only for timer owned behavior such as debounce, and advance them intentionally. do not combine timer control and unresolved promises without understanding both queues. common traps adding sleeps to make a test pass. wrapping everything in waitfor . forgetting to await user interactions. testing only the successful response. interview answer i trigger async ui through user interactions, assert immediate pending feedback, and wait for a specific observable outcome. i control network and timer boundaries deterministically, test failure and stale response cases, and avoid arbitrary sleeps or implementation specific state assertions. check yourself how would you test that an older autocomplete response cannot replace a newer query?",
+  },
+  {
+    number: 44,
+    slug: "44-strict-mode-behavior",
+    title: "Strict Mode Behavior",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      "# Chapter 44 — Strict Mode Behavior\n\n## Quick refresher\n\nStrict Mode enables development-only checks that may repeat rendering and Effect setup-cleanup cycles to expose impure rendering and missing cleanup.\n\n## Why this matters\n\nCode that relies on “this runs once” can duplicate subscriptions, requests, or mutations and fail under remounting or concurrent behavior.\n\n## Core mental model\n\n```tsx\nuseEffect(() => {\n  const subscription = source.subscribe(handleValue);\n  return () => subscription.unsubscribe();\n}, [source]);\n```\n\nCorrect synchronization survives setup, cleanup, and setup again. Rendering must also be pure: mutating props or module state during render becomes visible when React calls the component again.\n\nThe checks do not mean production always performs the same sequence. They reveal code that is unsafe under legitimate lifecycle changes. Fix the underlying symmetry rather than disabling Strict Mode or using a ref to hide duplicate setup.\n\n## Common traps\n\n- Treating repeated development logs as a React bug.\n- Guarding an Effect with `hasRun.current` while leaking its resource.\n- Performing irreversible work during render.\n- Assuming an empty dependency array guarantees one lifetime execution.\n\n## Interview answer\n\nStrict Mode intentionally stresses render purity and Effect cleanup in development. I make rendering idempotent and every Effect a symmetric setup-cleanup process. I do not suppress repeated setup with a ref because that hides the lifecycle bug rather than making synchronization safe.\n\n## Check yourself\n\nWhy is a `hasRun` ref usually the wrong fix for an Effect that sends duplicate development requests?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Strict Mode enables development only checks that may repeat rendering and Effect setup cleanup cycles to expose impure rendering and missing cleanup.",
+    excerpt:
+      "Code that relies on “this runs once” can duplicate subscriptions, requests, or mutations and fail under remounting or concurrent behavior.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 44 — strict mode behavior quick refresher strict mode enables development only checks that may repeat rendering and effect setup cleanup cycles to expose impure rendering and missing cleanup. why this matters code that relies on “this runs once” can duplicate subscriptions, requests, or mutations and fail under remounting or concurrent behavior. core mental model correct synchronization survives setup, cleanup, and setup again. rendering must also be pure: mutating props or module state during render becomes visible when react calls the component again. the checks do not mean production always performs the same sequence. they reveal code that is unsafe under legitimate lifecycle changes. fix the underlying symmetry rather than disabling strict mode or using a ref to hide duplicate setup. common traps treating repeated development logs as a react bug. guarding an effect with hasrun.current while leaking its resource. performing irreversible work during render. assuming an empty dependency array guarantees one lifetime execution. interview answer strict mode intentionally stresses render purity and effect cleanup in development. i make rendering idempotent and every effect a symmetric setup cleanup process. i do not suppress repeated setup with a ref because that hides the lifecycle bug rather than making synchronization safe. check yourself why is a hasrun ref usually the wrong fix for an effect that sends duplicate development requests?",
+  },
+  {
+    number: 45,
+    slug: "45-race-conditions-and-cancellation",
+    title: "Race Conditions and Cancellation",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      "# Chapter 45 — Race Conditions and Cancellation\n\n## Quick refresher\n\nAsync operations can finish out of order. Cleanup should cancel obsolete work when possible and prevent obsolete results from updating state.\n\n## Why this matters\n\nWithout ownership rules, an older request can replace newer UI, or an unmounted feature can continue consuming resources.\n\n## Core mental model\n\n```tsx\nuseEffect(() => {\n  const controller = new AbortController();\n  let ignore = false;\n\n  search(query, controller.signal).then(result => {\n    if (!ignore) setResult(result);\n  });\n\n  return () => {\n    ignore = true;\n    controller.abort();\n  };\n}, [query]);\n```\n\nCancellation stops unnecessary supported work. The ignore guard ensures that this Effect execution cannot commit after losing ownership, even if the abstraction does not honor abort fully.\n\nServer-state libraries often implement cancellation, deduplication, and request identity. Mutations additionally require idempotency and conflict strategy; blindly cancelling a client request does not guarantee the server did not apply it.\n\n## Common traps\n\n- Assuming request completion order matches start order.\n- Treating abort as proof that no server mutation occurred.\n- Reporting cancellation as an error.\n- Updating shared state without checking which request owns it.\n\n## Interview answer\n\nI associate async work with the render or operation that started it. Cleanup aborts supported work and invalidates that execution so stale results cannot commit. For mutations I also design idempotency and reconciliation because cancelling transport does not necessarily cancel server-side effects.\n\n## Check yourself\n\nWhy might an ignore guard remain useful when using `AbortController`?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Async operations can finish out of order. Cleanup should cancel obsolete work when possible and prevent obsolete results from updating state.",
+    excerpt:
+      "Without ownership rules, an older request can replace newer UI, or an unmounted feature can continue consuming resources.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 45 — race conditions and cancellation quick refresher async operations can finish out of order. cleanup should cancel obsolete work when possible and prevent obsolete results from updating state. why this matters without ownership rules, an older request can replace newer ui, or an unmounted feature can continue consuming resources. core mental model cancellation stops unnecessary supported work. the ignore guard ensures that this effect execution cannot commit after losing ownership, even if the abstraction does not honor abort fully. server state libraries often implement cancellation, deduplication, and request identity. mutations additionally require idempotency and conflict strategy; blindly cancelling a client request does not guarantee the server did not apply it. common traps assuming request completion order matches start order. treating abort as proof that no server mutation occurred. reporting cancellation as an error. updating shared state without checking which request owns it. interview answer i associate async work with the render or operation that started it. cleanup aborts supported work and invalidates that execution so stale results cannot commit. for mutations i also design idempotency and reconciliation because cancelling transport does not necessarily cancel server side effects. check yourself why might an ignore guard remain useful when using abortcontroller ?",
+  },
+  {
+    number: 46,
+    slug: "46-loading-empty-and-error-states",
+    title: "Loading, Empty, and Error States",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      '# Chapter 46 — Loading, Empty, and Error States\n\n## Quick refresher\n\nAsync UI should represent distinct idle, pending, success, empty, and error states. Refreshing existing data differs from loading it for the first time.\n\n## Why this matters\n\nBoolean combinations create impossible states and poor transitions. Explicit states make rendering, testing, and accessibility clearer.\n\n## Core mental model\n\n```tsx\ntype Resource\u003cT> =\n  | { status: "idle" }\n  | { status: "loading" }\n  | { status: "success"; data: T }\n  | { status: "error"; message: string };\n```\n\nKeep useful previous data visible during background refresh when appropriate, with a subtle pending indicator. Empty state is a successful result with no items, not an error. Errors should explain impact and offer a relevant retry or alternative.\n\nUse `aria-live` or status semantics for important asynchronous changes without repeatedly announcing noisy updates. Skeletons should preserve layout; spinners should not erase useful context.\n\n## Common traps\n\n- Modeling loading and error as contradictory booleans.\n- Showing the same empty UI before a request and after an empty success.\n- Replacing existing content with a spinner during every refresh.\n- Displaying an error without recovery.\n\n## Interview answer\n\nI model async state explicitly and distinguish initial loading, background refresh, empty success, and failure. I preserve useful content when possible, provide relevant recovery, and announce important transitions accessibly. This avoids impossible boolean combinations and makes tests match actual user states.\n\n## Check yourself\n\nWhy should an empty search result not use the same UI as an unsubmitted search?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Async UI should represent distinct idle, pending, success, empty, and error states. Refreshing existing data differs from loading it for the first time.",
+    excerpt:
+      "Boolean combinations create impossible states and poor transitions. Explicit states make rendering, testing, and accessibility clearer.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 46 — loading, empty, and error states quick refresher async ui should represent distinct idle, pending, success, empty, and error states. refreshing existing data differs from loading it for the first time. why this matters boolean combinations create impossible states and poor transitions. explicit states make rendering, testing, and accessibility clearer. core mental model keep useful previous data visible during background refresh when appropriate, with a subtle pending indicator. empty state is a successful result with no items, not an error. errors should explain impact and offer a relevant retry or alternative. use aria live or status semantics for important asynchronous changes without repeatedly announcing noisy updates. skeletons should preserve layout; spinners should not erase useful context. common traps modeling loading and error as contradictory booleans. showing the same empty ui before a request and after an empty success. replacing existing content with a spinner during every refresh. displaying an error without recovery. interview answer i model async state explicitly and distinguish initial loading, background refresh, empty success, and failure. i preserve useful content when possible, provide relevant recovery, and announce important transitions accessibly. this avoids impossible boolean combinations and makes tests match actual user states. check yourself why should an empty search result not use the same ui as an unsubmitted search?",
+  },
+  {
+    number: 47,
+    slug: "47-debugging-react-applications",
+    title: "Debugging React Applications",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      "# Chapter 47 — Debugging React Applications\n\n## Quick refresher\n\nDebugging starts with reproduction, scope reduction, evidence collection, and a falsifiable hypothesis—not immediate code changes.\n\n## Why this matters\n\nReact symptoms often originate from identity, ownership, stale closures, mutation, browser behavior, or external data rather than React itself.\n\n## Core mental model\n\n```text\nreproduce → minimize → observe → hypothesize → test one change → verify\n```\n\nRead the first meaningful error and component stack. Use React DevTools to inspect props, state, context, owners, and render activity. Use the Profiler for timing and browser DevTools for network, console, DOM, accessibility, and main-thread evidence.\n\nFor unexpected state, trace who owns it and which event or Effect updates it. For unexpected remounts, inspect type, position, and keys. For loops, find an Effect that updates a dependency or an unstable dependency recreated each render. Build a minimal reproduction when framework or library interaction is unclear.\n\n## Common traps\n\n- Changing multiple things before testing the hypothesis.\n- Debugging minified symptoms without source maps or context.\n- Treating logs during render as committed UI.\n- Silencing warnings instead of finding the violated invariant.\n\n## Interview answer\n\nI make the failure reproducible, reduce it to the smallest responsible boundary, and collect evidence with React and browser tools. I trace ownership, identity, update sources, and Effect dependencies, then test one falsifiable hypothesis. Finally I verify the original user scenario and add a regression test at the appropriate boundary.\n\n## Check yourself\n\nWhich identity questions would you ask when a child’s state resets unexpectedly?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Debugging starts with reproduction, scope reduction, evidence collection, and a falsifiable hypothesis—not immediate code changes.",
+    excerpt:
+      "React symptoms often originate from identity, ownership, stale closures, mutation, browser behavior, or external data rather than React itself.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 47 — debugging react applications quick refresher debugging starts with reproduction, scope reduction, evidence collection, and a falsifiable hypothesis—not immediate code changes. why this matters react symptoms often originate from identity, ownership, stale closures, mutation, browser behavior, or external data rather than react itself. core mental model read the first meaningful error and component stack. use react devtools to inspect props, state, context, owners, and render activity. use the profiler for timing and browser devtools for network, console, dom, accessibility, and main thread evidence. for unexpected state, trace who owns it and which event or effect updates it. for unexpected remounts, inspect type, position, and keys. for loops, find an effect that updates a dependency or an unstable dependency recreated each render. build a minimal reproduction when framework or library interaction is unclear. common traps changing multiple things before testing the hypothesis. debugging minified symptoms without source maps or context. treating logs during render as committed ui. silencing warnings instead of finding the violated invariant. interview answer i make the failure reproducible, reduce it to the smallest responsible boundary, and collect evidence with react and browser tools. i trace ownership, identity, update sources, and effect dependencies, then test one falsifiable hypothesis. finally i verify the original user scenario and add a regression test at the appropriate boundary. check yourself which identity questions would you ask when a child’s state resets unexpectedly?",
+  },
+  {
+    number: 48,
+    slug: "48-production-resilience",
+    title: "Production Resilience",
+    kind: "chapter",
+    partNumber: 6,
+    partName: "Testing and Production Behavior",
+    markdown:
+      "# Chapter 48 — Production Resilience\n\n## Quick refresher\n\nResilient React applications isolate failures, expose useful diagnostics, tolerate partial outages, and provide safe recovery without losing user work.\n\n## Why this matters\n\nProduction behavior includes slow networks, stale deployments, third-party failures, malformed data, unsupported browsers, and long-running sessions—not only successful local rendering.\n\n## Core mental model\n\nDesign resilience in layers:\n\n```text\nvalidation → explicit resource states → timeout/retry policy\n→ error boundaries → observability → recovery or degradation\n```\n\nPlace error and Suspense boundaries around independently recoverable regions. Preserve form drafts and useful cached data during transient failure. Retry only safe operations with bounded backoff and jitter; avoid retry storms and non-idempotent mutations.\n\nCollect actionable client errors, component context, release version, performance signals, and user journey information while respecting privacy. Source maps and release correlation make reports diagnosable. Provide recovery for stale chunk failures after deployments and degrade optional third-party features rather than blocking core journeys.\n\n## Common traps\n\n- Retrying every failure indefinitely.\n- Sending sensitive state in error reports.\n- Using one application-wide fallback for local failures.\n- Losing unsaved user input during recovery.\n- Monitoring errors without ownership or alert thresholds.\n\n## Interview answer\n\nI design failure isolation with explicit async states and scoped boundaries, preserve valuable user state, and define safe timeout and retry policies. Observability includes release and journey context without sensitive data. Recovery may retry, refresh stale code, use cached data, or degrade optional functionality, and every alert has clear ownership.\n\n## Check yourself\n\nHow should an application recover when a deployed lazy chunk no longer exists on the server?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Resilient React applications isolate failures, expose useful diagnostics, tolerate partial outages, and provide safe recovery without losing user work.",
+    excerpt:
+      "Production behavior includes slow networks, stale deployments, third party failures, malformed data, unsupported browsers, and long running sessions—not only successful local rendering.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 48 — production resilience quick refresher resilient react applications isolate failures, expose useful diagnostics, tolerate partial outages, and provide safe recovery without losing user work. why this matters production behavior includes slow networks, stale deployments, third party failures, malformed data, unsupported browsers, and long running sessions—not only successful local rendering. core mental model design resilience in layers: place error and suspense boundaries around independently recoverable regions. preserve form drafts and useful cached data during transient failure. retry only safe operations with bounded backoff and jitter; avoid retry storms and non idempotent mutations. collect actionable client errors, component context, release version, performance signals, and user journey information while respecting privacy. source maps and release correlation make reports diagnosable. provide recovery for stale chunk failures after deployments and degrade optional third party features rather than blocking core journeys. common traps retrying every failure indefinitely. sending sensitive state in error reports. using one application wide fallback for local failures. losing unsaved user input during recovery. monitoring errors without ownership or alert thresholds. interview answer i design failure isolation with explicit async states and scoped boundaries, preserve valuable user state, and define safe timeout and retry policies. observability includes release and journey context without sensitive data. recovery may retry, refresh stale code, use cached data, or degrade optional functionality, and every alert has clear ownership. check yourself how should an application recover when a deployed lazy chunk no longer exists on the server?",
+  },
 ];
 
 export const reactPracticeArticles: Chapter[] = [
