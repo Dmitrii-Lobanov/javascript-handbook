@@ -621,6 +621,231 @@ export const reactChapters: Chapter[] = [
     searchText:
       "chapter 7 — batching and functional updates quick refresher react queues state updates and batches them so related updates can produce fewer renders. functional updaters calculate the next state from the previously queued state. why this matters this topic tests whether you can reason about multiple updates without treating setters as immediate assignments. core mental model all three expressions use the same count snapshot, so they request the same replacement value. to compose updates, pass updater functions: react processes the queue in order, passing each updater the result of the previous one. use an updater whenever the next state depends on previous state, especially when multiple updates may be queued. modern react batches updates from more asynchronous contexts than older versions. batching is an implementation optimization: code should depend on state semantics, not on counting renders. flushsync exists for rare dom integration cases that require an immediate commit, but it can harm performance and should not be routine. common traps treating setters as synchronous assignments. repeating replacement updates based on one stale snapshot. mutating an object inside an updater instead of returning a new value. reaching for flushsync to make ordinary application logic work. interview answer react queues and batches state updates before rendering. replacement updates created from the same snapshot can overwrite one another conceptually. functional updaters receive the latest queued value, so they compose correctly and are the right choice when next state depends on previous state. batching reduces work but should not change the meaning of the update logic. check yourself what value results from three setcount(count + 1) calls, and how do three functional updaters differ?",
   },
+  {
+    number: 8,
+    slug: "08-choosing-a-state-structure",
+    title: "Choosing a State Structure",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      '# Chapter 8 — Choosing a State Structure\n\n## Quick refresher\n\n- Keep state minimal and represent each fact once.\n- Group values that change together; separate values that change independently.\n- Avoid contradictory, redundant, deeply nested, or duplicated state.\n- Prefer IDs over duplicating complete objects when the object already exists in a collection.\n\n## Why this matters\n\nMany React bugs are state-modeling bugs rather than rendering bugs. A good model makes invalid combinations difficult to represent and reduces synchronization Effects.\n\n## Core mental model\n\nAvoid independent booleans that can contradict one another:\n\n```tsx\nconst [isLoading, setIsLoading] = useState(false);\nconst [hasError, setHasError] = useState(false);\nconst [isSuccess, setIsSuccess] = useState(false);\n```\n\nModel the mutually exclusive state directly:\n\n```tsx\ntype Status = "idle" | "loading" | "success" | "error";\nconst [status, setStatus] = useState\u003cStatus>("idle");\n```\n\nFor collections, store stable identity rather than a second object copy:\n\n```tsx\nconst [selectedId, setSelectedId] = useState\u003cstring | null>(null);\nconst selectedItem = items.find(item => item.id === selectedId) ?? null;\n```\n\nWhen updating nested data, treat state as immutable and copy only the changed path. If updates become difficult to express or many transitions must remain consistent, consider a reducer.\n\n## Common traps\n\n- Mirroring props in state without a clear ownership reason.\n- Storing both a selected object and the collection that contains it.\n- Using several booleans for one state machine.\n- Flattening everything even when related values always change together.\n\n## Interview answer\n\nI keep state minimal, normalize it around stable IDs, and represent mutually exclusive modes with one status rather than contradictory booleans. I group values by how they change and derive anything that can be calculated from props or state. This reduces invalid states and removes synchronization code.\n\n## Check yourself\n\nWhy is `selectedId` often safer than storing a duplicate `selectedItem` object?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Keep state minimal and represent each fact once. Group values that change together; separate values that change independently. Avoid contradictory, redundant, deeply nested, or duplicated state. Prefer IDs over duplicating complete objects when the object already exists in a collection.",
+    excerpt:
+      "Many React bugs are state modeling bugs rather than rendering bugs. A good model makes invalid combinations difficult to represent and reduces synchronization Effects.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 8 — choosing a state structure quick refresher keep state minimal and represent each fact once. group values that change together; separate values that change independently. avoid contradictory, redundant, deeply nested, or duplicated state. prefer ids over duplicating complete objects when the object already exists in a collection. why this matters many react bugs are state modeling bugs rather than rendering bugs. a good model makes invalid combinations difficult to represent and reduces synchronization effects. core mental model avoid independent booleans that can contradict one another: model the mutually exclusive state directly: for collections, store stable identity rather than a second object copy: when updating nested data, treat state as immutable and copy only the changed path. if updates become difficult to express or many transitions must remain consistent, consider a reducer. common traps mirroring props in state without a clear ownership reason. storing both a selected object and the collection that contains it. using several booleans for one state machine. flattening everything even when related values always change together. interview answer i keep state minimal, normalize it around stable ids, and represent mutually exclusive modes with one status rather than contradictory booleans. i group values by how they change and derive anything that can be calculated from props or state. this reduces invalid states and removes synchronization code. check yourself why is selectedid often safer than storing a duplicate selecteditem object?",
+  },
+  {
+    number: 9,
+    slug: "09-derived-and-redundant-state",
+    title: "Derived and Redundant State",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      '# Chapter 9 — Derived and Redundant State\n\n## Quick refresher\n\nIf a value can be calculated from current props and state during render, it usually should not be stored as state.\n\n## Why this matters\n\nRedundant state creates an additional source of truth. It can become stale, requires extra updates, and often causes an unnecessary render through an Effect.\n\n## Core mental model\n\nDo not synchronize a value React can calculate:\n\n```tsx\nfunction Name({ firstName, lastName }: Props) {\n  const [fullName, setFullName] = useState("");\n\n  useEffect(() => {\n    setFullName(`${firstName} ${lastName}`);\n  }, [firstName, lastName]);\n}\n```\n\nDerive it while rendering:\n\n```tsx\nfunction Name({ firstName, lastName }: Props) {\n  const fullName = `${firstName} ${lastName}`;\n  return \u003cspan>{fullName}\u003c/span>;\n}\n```\n\nExpensive derivation is still derivation. Measure first, then use `useMemo` only when avoiding the recalculation is valuable.\n\nState is appropriate when the value represents independent information: user input, a server result, a chosen mode, or a snapshot intentionally captured at a particular time. Initializing state from a prop can be valid when the prop is explicitly only an initial value, such as `initialColor`.\n\n## Common traps\n\n- Using an Effect to synchronize two pieces of local state.\n- Assuming every calculated value needs `useMemo`.\n- Copying a prop into state and expecting later prop changes to synchronize automatically.\n- Removing state that intentionally represents a historical snapshot.\n\n## Interview answer\n\nI derive values during render whenever current props and state already contain the required information. Storing the result would duplicate a source of truth and introduce synchronization risk. I use state only when the value changes independently or intentionally captures information over time, and I memoize expensive derivations only after identifying a real cost.\n\n## Check yourself\n\nWhen is `useState(props.value)` intentional, and when does it create a synchronization bug?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "If a value can be calculated from current props and state during render, it usually should not be stored as state.",
+    excerpt:
+      "Redundant state creates an additional source of truth. It can become stale, requires extra updates, and often causes an unnecessary render through an Effect.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 9 — derived and redundant state quick refresher if a value can be calculated from current props and state during render, it usually should not be stored as state. why this matters redundant state creates an additional source of truth. it can become stale, requires extra updates, and often causes an unnecessary render through an effect. core mental model do not synchronize a value react can calculate: derive it while rendering: expensive derivation is still derivation. measure first, then use usememo only when avoiding the recalculation is valuable. state is appropriate when the value represents independent information: user input, a server result, a chosen mode, or a snapshot intentionally captured at a particular time. initializing state from a prop can be valid when the prop is explicitly only an initial value, such as initialcolor . common traps using an effect to synchronize two pieces of local state. assuming every calculated value needs usememo . copying a prop into state and expecting later prop changes to synchronize automatically. removing state that intentionally represents a historical snapshot. interview answer i derive values during render whenever current props and state already contain the required information. storing the result would duplicate a source of truth and introduce synchronization risk. i use state only when the value changes independently or intentionally captures information over time, and i memoize expensive derivations only after identifying a real cost. check yourself when is usestate(props.value) intentional, and when does it create a synchronization bug?",
+  },
+  {
+    number: 10,
+    slug: "10-rules-of-hooks",
+    title: "Rules of Hooks",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      "# Chapter 10 — Rules of Hooks\n\n## Quick refresher\n\n- Call Hooks only at the top level of a component or custom Hook.\n- Call Hooks only from React components or custom Hooks.\n- Do not call Hooks conditionally, in loops, event handlers, or ordinary utility functions.\n\n## Why this matters\n\nReact associates Hook state with call order. The rules preserve that order across renders and allow React and its tooling to reason about component behavior.\n\n## Core mental model\n\nConceptually, React matches Hook calls by position:\n\n```text\nfirst call  → first state slot\nsecond call → second Effect slot\nthird call  → third ref slot\n```\n\nThis is unsafe because the call order changes:\n\n```tsx\nif (enabled) {\n  const [value, setValue] = useState(0);\n}\n```\n\nMove the condition inside the Hook’s behavior instead:\n\n```tsx\nuseEffect(() => {\n  if (!enabled) return;\n  return subscribe();\n}, [enabled]);\n```\n\nCustom Hooks can call other Hooks because they participate in the same ordered component execution. Their names start with `use` so lint tooling can recognize and enforce Hook semantics.\n\nModern lint rules also enforce purity and dependency requirements beyond the two foundational rules. The core reason remains predictable render-time composition.\n\n## Common traps\n\n- Calling a Hook after an early return that occurs only on some renders.\n- Calling Hooks from event handlers or module-level helpers.\n- Assuming a custom Hook creates a separate component or state store.\n- Naming a normal function `useSomething` even though it is not a Hook.\n\n## Interview answer\n\nHooks must be called unconditionally at the top level of components or custom Hooks because React tracks Hook state by call order. If a conditional changes that order, later state slots no longer correspond to the same calls. Conditions should normally move inside the Hook or into a separate component.\n\n## Check yourself\n\nWhy is a Hook after a conditional early return unsafe even though it is not visibly inside an `if` block?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Call Hooks only at the top level of a component or custom Hook. Call Hooks only from React components or custom Hooks. Do not call Hooks conditionally, in loops, event handlers, or ordinary utility functions.",
+    excerpt:
+      "React associates Hook state with call order. The rules preserve that order across renders and allow React and its tooling to reason about component behavior.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 10 — rules of hooks quick refresher call hooks only at the top level of a component or custom hook. call hooks only from react components or custom hooks. do not call hooks conditionally, in loops, event handlers, or ordinary utility functions. why this matters react associates hook state with call order. the rules preserve that order across renders and allow react and its tooling to reason about component behavior. core mental model conceptually, react matches hook calls by position: this is unsafe because the call order changes: move the condition inside the hook’s behavior instead: custom hooks can call other hooks because they participate in the same ordered component execution. their names start with use so lint tooling can recognize and enforce hook semantics. modern lint rules also enforce purity and dependency requirements beyond the two foundational rules. the core reason remains predictable render time composition. common traps calling a hook after an early return that occurs only on some renders. calling hooks from event handlers or module level helpers. assuming a custom hook creates a separate component or state store. naming a normal function usesomething even though it is not a hook. interview answer hooks must be called unconditionally at the top level of components or custom hooks because react tracks hook state by call order. if a conditional changes that order, later state slots no longer correspond to the same calls. conditions should normally move inside the hook or into a separate component. check yourself why is a hook after a conditional early return unsafe even though it is not visibly inside an if block?",
+  },
+  {
+    number: 11,
+    slug: "11-closures-and-state-updates",
+    title: "Closures and State Updates",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      "# Chapter 11 — Closures and State Updates\n\n## Quick refresher\n\nEvery render creates new variables and functions. A callback closes over the props and state from the render in which it was created.\n\n## Why this matters\n\nClosures explain stale asynchronous callbacks, missing Effect dependencies, repeated state updates, and many incorrect attempts to “fix” React with refs.\n\n## Core mental model\n\nThis interval captures the initial `count` because the Effect never reruns:\n\n```tsx\nuseEffect(() => {\n  const id = setInterval(() => setCount(count + 1), 1000);\n  return () => clearInterval(id);\n}, []);\n```\n\nIf the update only needs previous state, remove the captured dependency:\n\n```tsx\nuseEffect(() => {\n  const id = setInterval(() => setCount(value => value + 1), 1000);\n  return () => clearInterval(id);\n}, []);\n```\n\nIf an Effect needs a reactive value, include it as a dependency and accept the corresponding resynchronization. If a long-lived external callback truly needs the latest value without causing resubscription, use the appropriate modern Effect-event pattern when available, or a carefully synchronized ref.\n\nA stale closure is not inherently wrong. A submission handler should often retain the values submitted at that moment. The question is whether snapshot or latest-value semantics match the requirement.\n\n## Common traps\n\n- Removing dependencies to silence the linter.\n- Calling all captured values stale bugs.\n- Using refs to hide reactive data from React.\n- Using a functional updater when the callback also needs other changing props.\n\n## Interview answer\n\nEach render creates a snapshot, and its callbacks close over that snapshot. I first decide whether the operation should use the value from that render or the latest value. Functional updates solve previous-state calculations; correct dependencies resynchronize Effects; refs are reserved for mutable values whose changes should not render.\n\n## Check yourself\n\nWhy does a functional updater fix an interval that increments state but not one that also reads a changing `step` prop?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Every render creates new variables and functions. A callback closes over the props and state from the render in which it was created.",
+    excerpt:
+      "Closures explain stale asynchronous callbacks, missing Effect dependencies, repeated state updates, and many incorrect attempts to “fix” React with refs.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 11 — closures and state updates quick refresher every render creates new variables and functions. a callback closes over the props and state from the render in which it was created. why this matters closures explain stale asynchronous callbacks, missing effect dependencies, repeated state updates, and many incorrect attempts to “fix” react with refs. core mental model this interval captures the initial count because the effect never reruns: if the update only needs previous state, remove the captured dependency: if an effect needs a reactive value, include it as a dependency and accept the corresponding resynchronization. if a long lived external callback truly needs the latest value without causing resubscription, use the appropriate modern effect event pattern when available, or a carefully synchronized ref. a stale closure is not inherently wrong. a submission handler should often retain the values submitted at that moment. the question is whether snapshot or latest value semantics match the requirement. common traps removing dependencies to silence the linter. calling all captured values stale bugs. using refs to hide reactive data from react. using a functional updater when the callback also needs other changing props. interview answer each render creates a snapshot, and its callbacks close over that snapshot. i first decide whether the operation should use the value from that render or the latest value. functional updates solve previous state calculations; correct dependencies resynchronize effects; refs are reserved for mutable values whose changes should not render. check yourself why does a functional updater fix an interval that increments state but not one that also reads a changing step prop?",
+  },
+  {
+    number: 12,
+    slug: "12-useeffect-as-synchronization",
+    title: "useEffect as Synchronization",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      "# Chapter 12 — useEffect as Synchronization\n\n## Quick refresher\n\nAn Effect synchronizes a component with something outside React: a network connection, browser API, third-party widget, timer, or subscription.\n\n## Why this matters\n\nTreating Effects as generic “run after render” callbacks produces redundant state, tangled data flow, race conditions, and unnecessary renders.\n\n## Core mental model\n\n```text\nrender describes UI\nevent handlers respond to interactions\nEffects synchronize with external systems\n```\n\n```tsx\nuseEffect(() => {\n  const connection = createConnection(roomId);\n  connection.connect();\n  return () => connection.disconnect();\n}, [roomId]);\n```\n\nThe Effect establishes synchronization for the current `roomId`. When it changes, React cleans up the old connection and establishes the new one.\n\nDo not use an Effect for calculations:\n\n```tsx\n// Derive during render instead.\nconst visibleItems = items.filter(item => item.name.includes(query));\n```\n\nDo not move interaction-specific work into an Effect merely because state changed. If submitting a form causes a POST request, perform it in the submit handler; the user event is the cause.\n\nFramework data APIs or server-state libraries may be better than hand-written fetching Effects because they provide caching, deduplication, server rendering, and loading coordination.\n\n## Common traps\n\n- Using Effects to derive local data.\n- Triggering user-event side effects indirectly through state.\n- Thinking `[]` means “run once” rather than “uses no reactive values.”\n- Fetching without accounting for stale responses or framework capabilities.\n\n## Interview answer\n\nI use `useEffect` to keep an external system synchronized with the current rendered state. The setup describes the synchronization and cleanup undoes it. Derived values stay in render, and interaction-caused work stays in event handlers. This framing makes dependencies and cleanup consequences easier to reason about.\n\n## Check yourself\n\nShould analytics for “the user clicked Buy” run in an Effect watching purchase state or in the click/submission flow?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "An Effect synchronizes a component with something outside React: a network connection, browser API, third party widget, timer, or subscription.",
+    excerpt:
+      "Treating Effects as generic “run after render” callbacks produces redundant state, tangled data flow, race conditions, and unnecessary renders.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 12 — useeffect as synchronization quick refresher an effect synchronizes a component with something outside react: a network connection, browser api, third party widget, timer, or subscription. why this matters treating effects as generic “run after render” callbacks produces redundant state, tangled data flow, race conditions, and unnecessary renders. core mental model the effect establishes synchronization for the current roomid . when it changes, react cleans up the old connection and establishes the new one. do not use an effect for calculations: do not move interaction specific work into an effect merely because state changed. if submitting a form causes a post request, perform it in the submit handler; the user event is the cause. framework data apis or server state libraries may be better than hand written fetching effects because they provide caching, deduplication, server rendering, and loading coordination. common traps using effects to derive local data. triggering user event side effects indirectly through state. thinking [] means “run once” rather than “uses no reactive values.” fetching without accounting for stale responses or framework capabilities. interview answer i use useeffect to keep an external system synchronized with the current rendered state. the setup describes the synchronization and cleanup undoes it. derived values stay in render, and interaction caused work stays in event handlers. this framing makes dependencies and cleanup consequences easier to reason about. check yourself should analytics for “the user clicked buy” run in an effect watching purchase state or in the click/submission flow?",
+  },
+  {
+    number: 13,
+    slug: "13-effect-dependencies-and-cleanup",
+    title: "Effect Dependencies and Cleanup",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      "# Chapter 13 — Effect Dependencies and Cleanup\n\n## Quick refresher\n\nDependencies list every reactive value read by an Effect. Cleanup stops or reverses the previous synchronization before the Effect reruns and when the component unmounts.\n\n## Why this matters\n\nCorrect dependencies prevent stale behavior; correct cleanup prevents leaked subscriptions and obsolete asynchronous work.\n\n## Core mental model\n\n```tsx\nuseEffect(() => {\n  const controller = new AbortController();\n  let ignore = false;\n\n  loadUser(userId, controller.signal).then(user => {\n    if (!ignore) setUser(user);\n  });\n\n  return () => {\n    ignore = true;\n    controller.abort();\n  };\n}, [userId]);\n```\n\n`userId` is reactive because it comes from props or state and is read inside the Effect. When it changes, cleanup invalidates the previous request before the next synchronization starts.\n\nObjects and functions created during render have new identities. Before memoizing them, ask whether they can be created inside the Effect or whether the Effect can depend on primitive inputs instead.\n\nCleanup must be symmetrical: unsubscribe what was subscribed, disconnect what was connected, or cancel work that no longer belongs to the current render. Development Strict Mode may run an extra setup-cleanup cycle to expose missing symmetry.\n\n## Common traps\n\n- Suppressing dependency lint rules.\n- Omitting a changing value because rerunning feels inconvenient.\n- Adding memoization before simplifying the Effect.\n- Relying only on request order and allowing old responses to overwrite new state.\n\n## Interview answer\n\nAn Effect’s dependency list is determined by the reactive values its setup reads; it is not a manually chosen schedule. Cleanup ends the synchronization created by that particular execution before replacement or unmounting. For async work, I cancel when possible and also prevent obsolete executions from committing state.\n\n## Check yourself\n\nWhy can moving an options object inside an Effect be better than wrapping it in `useMemo`?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Dependencies list every reactive value read by an Effect. Cleanup stops or reverses the previous synchronization before the Effect reruns and when the component unmounts.",
+    excerpt:
+      "Correct dependencies prevent stale behavior; correct cleanup prevents leaked subscriptions and obsolete asynchronous work.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 13 — effect dependencies and cleanup quick refresher dependencies list every reactive value read by an effect. cleanup stops or reverses the previous synchronization before the effect reruns and when the component unmounts. why this matters correct dependencies prevent stale behavior; correct cleanup prevents leaked subscriptions and obsolete asynchronous work. core mental model userid is reactive because it comes from props or state and is read inside the effect. when it changes, cleanup invalidates the previous request before the next synchronization starts. objects and functions created during render have new identities. before memoizing them, ask whether they can be created inside the effect or whether the effect can depend on primitive inputs instead. cleanup must be symmetrical: unsubscribe what was subscribed, disconnect what was connected, or cancel work that no longer belongs to the current render. development strict mode may run an extra setup cleanup cycle to expose missing symmetry. common traps suppressing dependency lint rules. omitting a changing value because rerunning feels inconvenient. adding memoization before simplifying the effect. relying only on request order and allowing old responses to overwrite new state. interview answer an effect’s dependency list is determined by the reactive values its setup reads; it is not a manually chosen schedule. cleanup ends the synchronization created by that particular execution before replacement or unmounting. for async work, i cancel when possible and also prevent obsolete executions from committing state. check yourself why can moving an options object inside an effect be better than wrapping it in usememo ?",
+  },
+  {
+    number: 14,
+    slug: "14-useref-and-mutable-values",
+    title: "useRef and Mutable Values",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      "# Chapter 14 — useRef and Mutable Values\n\n## Quick refresher\n\nA ref is a stable object whose `.current` value persists between renders. Changing it does not trigger a render.\n\n## Why this matters\n\nRefs are the correct escape hatch for DOM nodes and mutable values that participate in behavior but not in the rendered output.\n\n## Core mental model\n\nUse state for information that affects rendering. Use a ref for information React does not need to display:\n\n```tsx\nfunction SearchInput() {\n  const inputRef = useRef\u003cHTMLInputElement>(null);\n  return (\n    \u003c>\n      \u003cinput ref={inputRef} />\n      \u003cbutton onClick={() => inputRef.current?.focus()}>Focus\u003c/button>\n    \u003c/>\n  );\n}\n```\n\nRefs also store timer IDs, previous integration instances, or mutable values required by external callbacks:\n\n```tsx\nconst timerRef = useRef\u003cReturnType\u003ctypeof setTimeout> | null>(null);\n```\n\nDo not read or write refs during render except for predictable initialization patterns. Render must remain pure, and ref mutations are invisible to React. DOM access belongs in event handlers or Effects; layout measurement that must happen before paint typically belongs in `useLayoutEffect`.\n\nPassing refs through component boundaries is part of API design. Expose the smallest imperative surface necessary rather than leaking an entire internal DOM structure.\n\n## Common traps\n\n- Storing visible UI state in a ref and wondering why the UI does not update.\n- Using a ref to avoid correct Effect dependencies.\n- Mutating or reading DOM nodes during render.\n- Exposing more imperative methods than consumers require.\n\n## Interview answer\n\n`useRef` returns a stable mutable container that survives renders without scheduling new ones. I use it for DOM access and non-rendering values such as timer handles or external instances. If a value affects what the component displays, it belongs in state instead. Refs are an escape hatch, not an alternative state system.\n\n## Check yourself\n\nShould the current search query live in state or a ref, and why?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "A ref is a stable object whose .current value persists between renders. Changing it does not trigger a render.",
+    excerpt:
+      "Refs are the correct escape hatch for DOM nodes and mutable values that participate in behavior but not in the rendered output.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 14 — useref and mutable values quick refresher a ref is a stable object whose .current value persists between renders. changing it does not trigger a render. why this matters refs are the correct escape hatch for dom nodes and mutable values that participate in behavior but not in the rendered output. core mental model use state for information that affects rendering. use a ref for information react does not need to display: refs also store timer ids, previous integration instances, or mutable values required by external callbacks: do not read or write refs during render except for predictable initialization patterns. render must remain pure, and ref mutations are invisible to react. dom access belongs in event handlers or effects; layout measurement that must happen before paint typically belongs in uselayouteffect . passing refs through component boundaries is part of api design. expose the smallest imperative surface necessary rather than leaking an entire internal dom structure. common traps storing visible ui state in a ref and wondering why the ui does not update. using a ref to avoid correct effect dependencies. mutating or reading dom nodes during render. exposing more imperative methods than consumers require. interview answer useref returns a stable mutable container that survives renders without scheduling new ones. i use it for dom access and non rendering values such as timer handles or external instances. if a value affects what the component displays, it belongs in state instead. refs are an escape hatch, not an alternative state system. check yourself should the current search query live in state or a ref, and why?",
+  },
+  {
+    number: 15,
+    slug: "15-usereducer",
+    title: "useReducer",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      '# Chapter 15 — useReducer\n\n## Quick refresher\n\n`useReducer` centralizes state transitions in a pure reducer: `(state, action) => nextState`.\n\n## Why this matters\n\nReducers make complex transitions explicit, testable, and resistant to invalid partial updates. They do not automatically improve performance or replace application-wide state tools.\n\n## Core mental model\n\n```tsx\ntype State = { status: "idle" | "saving" | "error"; message: string };\ntype Action =\n  | { type: "submitted" }\n  | { type: "succeeded" }\n  | { type: "failed"; message: string };\n\nfunction reducer(state: State, action: Action): State {\n  switch (action.type) {\n    case "submitted": return { ...state, status: "saving", message: "" };\n    case "succeeded": return { ...state, status: "idle" };\n    case "failed": return { status: "error", message: action.message };\n  }\n}\n\nconst [state, dispatch] = useReducer(reducer, initialState);\n```\n\nActions describe what happened, while the reducer decides how state changes. Keep reducers pure: no requests, timers, random values, mutation, or other side effects. Perform effects outside the reducer and dispatch the resulting event.\n\nChoose a reducer when multiple fields change together, transitions are numerous, or centralizing state logic improves clarity. Several independent `useState` calls are often simpler for small components.\n\n## Common traps\n\n- Using a reducer for every component by default.\n- Performing side effects inside the reducer.\n- Creating actions that merely expose setters, such as `setField` for everything.\n- Mutating and returning the existing state object.\n\n## Interview answer\n\nI use `useReducer` when state transitions are related enough that explicit events and one transition function make the model clearer. The reducer stays pure and returns new state; event handlers or Effects perform external work and dispatch outcomes. It improves transition design, not automatically rendering performance.\n\n## Check yourself\n\nWhy is `dispatch({ type: "saveSucceeded" })` usually more meaningful than `dispatch({ type: "setLoading", value: false })`?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "useReducer centralizes state transitions in a pure reducer: (state, action) = nextState .",
+    excerpt:
+      "Reducers make complex transitions explicit, testable, and resistant to invalid partial updates. They do not automatically improve performance or replace application wide state tools.",
+    readingMinutes: 1,
+    searchText:
+      'chapter 15 — usereducer quick refresher usereducer centralizes state transitions in a pure reducer: (state, action) = nextstate . why this matters reducers make complex transitions explicit, testable, and resistant to invalid partial updates. they do not automatically improve performance or replace application wide state tools. core mental model actions describe what happened, while the reducer decides how state changes. keep reducers pure: no requests, timers, random values, mutation, or other side effects. perform effects outside the reducer and dispatch the resulting event. choose a reducer when multiple fields change together, transitions are numerous, or centralizing state logic improves clarity. several independent usestate calls are often simpler for small components. common traps using a reducer for every component by default. performing side effects inside the reducer. creating actions that merely expose setters, such as setfield for everything. mutating and returning the existing state object. interview answer i use usereducer when state transitions are related enough that explicit events and one transition function make the model clearer. the reducer stays pure and returns new state; event handlers or effects perform external work and dispatch outcomes. it improves transition design, not automatically rendering performance. check yourself why is dispatch({ type: "savesucceeded" }) usually more meaningful than dispatch({ type: "setloading", value: false }) ?',
+  },
+  {
+    number: 16,
+    slug: "16-designing-custom-hooks",
+    title: "Designing Custom Hooks",
+    kind: "chapter",
+    partNumber: 2,
+    partName: "State and Hooks",
+    markdown:
+      '# Chapter 16 — Designing Custom Hooks\n\n## Quick refresher\n\nA custom Hook extracts reusable stateful behavior. It shares logic, not state: each call receives its own Hook state unless the Hook connects to a shared external source.\n\n## Why this matters\n\nInterviewers look for abstractions with clear ownership and useful contracts—not merely code moved into a function.\n\n## Core mental model\n\n```tsx\nfunction useOnlineStatus() {\n  const [online, setOnline] = useState(() => navigator.onLine);\n\n  useEffect(() => {\n    const update = () => setOnline(navigator.onLine);\n    window.addEventListener("online", update);\n    window.addEventListener("offline", update);\n    return () => {\n      window.removeEventListener("online", update);\n      window.removeEventListener("offline", update);\n    };\n  }, []);\n\n  return online;\n}\n```\n\nThe component consumes a meaningful value without owning browser subscription details. The Hook still follows all Hook rules and must provide correct cleanup.\n\nDesign around a behavior or capability, not a lifecycle wrapper. Prefer a focused API with explicit inputs and outputs. Return the smallest stable contract callers need, and avoid hiding important application ownership or turning every Effect into a generic `useMount` abstraction.\n\nNot all reused code needs a Hook. Pure calculations should remain ordinary functions. A function becomes a Hook when it needs React Hooks or should compose other stateful behavior.\n\n## Common traps\n\n- Assuming two calls to a custom Hook share state.\n- Creating vague wrappers such as `useEffectOnce` that hide dependency semantics.\n- Returning a large unstable object without considering consumers.\n- Using a Hook for a pure formatting or transformation function.\n\n## Interview answer\n\nA custom Hook packages reusable stateful behavior behind a domain-focused contract. It should make ownership clearer, expose explicit inputs and useful outputs, and correctly handle synchronization and cleanup. Calls share implementation but normally not state. Pure reusable logic remains an ordinary function.\n\n## Check yourself\n\nWhen should filtering data be a normal function, and when might a `useFilteredResults` Hook be justified?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "A custom Hook extracts reusable stateful behavior. It shares logic, not state: each call receives its own Hook state unless the Hook connects to a shared external source.",
+    excerpt:
+      "Interviewers look for abstractions with clear ownership and useful contracts—not merely code moved into a function.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 16 — designing custom hooks quick refresher a custom hook extracts reusable stateful behavior. it shares logic, not state: each call receives its own hook state unless the hook connects to a shared external source. why this matters interviewers look for abstractions with clear ownership and useful contracts—not merely code moved into a function. core mental model the component consumes a meaningful value without owning browser subscription details. the hook still follows all hook rules and must provide correct cleanup. design around a behavior or capability, not a lifecycle wrapper. prefer a focused api with explicit inputs and outputs. return the smallest stable contract callers need, and avoid hiding important application ownership or turning every effect into a generic usemount abstraction. not all reused code needs a hook. pure calculations should remain ordinary functions. a function becomes a hook when it needs react hooks or should compose other stateful behavior. common traps assuming two calls to a custom hook share state. creating vague wrappers such as useeffectonce that hide dependency semantics. returning a large unstable object without considering consumers. using a hook for a pure formatting or transformation function. interview answer a custom hook packages reusable stateful behavior behind a domain focused contract. it should make ownership clearer, expose explicit inputs and useful outputs, and correctly handle synchronization and cleanup. calls share implementation but normally not state. pure reusable logic remains an ordinary function. check yourself when should filtering data be a normal function, and when might a usefilteredresults hook be justified?",
+  },
 ];
 
 export const reactPracticeArticles: Chapter[] = [
