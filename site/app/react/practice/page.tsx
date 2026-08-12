@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { reactPracticeArticles } from "@/generated/content";
 import { ReactNav } from "../../components/TechnologyNav";
 
 export const metadata: Metadata = {
@@ -102,6 +103,8 @@ const tasks = [
 ] as const;
 
 export default function ReactPracticePage() {
+  const availableSlugs = new Set(reactPracticeArticles.map((article) => article.slug));
+
   return (
     <>
       <ReactNav active="practice" />
@@ -124,10 +127,22 @@ export default function ReactPracticePage() {
               </Link>
             </div>
           </div>
-          <div className="react-practice-stats" aria-label="React live coding collection statistics">
-            <div><strong>10</strong><span>explanatory articles</span></div>
-            <div><strong>45–60</strong><span>minute interview scope</span></div>
-            <div><strong>15</strong><span>steps in every guide</span></div>
+          <div
+            className="react-practice-stats"
+            aria-label="React live coding collection statistics"
+          >
+            <div>
+              <strong>10</strong>
+              <span>explanatory articles</span>
+            </div>
+            <div>
+              <strong>45–60</strong>
+              <span>minute interview scope</span>
+            </div>
+            <div>
+              <strong>15</strong>
+              <span>steps in every guide</span>
+            </div>
           </div>
         </section>
 
@@ -156,23 +171,27 @@ export default function ReactPracticePage() {
 
           <div className="react-task-grid">
             {tasks.map((task, index) => {
-              const available = index === 0;
+              const available = availableSlugs.has(task.slug);
               const content = (
                 <>
-                <div className="react-task-card-top">
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <small>{available ? "Available" : "Article planned"}</small>
-                </div>
-                <h3>{task.title}</h3>
-                <p>{task.description}</p>
-                <ul aria-label={`${task.title} concepts`}>
-                  {task.concepts.map((concept) => <li key={concept}>{concept}</li>)}
-                </ul>
-                <div className="react-task-card-meta">
-                  <span>{task.difficulty}</span>
-                  <span>{task.duration}</span>
-                </div>
-                {available && <span className="react-task-card-link">Read the walkthrough →</span>}
+                  <div className="react-task-card-top">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <small>{available ? "Available" : "Article planned"}</small>
+                  </div>
+                  <h3>{task.title}</h3>
+                  <p>{task.description}</p>
+                  <ul aria-label={`${task.title} concepts`}>
+                    {task.concepts.map((concept) => (
+                      <li key={concept}>{concept}</li>
+                    ))}
+                  </ul>
+                  <div className="react-task-card-meta">
+                    <span>{task.difficulty}</span>
+                    <span>{task.duration}</span>
+                  </div>
+                  {available && (
+                    <span className="react-task-card-link">Read the walkthrough →</span>
+                  )}
                 </>
               );
 
@@ -185,7 +204,9 @@ export default function ReactPracticePage() {
                   {content}
                 </Link>
               ) : (
-                <article className="react-task-card" key={task.title}>{content}</article>
+                <article className="react-task-card" key={task.title}>
+                  {content}
+                </article>
               );
             })}
           </div>
