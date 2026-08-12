@@ -9,6 +9,7 @@ const reactRoot = join(repositoryRoot, "react");
 const performanceRoot = join(repositoryRoot, "performance");
 const bookRoot = join(javascriptRoot, "handbook");
 const performanceBookRoot = join(performanceRoot, "handbook");
+const reactBookRoot = join(reactRoot, "handbook");
 const reactPracticeRoot = join(reactRoot, "practice", "articles");
 const questionsRoadmapFile = join(javascriptRoot, "q-and-a", "roadmap.md");
 const questionsAnswersFile = join(javascriptRoot, "q-and-a", "answers.md");
@@ -122,7 +123,8 @@ const performanceChapters = existsSync(performanceBookRoot)
         const excerpt = excerptSource.split(/\n\s*\n/, 1)[0] ?? "";
         const plainText = stripMarkdown(markdown);
         const words = plainText.split(/\s+/).filter(Boolean).length;
-        const part = performanceParts.findLast((item) => number >= item.from) ?? performanceParts[0];
+        const part =
+          performanceParts.findLast((item) => number >= item.from) ?? performanceParts[0];
 
         return {
           number,
@@ -136,6 +138,49 @@ const performanceChapters = existsSync(performanceBookRoot)
           quickRefresher: stripMarkdown(section(markdown, "Quick refresher")),
           excerpt: stripMarkdown(excerpt),
           readingMinutes: Math.max(1, Math.ceil(words / 220)),
+          searchText: plainText.toLowerCase(),
+        };
+      })
+  : [];
+
+const reactParts = [
+  { from: 1, number: 1, name: "Rendering Model" },
+  { from: 8, number: 2, name: "State and Hooks" },
+  { from: 17, number: 3, name: "Component Design" },
+  { from: 25, number: 4, name: "Performance" },
+  { from: 33, number: 5, name: "Modern React Architecture" },
+  { from: 41, number: 6, name: "Testing and Production Behavior" },
+];
+
+const reactChapters = existsSync(reactBookRoot)
+  ? walk(reactBookRoot)
+      .filter((path) => /\/\d+[^/]*\.md$/.test(path))
+      .sort((left, right) => left.localeCompare(right))
+      .map((path) => {
+        const markdown = readFileSync(path, "utf8").trim();
+        const number = Number(path.match(/\/(\d+)-[^/]+\.md$/)?.[1]);
+        const slug = path.match(/\/(\d+-[^/]+)\.md$/)?.[1] ?? String(number);
+        const title = markdown.match(/^#\s+Chapter\s+\d+\s+[—-]\s+(.+)$/m)?.[1] ?? slug;
+        const headings = [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]);
+        const excerpt = section(markdown, "Why this matters").split(/\n\s*\n/, 1)[0] ?? "";
+        const plainText = stripMarkdown(markdown);
+        const part = reactParts.findLast((item) => number >= item.from) ?? reactParts[0];
+
+        return {
+          number,
+          slug,
+          title,
+          kind: "chapter",
+          partNumber: part.number,
+          partName: part.name,
+          markdown,
+          headings,
+          quickRefresher: stripMarkdown(section(markdown, "Quick refresher")),
+          excerpt: stripMarkdown(excerpt),
+          readingMinutes: Math.max(
+            1,
+            Math.ceil(plainText.split(/\s+/).filter(Boolean).length / 220),
+          ),
           searchText: plainText.toLowerCase(),
         };
       })
@@ -297,6 +342,7 @@ const generated =
   `export type QuestionAnswer = { number: number; question: string; answer: string; explanation: string; details: string };\n\n` +
   `export const chapters: Chapter[] = ${JSON.stringify(chapters).replaceAll("<", "\\u003c")};\n\n` +
   `export const performanceChapters: Chapter[] = ${JSON.stringify(performanceChapters).replaceAll("<", "\\u003c")};\n\n` +
+  `export const reactChapters: Chapter[] = ${JSON.stringify(reactChapters).replaceAll("<", "\\u003c")};\n\n` +
   `export const reactPracticeArticles: Chapter[] = ${JSON.stringify(reactPracticeArticles).replaceAll("<", "\\u003c")};\n\n` +
   `export const roadmap: RoadmapPart[] = ${JSON.stringify(roadmap, null, 2).replaceAll("<", "\\u003c")};\n\n` +
   `export const questionRoadmap: QuestionRoadmapSection[] = ${JSON.stringify(questionRoadmap, null, 2).replaceAll("<", "\\u003c")};\n\n` +

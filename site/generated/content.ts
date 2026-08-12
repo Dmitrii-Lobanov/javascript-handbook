@@ -445,6 +445,184 @@ export const performanceChapters: Chapter[] = [
   },
 ];
 
+export const reactChapters: Chapter[] = [
+  {
+    number: 1,
+    slug: "01-render-and-commit-phases",
+    title: "Render and Commit Phases",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      '# Chapter 1 — Render and Commit Phases\n\n## Quick refresher\n\n- **Render** calculates what the UI should look like. React calls components and compares the resulting element trees.\n- **Commit** applies the necessary changes to the DOM and runs commit-related work.\n- Rendering should be pure: the same inputs should produce the same output without side effects.\n- A render can be paused, restarted, or discarded; a commit is the visible mutation.\n\n## Why this matters\n\nInterviewers use this topic to check whether you distinguish “React called my component” from “the DOM changed.” A component may render while React ultimately commits little or nothing.\n\n## Core mental model\n\n```text\nupdate → render tree → reconcile → commit DOM changes → browser paints\n```\n\nDuring render, React calls components and builds the next description of the UI. Reconciliation matches it against the previous tree. During commit, React performs mutations, updates refs, and runs layout Effects. The browser can then paint; regular Effects generally run afterward.\n\n```tsx\nfunction Price({ value }: { value: number }) {\n  // Runs during render. Do not mutate the DOM or start requests here.\n  const formatted = new Intl.NumberFormat("en-US").format(value);\n  return \u003cspan>{formatted}\u003c/span>;\n}\n```\n\nRender-phase code must tolerate repeated execution. Side effects belong in event handlers when caused by an interaction, or in Effects when synchronizing with an external system.\n\n## Common traps\n\n- Treating every render as a DOM update.\n- Starting network requests or mutating shared state during render.\n- Assuming Effects run as part of rendering.\n- Using an Effect to calculate data that could be derived during render.\n\n## Interview answer\n\nReact first renders by calling components to calculate the next UI tree. It then reconciles that tree with the previous one. In the commit phase React applies the required host changes, updates refs, and runs layout Effects. Because rendering may be repeated or abandoned, it must stay pure. A render does not necessarily mean that React changed the DOM.\n\n## Check yourself\n\nWhy can logging inside a component show multiple renders even when the visible DOM appears unchanged?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Render calculates what the UI should look like. React calls components and compares the resulting element trees. Commit applies the necessary changes to the DOM and runs commit related work. Rendering should be pure: the same inputs should produce the same output without side effects. A render can be paused, restarted, or discarded; a commit is the visible mutation.",
+    excerpt:
+      "Interviewers use this topic to check whether you distinguish “React called my component” from “the DOM changed.” A component may render while React ultimately commits little or nothing.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 1 — render and commit phases quick refresher render calculates what the ui should look like. react calls components and compares the resulting element trees. commit applies the necessary changes to the dom and runs commit related work. rendering should be pure: the same inputs should produce the same output without side effects. a render can be paused, restarted, or discarded; a commit is the visible mutation. why this matters interviewers use this topic to check whether you distinguish “react called my component” from “the dom changed.” a component may render while react ultimately commits little or nothing. core mental model during render, react calls components and builds the next description of the ui. reconciliation matches it against the previous tree. during commit, react performs mutations, updates refs, and runs layout effects. the browser can then paint; regular effects generally run afterward. render phase code must tolerate repeated execution. side effects belong in event handlers when caused by an interaction, or in effects when synchronizing with an external system. common traps treating every render as a dom update. starting network requests or mutating shared state during render. assuming effects run as part of rendering. using an effect to calculate data that could be derived during render. interview answer react first renders by calling components to calculate the next ui tree. it then reconciles that tree with the previous one. in the commit phase react applies the required host changes, updates refs, and runs layout effects. because rendering may be repeated or abandoned, it must stay pure. a render does not necessarily mean that react changed the dom. check yourself why can logging inside a component show multiple renders even when the visible dom appears unchanged?",
+  },
+  {
+    number: 2,
+    slug: "02-what-causes-a-component-to-render",
+    title: "What Causes a Component to Render",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      '# Chapter 2 — What Causes a Component to Render\n\n## Quick refresher\n\nA component renders on initial mount and when React processes an update involving it: its own state changes, an ancestor renders, consumed context changes, or a subscribed external store reports a change.\n\n## Why this matters\n\n“Props changed” is an incomplete answer. By default, when a parent renders, React evaluates its child components too—even if their props are referentially unchanged.\n\n## Core mental model\n\n```tsx\nfunction Parent() {\n  const [count, setCount] = useState(0);\n  return (\n    \u003c>\n      \u003cbutton onClick={() => setCount(c => c + 1)}>{count}\u003c/button>\n      \u003cChild label="Stable" />\n    \u003c/>\n  );\n}\n```\n\nUpdating `count` renders `Parent`, and React normally calls `Child` as it walks the returned tree. `memo(Child)` may skip that child render when its props compare equal, but memoization is a performance optimization, not a semantic guarantee.\n\nCalling a state setter with the same value may let React bail out using `Object.is`. Context consumers render when the provider value they consume changes. External stores should integrate through `useSyncExternalStore` or a library built on equivalent guarantees.\n\n## Common traps\n\n- Saying a component renders only when its props change.\n- Assuming `memo` prevents all renders.\n- Mutating state and passing the same object reference back.\n- Optimizing before using the React Profiler to identify expensive work.\n\n## Interview answer\n\nA component renders initially and when its state updates, its parent renders, consumed context changes, or an external subscription schedules an update. React can bail out in some cases, and memoization can skip child work when inputs compare equal. Rendering still does not imply a DOM mutation; the commit depends on the reconciled result.\n\n## Check yourself\n\nIf a parent’s state changes but a child receives the same primitive props, why might the child function still run?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "A component renders on initial mount and when React processes an update involving it: its own state changes, an ancestor renders, consumed context changes, or a subscribed external store reports a change.",
+    excerpt:
+      "“Props changed” is an incomplete answer. By default, when a parent renders, React evaluates its child components too—even if their props are referentially unchanged.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 2 — what causes a component to render quick refresher a component renders on initial mount and when react processes an update involving it: its own state changes, an ancestor renders, consumed context changes, or a subscribed external store reports a change. why this matters “props changed” is an incomplete answer. by default, when a parent renders, react evaluates its child components too—even if their props are referentially unchanged. core mental model updating count renders parent , and react normally calls child as it walks the returned tree. memo(child) may skip that child render when its props compare equal, but memoization is a performance optimization, not a semantic guarantee. calling a state setter with the same value may let react bail out using object.is . context consumers render when the provider value they consume changes. external stores should integrate through usesyncexternalstore or a library built on equivalent guarantees. common traps saying a component renders only when its props change. assuming memo prevents all renders. mutating state and passing the same object reference back. optimizing before using the react profiler to identify expensive work. interview answer a component renders initially and when its state updates, its parent renders, consumed context changes, or an external subscription schedules an update. react can bail out in some cases, and memoization can skip child work when inputs compare equal. rendering still does not imply a dom mutation; the commit depends on the reconciled result. check yourself if a parent’s state changes but a child receives the same primitive props, why might the child function still run?",
+  },
+  {
+    number: 3,
+    slug: "03-reconciliation-and-element-identity",
+    title: "Reconciliation and Element Identity",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      '# Chapter 3 — Reconciliation and Element Identity\n\n## Quick refresher\n\nReact preserves a component instance when the element at a tree position has the same type and identity. Changing the type or key tells React that it is a different subtree.\n\n## Why this matters\n\nThis model explains surprising state resets, preserved form values, Effect cleanup, and why defining components inside other components is dangerous.\n\n## Core mental model\n\nReact compares element trees using practical rules:\n\n- different element types produce different subtrees;\n- the same component type at the same position is normally preserved;\n- keys refine identity among siblings.\n\n```tsx\nfunction Profile({ compact }: { compact: boolean }) {\n  return compact ? \u003cUserForm className="compact" /> : \u003cUserForm className="wide" />;\n}\n```\n\nBoth branches return `UserForm` at the same position, so its state is preserved. A prop changed; its identity did not.\n\n```tsx\nfunction Profile({ compact }: { compact: boolean }) {\n  return compact ? \u003cCompactForm /> : \u003cFullForm />;\n}\n```\n\nThe types differ, so React unmounts one subtree and mounts the other. Local state resets and Effect cleanup runs.\n\nNever define a component inside another component: each parent render creates a new function identity, which can cause the nested component’s state to reset.\n\n## Common traps\n\n- Believing JSX branches automatically create separate identities.\n- Confusing a prop change with a component replacement.\n- Defining component functions during render.\n- Using keys without understanding that they deliberately affect identity.\n\n## Interview answer\n\nReconciliation matches the next element tree with the previous tree. React generally preserves state when the same component type and key remain at the same tree position. A changed type or key creates a new identity, so React unmounts the old subtree and mounts a new one. This heuristic makes tree comparison efficient and gives developers explicit control over preservation.\n\n## Check yourself\n\nWhen a conditional changes only a component’s props, should its local state reset? Why?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "React preserves a component instance when the element at a tree position has the same type and identity. Changing the type or key tells React that it is a different subtree.",
+    excerpt:
+      "This model explains surprising state resets, preserved form values, Effect cleanup, and why defining components inside other components is dangerous.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 3 — reconciliation and element identity quick refresher react preserves a component instance when the element at a tree position has the same type and identity. changing the type or key tells react that it is a different subtree. why this matters this model explains surprising state resets, preserved form values, effect cleanup, and why defining components inside other components is dangerous. core mental model react compares element trees using practical rules: different element types produce different subtrees; the same component type at the same position is normally preserved; keys refine identity among siblings. both branches return userform at the same position, so its state is preserved. a prop changed; its identity did not. the types differ, so react unmounts one subtree and mounts the other. local state resets and effect cleanup runs. never define a component inside another component: each parent render creates a new function identity, which can cause the nested component’s state to reset. common traps believing jsx branches automatically create separate identities. confusing a prop change with a component replacement. defining component functions during render. using keys without understanding that they deliberately affect identity. interview answer reconciliation matches the next element tree with the previous tree. react generally preserves state when the same component type and key remain at the same tree position. a changed type or key creates a new identity, so react unmounts the old subtree and mounts a new one. this heuristic makes tree comparison efficient and gives developers explicit control over preservation. check yourself when a conditional changes only a component’s props, should its local state reset? why?",
+  },
+  {
+    number: 4,
+    slug: "04-keys-and-list-rendering",
+    title: "Keys and List Rendering",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      "# Chapter 4 — Keys and List Rendering\n\n## Quick refresher\n\nKeys identify siblings across renders. A good key is stable, unique among siblings, and derived from the underlying data.\n\n## Why this matters\n\nIncorrect keys produce subtle bugs: state appears on the wrong row, focused inputs move, animations break, and unnecessary mounts occur.\n\n## Core mental model\n\n```tsx\nfunction TodoList({ todos }: { todos: Todo[] }) {\n  return todos.map(todo => \u003cTodoRow key={todo.id} todo={todo} />);\n}\n```\n\nWhen items reorder, `todo.id` lets React associate each element with the same conceptual todo. An array index identifies a position instead. It is safe only when the list is truly static: items are not inserted, removed, reordered, or independently stateful.\n\n```tsx\n// Risky for a changing list\ntodos.map((todo, index) => \u003cTodoRow key={index} todo={todo} />);\n```\n\nKeys are not globally unique and are not passed as a normal prop. They matter only within the immediate sibling collection. A key can also intentionally reset state:\n\n```tsx\n\u003cEditor key={documentId} documentId={documentId} />\n```\n\nChanging `documentId` gives `Editor` a new identity and resets its local state.\n\n## Common traps\n\n- Using the array index for editable or reorderable data.\n- Generating a random key during render, which remounts every item.\n- Expecting `props.key` to exist.\n- Adding keys deep inside the row instead of where the array is created.\n\n## Interview answer\n\nKeys give React stable identity among siblings during reconciliation. Data IDs are usually best because identity survives insertion, deletion, and reordering. Index keys represent positions and can attach local state to the wrong item when a list changes. Keys can also intentionally reset a subtree by changing its identity.\n\n## Check yourself\n\nWhy can an index key put an uncontrolled input’s value on the wrong row after sorting?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Keys identify siblings across renders. A good key is stable, unique among siblings, and derived from the underlying data.",
+    excerpt:
+      "Incorrect keys produce subtle bugs: state appears on the wrong row, focused inputs move, animations break, and unnecessary mounts occur.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 4 — keys and list rendering quick refresher keys identify siblings across renders. a good key is stable, unique among siblings, and derived from the underlying data. why this matters incorrect keys produce subtle bugs: state appears on the wrong row, focused inputs move, animations break, and unnecessary mounts occur. core mental model when items reorder, todo.id lets react associate each element with the same conceptual todo. an array index identifies a position instead. it is safe only when the list is truly static: items are not inserted, removed, reordered, or independently stateful. keys are not globally unique and are not passed as a normal prop. they matter only within the immediate sibling collection. a key can also intentionally reset state: changing documentid gives editor a new identity and resets its local state. common traps using the array index for editable or reorderable data. generating a random key during render, which remounts every item. expecting props.key to exist. adding keys deep inside the row instead of where the array is created. interview answer keys give react stable identity among siblings during reconciliation. data ids are usually best because identity survives insertion, deletion, and reordering. index keys represent positions and can attach local state to the wrong item when a list changes. keys can also intentionally reset a subtree by changing its identity. check yourself why can an index key put an uncontrolled input’s value on the wrong row after sorting?",
+  },
+  {
+    number: 5,
+    slug: "05-state-as-a-snapshot",
+    title: "State as a Snapshot",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      "# Chapter 5 — State as a Snapshot\n\n## Quick refresher\n\nEach render receives a fixed snapshot of state. Calling a setter schedules a future render; it does not change variables inside the event handler already running.\n\n## Why this matters\n\nThis explains stale logs, delayed callbacks, repeated setters, and why event handlers observe the values from the render that created them.\n\n## Core mental model\n\n```tsx\nfunction Counter() {\n  const [count, setCount] = useState(0);\n\n  function increment() {\n    setCount(count + 1);\n    console.log(count); // current render's snapshot\n  }\n\n  return \u003cbutton onClick={increment}>{count}\u003c/button>;\n}\n```\n\n`count` remains `0` throughout that handler when it was invoked from the render where `count` was `0`. React schedules another render with the next value.\n\nClosures preserve the same snapshot:\n\n```tsx\nfunction showLater() {\n  const submitted = message;\n  setTimeout(() => alert(submitted), 1000);\n}\n```\n\nThe callback sees the submitted value, not automatically the latest value. Use a ref only when a callback truly needs the latest mutable value; do not use refs to bypass normal state reasoning.\n\n## Common traps\n\n- Expecting a state variable to mutate immediately after its setter.\n- Calling `setCount(count + 1)` repeatedly and expecting cumulative updates.\n- Calling every captured value a bug; snapshots often provide intentional consistency.\n- Using refs everywhere to force “latest” behavior.\n\n## Interview answer\n\nState behaves like a snapshot attached to a render. Event handlers and callbacks close over that render’s values. A setter queues an update and causes React to create a later render; it does not mutate the current JavaScript variable. When the next value depends on queued previous state, use a functional updater.\n\n## Check yourself\n\nWhy does a timeout created by an event handler normally see the state from the click rather than the state at timeout execution?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Each render receives a fixed snapshot of state. Calling a setter schedules a future render; it does not change variables inside the event handler already running.",
+    excerpt:
+      "This explains stale logs, delayed callbacks, repeated setters, and why event handlers observe the values from the render that created them.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 5 — state as a snapshot quick refresher each render receives a fixed snapshot of state. calling a setter schedules a future render; it does not change variables inside the event handler already running. why this matters this explains stale logs, delayed callbacks, repeated setters, and why event handlers observe the values from the render that created them. core mental model count remains 0 throughout that handler when it was invoked from the render where count was 0 . react schedules another render with the next value. closures preserve the same snapshot: the callback sees the submitted value, not automatically the latest value. use a ref only when a callback truly needs the latest mutable value; do not use refs to bypass normal state reasoning. common traps expecting a state variable to mutate immediately after its setter. calling setcount(count + 1) repeatedly and expecting cumulative updates. calling every captured value a bug; snapshots often provide intentional consistency. using refs everywhere to force “latest” behavior. interview answer state behaves like a snapshot attached to a render. event handlers and callbacks close over that render’s values. a setter queues an update and causes react to create a later render; it does not mutate the current javascript variable. when the next value depends on queued previous state, use a functional updater. check yourself why does a timeout created by an event handler normally see the state from the click rather than the state at timeout execution?",
+  },
+  {
+    number: 6,
+    slug: "06-state-preservation-and-reset",
+    title: "State Preservation and Reset",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      "# Chapter 6 — State Preservation and Reset\n\n## Quick refresher\n\nReact associates state with a component’s position and identity in the rendered tree, not with the JSX text or component function in isolation.\n\n## Why this matters\n\nInterview tasks frequently involve resetting forms, switching users, conditionally rendering panels, or preserving tabs. The correct solution follows identity rather than manually clearing every state field.\n\n## Core mental model\n\nState is preserved when the same component type and key remain in the same position:\n\n```tsx\n\u003cChat contact={selectedContact} />\n```\n\nChanging `selectedContact` changes props but preserves `Chat` state. That may be useful, or it may leave a draft intended for the previous recipient.\n\nReset the subtree by changing its identity:\n\n```tsx\n\u003cChat key={selectedContact.id} contact={selectedContact} />\n```\n\nNow changing contacts unmounts the old `Chat` and mounts a fresh one. Alternatively, render distinct components in distinct tree positions when both states should be preserved.\n\nBefore resetting, decide where the state belongs. If a draft must survive unmounting, lift it to a parent or store it by contact ID. A key is a reset tool, not persistence.\n\n## Common traps\n\n- Clearing several state variables in an Effect when a key expresses the reset directly.\n- Assuming conditional JSX location in source code defines identity.\n- Adding a key when state should actually survive.\n- Storing important drafts only in a component that may unmount.\n\n## Interview answer\n\nReact preserves state for the same component identity at the same tree position. Changing props alone does not reset it. Changing the component type or key creates a new identity and resets the subtree. I choose between preservation, keyed reset, and lifting state based on the product requirement rather than clearing state reactively in an Effect.\n\n## Check yourself\n\nWhen switching between chat recipients, when should you use a key and when should you lift draft state instead?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "React associates state with a component’s position and identity in the rendered tree, not with the JSX text or component function in isolation.",
+    excerpt:
+      "Interview tasks frequently involve resetting forms, switching users, conditionally rendering panels, or preserving tabs. The correct solution follows identity rather than manually clearing every state field.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 6 — state preservation and reset quick refresher react associates state with a component’s position and identity in the rendered tree, not with the jsx text or component function in isolation. why this matters interview tasks frequently involve resetting forms, switching users, conditionally rendering panels, or preserving tabs. the correct solution follows identity rather than manually clearing every state field. core mental model state is preserved when the same component type and key remain in the same position: changing selectedcontact changes props but preserves chat state. that may be useful, or it may leave a draft intended for the previous recipient. reset the subtree by changing its identity: now changing contacts unmounts the old chat and mounts a fresh one. alternatively, render distinct components in distinct tree positions when both states should be preserved. before resetting, decide where the state belongs. if a draft must survive unmounting, lift it to a parent or store it by contact id. a key is a reset tool, not persistence. common traps clearing several state variables in an effect when a key expresses the reset directly. assuming conditional jsx location in source code defines identity. adding a key when state should actually survive. storing important drafts only in a component that may unmount. interview answer react preserves state for the same component identity at the same tree position. changing props alone does not reset it. changing the component type or key creates a new identity and resets the subtree. i choose between preservation, keyed reset, and lifting state based on the product requirement rather than clearing state reactively in an effect. check yourself when switching between chat recipients, when should you use a key and when should you lift draft state instead?",
+  },
+  {
+    number: 7,
+    slug: "07-batching-and-functional-updates",
+    title: "Batching and Functional Updates",
+    kind: "chapter",
+    partNumber: 1,
+    partName: "Rendering Model",
+    markdown:
+      "# Chapter 7 — Batching and Functional Updates\n\n## Quick refresher\n\nReact queues state updates and batches them so related updates can produce fewer renders. Functional updaters calculate the next state from the previously queued state.\n\n## Why this matters\n\nThis topic tests whether you can reason about multiple updates without treating setters as immediate assignments.\n\n## Core mental model\n\n```tsx\nfunction addThree() {\n  setCount(count + 1);\n  setCount(count + 1);\n  setCount(count + 1);\n}\n```\n\nAll three expressions use the same `count` snapshot, so they request the same replacement value. To compose updates, pass updater functions:\n\n```tsx\nfunction addThree() {\n  setCount(value => value + 1);\n  setCount(value => value + 1);\n  setCount(value => value + 1);\n}\n```\n\nReact processes the queue in order, passing each updater the result of the previous one. Use an updater whenever the next state depends on previous state, especially when multiple updates may be queued.\n\nModern React batches updates from more asynchronous contexts than older versions. Batching is an implementation optimization: code should depend on state semantics, not on counting renders. `flushSync` exists for rare DOM-integration cases that require an immediate commit, but it can harm performance and should not be routine.\n\n## Common traps\n\n- Treating setters as synchronous assignments.\n- Repeating replacement updates based on one stale snapshot.\n- Mutating an object inside an updater instead of returning a new value.\n- Reaching for `flushSync` to make ordinary application logic work.\n\n## Interview answer\n\nReact queues and batches state updates before rendering. Replacement updates created from the same snapshot can overwrite one another conceptually. Functional updaters receive the latest queued value, so they compose correctly and are the right choice when next state depends on previous state. Batching reduces work but should not change the meaning of the update logic.\n\n## Check yourself\n\nWhat value results from three `setCount(count + 1)` calls, and how do three functional updaters differ?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "React queues state updates and batches them so related updates can produce fewer renders. Functional updaters calculate the next state from the previously queued state.",
+    excerpt:
+      "This topic tests whether you can reason about multiple updates without treating setters as immediate assignments.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 7 — batching and functional updates quick refresher react queues state updates and batches them so related updates can produce fewer renders. functional updaters calculate the next state from the previously queued state. why this matters this topic tests whether you can reason about multiple updates without treating setters as immediate assignments. core mental model all three expressions use the same count snapshot, so they request the same replacement value. to compose updates, pass updater functions: react processes the queue in order, passing each updater the result of the previous one. use an updater whenever the next state depends on previous state, especially when multiple updates may be queued. modern react batches updates from more asynchronous contexts than older versions. batching is an implementation optimization: code should depend on state semantics, not on counting renders. flushsync exists for rare dom integration cases that require an immediate commit, but it can harm performance and should not be routine. common traps treating setters as synchronous assignments. repeating replacement updates based on one stale snapshot. mutating an object inside an updater instead of returning a new value. reaching for flushsync to make ordinary application logic work. interview answer react queues and batches state updates before rendering. replacement updates created from the same snapshot can overwrite one another conceptually. functional updaters receive the latest queued value, so they compose correctly and are the right choice when next state depends on previous state. batching reduces work but should not change the meaning of the update logic. check yourself what value results from three setcount(count + 1) calls, and how do three functional updaters differ?",
+  },
+];
+
 export const reactPracticeArticles: Chapter[] = [
   {
     number: 1,

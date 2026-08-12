@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { reactChapters } from "@/generated/content";
 import { ReactNav } from "../../components/TechnologyNav";
 
 export const metadata: Metadata = {
@@ -292,6 +293,8 @@ const parts = [
 const chapterCount = parts.reduce((total, part) => total + part.chapters.length, 0);
 
 export default function ReactHandbookPage() {
+  const availableByNumber = new Map(reactChapters.map((chapter) => [chapter.number, chapter]));
+
   return (
     <>
       <ReactNav active="handbook" />
@@ -373,18 +376,31 @@ export default function ReactHandbookPage() {
                   <small>{part.chapters.length} chapters</small>
                 </header>
                 <ol>
-                  {part.chapters.map(([number, title, description]) => (
-                    <li key={number}>
-                      <span>{String(number).padStart(2, "0")}</span>
-                      <div>
-                        <div className="performance-chapter-title">
-                          <h4>{title}</h4>
+                  {part.chapters.map(([number, title, description]) => {
+                    const chapter = availableByNumber.get(number);
+                    const content = (
+                      <>
+                        <span>{String(number).padStart(2, "0")}</span>
+                        <div>
+                          <div className="performance-chapter-title">
+                            <h4>{title}</h4>
+                          </div>
+                          <p>{description}</p>
                         </div>
-                        <p>{description}</p>
-                      </div>
-                      <span className="performance-chapter-status">Draft planned</span>
-                    </li>
-                  ))}
+                        <span className="performance-chapter-status">
+                          {chapter ? "Available" : "Draft planned"}
+                        </span>
+                      </>
+                    );
+
+                    return chapter ? (
+                      <li className="available" key={number}>
+                        <Link href={`/react/handbook/chapters/${chapter.slug}`}>{content}</Link>
+                      </li>
+                    ) : (
+                      <li key={number}>{content}</li>
+                    );
+                  })}
                 </ol>
               </section>
             ))}
