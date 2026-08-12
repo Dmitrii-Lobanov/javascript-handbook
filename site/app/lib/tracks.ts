@@ -54,7 +54,7 @@ export const learningTracks: LearningTrack[] = [
     status: "expanding",
     phase: 1,
     resources: [
-      { slug: "handbook", label: "Handbook", title: "React Handbook", description: "Mental models, runtime behavior, and architectural tradeoffs." },
+      { slug: "handbook", label: "Handbook", title: "React Handbook", description: "Mental models, runtime behavior, and architectural tradeoffs.", available: true },
       { slug: "q-and-a", label: "Q&A", title: "React Questions & Answers", description: "120 curated questions from fundamentals to senior scenarios.", available: true },
       { slug: "practice", label: "Practice", title: "React Practice", description: "Explanatory articles for senior live-coding interview tasks.", available: true },
     ],
