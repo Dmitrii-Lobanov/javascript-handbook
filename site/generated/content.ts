@@ -846,6 +846,206 @@ export const reactChapters: Chapter[] = [
     searchText:
       "chapter 16 — designing custom hooks quick refresher a custom hook extracts reusable stateful behavior. it shares logic, not state: each call receives its own hook state unless the hook connects to a shared external source. why this matters interviewers look for abstractions with clear ownership and useful contracts—not merely code moved into a function. core mental model the component consumes a meaningful value without owning browser subscription details. the hook still follows all hook rules and must provide correct cleanup. design around a behavior or capability, not a lifecycle wrapper. prefer a focused api with explicit inputs and outputs. return the smallest stable contract callers need, and avoid hiding important application ownership or turning every effect into a generic usemount abstraction. not all reused code needs a hook. pure calculations should remain ordinary functions. a function becomes a hook when it needs react hooks or should compose other stateful behavior. common traps assuming two calls to a custom hook share state. creating vague wrappers such as useeffectonce that hide dependency semantics. returning a large unstable object without considering consumers. using a hook for a pure formatting or transformation function. interview answer a custom hook packages reusable stateful behavior behind a domain focused contract. it should make ownership clearer, expose explicit inputs and useful outputs, and correctly handle synchronization and cleanup. calls share implementation but normally not state. pure reusable logic remains an ordinary function. check yourself when should filtering data be a normal function, and when might a usefilteredresults hook be justified?",
   },
+  {
+    number: 17,
+    slug: "17-state-ownership-and-lifting-state",
+    title: "State Ownership and Lifting State",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      "# Chapter 17 — State Ownership and Lifting State\n\n## Quick refresher\n\n- Every piece of state should have one clear owner.\n- Keep state as close as possible to the components that use it.\n- Lift it to the nearest common ancestor when multiple descendants must coordinate.\n- Pass data down and communicate changes upward through callbacks.\n\n## Why this matters\n\nState placement determines coupling, render scope, and whether components can disagree. Interviewers often test whether you can find the owner without immediately reaching for context or a global store.\n\n## Core mental model\n\nTwo inputs that must stay synchronized need a shared owner:\n\n```tsx\nfunction TemperatureCalculator() {\n  const [celsius, setCelsius] = useState(0);\n\n  return (\n    \u003c>\n      \u003cTemperatureInput value={celsius} onChange={setCelsius} />\n      \u003cTemperatureInput\n        value={toFahrenheit(celsius)}\n        onChange={value => setCelsius(toCelsius(value))}\n      />\n    \u003c/>\n  );\n}\n```\n\nThe parent owns the source of truth; each child receives a value and reports intent. Do not lift state higher than necessary: distant ownership increases prop plumbing and can enlarge the subtree affected by updates.\n\nBefore choosing context or an external store, ask:\n\n1. Which components read the value?\n2. Which events change it?\n3. What is their closest stable common owner?\n4. Must it survive that owner unmounting?\n\n## Common traps\n\n- Keeping synchronized copies in multiple children.\n- Moving all state to the application root.\n- Using context solely to avoid passing a prop through one or two layers.\n- Confusing server cache data with client UI state.\n\n## Interview answer\n\nI place state at the lowest component that owns all reads and writes. If siblings must coordinate, I lift one source of truth to their closest common ancestor and pass values and event callbacks down. I move beyond that boundary only when lifetime, sharing, or update requirements justify context, URL state, a server cache, or an external store.\n\n## Check yourself\n\nWhen does lifting state improve consistency but worsen performance or maintainability?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Every piece of state should have one clear owner. Keep state as close as possible to the components that use it. Lift it to the nearest common ancestor when multiple descendants must coordinate. Pass data down and communicate changes upward through callbacks.",
+    excerpt:
+      "State placement determines coupling, render scope, and whether components can disagree. Interviewers often test whether you can find the owner without immediately reaching for context or a global store.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 17 — state ownership and lifting state quick refresher every piece of state should have one clear owner. keep state as close as possible to the components that use it. lift it to the nearest common ancestor when multiple descendants must coordinate. pass data down and communicate changes upward through callbacks. why this matters state placement determines coupling, render scope, and whether components can disagree. interviewers often test whether you can find the owner without immediately reaching for context or a global store. core mental model two inputs that must stay synchronized need a shared owner: the parent owns the source of truth; each child receives a value and reports intent. do not lift state higher than necessary: distant ownership increases prop plumbing and can enlarge the subtree affected by updates. before choosing context or an external store, ask: 1. which components read the value? 2. which events change it? 3. what is their closest stable common owner? 4. must it survive that owner unmounting? common traps keeping synchronized copies in multiple children. moving all state to the application root. using context solely to avoid passing a prop through one or two layers. confusing server cache data with client ui state. interview answer i place state at the lowest component that owns all reads and writes. if siblings must coordinate, i lift one source of truth to their closest common ancestor and pass values and event callbacks down. i move beyond that boundary only when lifetime, sharing, or update requirements justify context, url state, a server cache, or an external store. check yourself when does lifting state improve consistency but worsen performance or maintainability?",
+  },
+  {
+    number: 18,
+    slug: "18-controlled-and-uncontrolled-components",
+    title: "Controlled and Uncontrolled Components",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      "# Chapter 18 — Controlled and Uncontrolled Components\n\n## Quick refresher\n\nA controlled component receives its important value from a parent and reports changes. An uncontrolled component owns the value internally, often accepting an initial default.\n\n## Why this matters\n\nThis distinction affects API design, reset behavior, validation, coordination, and integration with native forms or third-party code.\n\n## Core mental model\n\n```tsx\n// Controlled\n\u003cAccordion expanded={open} onExpandedChange={setOpen} />\n\n// Uncontrolled\n\u003cAccordion defaultExpanded />\n```\n\nA reusable component can support both modes, but must define a consistent contract:\n\n```tsx\nfunction Accordion({ expanded, defaultExpanded = false, onExpandedChange }: Props) {\n  const [internal, setInternal] = useState(defaultExpanded);\n  const isControlled = expanded !== undefined;\n  const isExpanded = isControlled ? expanded : internal;\n\n  function update(next: boolean) {\n    if (!isControlled) setInternal(next);\n    onExpandedChange?.(next);\n  }\n}\n```\n\n`defaultExpanded` is read as an initial value; changing it later should not normally control the component. Avoid switching between controlled and uncontrolled modes during a component’s lifetime.\n\nNative form controls are uncontrolled when read through form submission or refs, and controlled when React supplies their current `value` or `checked`.\n\n## Common traps\n\n- Copying a controlled prop into state and creating two owners.\n- Expecting changes to a `defaultValue` prop to update current state.\n- Switching modes after mount.\n- Exposing both APIs without defining which value wins.\n\n## Interview answer\n\nA controlled component delegates state ownership to its parent through a value and change callback, which enables coordination and validation. An uncontrolled component owns state and may accept an initial default, which can simplify isolated use. A component supporting both must choose the current value consistently and never silently switch ownership modes.\n\n## Check yourself\n\nWhy does `defaultValue` describe initialization rather than ongoing synchronization?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "A controlled component receives its important value from a parent and reports changes. An uncontrolled component owns the value internally, often accepting an initial default.",
+    excerpt:
+      "This distinction affects API design, reset behavior, validation, coordination, and integration with native forms or third party code.",
+    readingMinutes: 1,
+    searchText:
+      "chapter 18 — controlled and uncontrolled components quick refresher a controlled component receives its important value from a parent and reports changes. an uncontrolled component owns the value internally, often accepting an initial default. why this matters this distinction affects api design, reset behavior, validation, coordination, and integration with native forms or third party code. core mental model a reusable component can support both modes, but must define a consistent contract: defaultexpanded is read as an initial value; changing it later should not normally control the component. avoid switching between controlled and uncontrolled modes during a component’s lifetime. native form controls are uncontrolled when read through form submission or refs, and controlled when react supplies their current value or checked . common traps copying a controlled prop into state and creating two owners. expecting changes to a defaultvalue prop to update current state. switching modes after mount. exposing both apis without defining which value wins. interview answer a controlled component delegates state ownership to its parent through a value and change callback, which enables coordination and validation. an uncontrolled component owns state and may accept an initial default, which can simplify isolated use. a component supporting both must choose the current value consistently and never silently switch ownership modes. check yourself why does defaultvalue describe initialization rather than ongoing synchronization?",
+  },
+  {
+    number: 19,
+    slug: "19-composition-over-configuration",
+    title: "Composition Over Configuration",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      '# Chapter 19 — Composition Over Configuration\n\n## Quick refresher\n\nComposition lets consumers supply elements or behavior through children and slots. Configuration asks one component to understand every possible variation through props.\n\n## Why this matters\n\nSenior interviews assess whether component APIs can grow without becoming a large collection of conditional branches and conflicting boolean props.\n\n## Core mental model\n\nConfiguration becomes difficult when combinations multiply:\n\n```tsx\n\u003cCard showHeader compact hasFooter elevated loading />\n```\n\nComposition gives structure to the caller:\n\n```tsx\n\u003cCard>\n  \u003cCard.Header>\u003cUserSummary />\u003c/Card.Header>\n  \u003cCard.Body>\u003cActivity />\u003c/Card.Body>\n  \u003cCard.Footer>\u003cActions />\u003c/Card.Footer>\n\u003c/Card>\n```\n\nUse ordinary `children` for one flexible content region. Use named props such as `header` and `footer` for a few explicit slots. Use compound components when related pieces need coordinated state and semantics.\n\nComposition is not automatically better. A small closed set of variants is clearer as a typed prop. The goal is to expose meaningful choices while preventing invalid combinations.\n\nPrefer elements or components over render callbacks unless the consumer needs internal state to produce its content.\n\n## Common traps\n\n- Replacing every prop with a compound component.\n- Creating many boolean props that produce invalid combinations.\n- Using a render prop when static children are sufficient.\n- Allowing arbitrary composition that breaks required semantics or accessibility.\n\n## Interview answer\n\nI use configuration for a small, stable set of variants and composition when consumers need structural flexibility. Children, named slots, or compound components let callers assemble UI without teaching one component every possible layout. The API should still enforce important semantic and accessibility constraints.\n\n## Check yourself\n\nWhen is `variant="danger"` clearer than supplying a custom component through a slot?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Composition lets consumers supply elements or behavior through children and slots. Configuration asks one component to understand every possible variation through props.",
+    excerpt:
+      "Senior interviews assess whether component APIs can grow without becoming a large collection of conditional branches and conflicting boolean props.",
+    readingMinutes: 2,
+    searchText:
+      'chapter 19 — composition over configuration quick refresher composition lets consumers supply elements or behavior through children and slots. configuration asks one component to understand every possible variation through props. why this matters senior interviews assess whether component apis can grow without becoming a large collection of conditional branches and conflicting boolean props. core mental model configuration becomes difficult when combinations multiply: composition gives structure to the caller: use ordinary children for one flexible content region. use named props such as header and footer for a few explicit slots. use compound components when related pieces need coordinated state and semantics. composition is not automatically better. a small closed set of variants is clearer as a typed prop. the goal is to expose meaningful choices while preventing invalid combinations. prefer elements or components over render callbacks unless the consumer needs internal state to produce its content. common traps replacing every prop with a compound component. creating many boolean props that produce invalid combinations. using a render prop when static children are sufficient. allowing arbitrary composition that breaks required semantics or accessibility. interview answer i use configuration for a small, stable set of variants and composition when consumers need structural flexibility. children, named slots, or compound components let callers assemble ui without teaching one component every possible layout. the api should still enforce important semantic and accessibility constraints. check yourself when is variant="danger" clearer than supplying a custom component through a slot?',
+  },
+  {
+    number: 20,
+    slug: "20-designing-reusable-component-apis",
+    title: "Designing Reusable Component APIs",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      "# Chapter 20 — Designing Reusable Component APIs\n\n## Quick refresher\n\nA reusable component API defines ownership, allowed variants, event semantics, accessibility behavior, defaults, and escape hatches.\n\n## Why this matters\n\nReusability is not maximum flexibility. Good APIs make common correct usage easy and invalid or inaccessible combinations difficult.\n\n## Core mental model\n\nDesign from consumer intent rather than internal implementation:\n\n```tsx\ntype DialogProps = {\n  open: boolean;\n  onOpenChange(open: boolean): void;\n  title: ReactNode;\n  children: ReactNode;\n};\n```\n\n`onOpenChange` describes the proposed state transition without exposing which internal button was clicked. The component owns focus management, Escape handling, and dialog semantics; consumers own whether the dialog is open.\n\nUseful API questions:\n\n- Who owns the state?\n- What are the valid states and combinations?\n- Which semantics must the component guarantee?\n- Which HTML props should be forwarded?\n- Does the escape hatch preserve the contract?\n- Can the API evolve without breaking callers?\n\nPrefer explicit names such as `onValueChange` when the callback reports a semantic value. Keep callbacks stable only when performance evidence or an external subscription requires it—not as a blanket API promise.\n\n## Common traps\n\n- Passing internal setters directly to consumers.\n- Adding props for isolated product-specific exceptions.\n- Accepting arbitrary markup that breaks keyboard or ARIA relationships.\n- Hiding ownership by maintaining a second internal copy of controlled state.\n\n## Interview answer\n\nI start a reusable API from the consumer’s states and events. I define one owner for each value, encode closed variants in types, provide composition where structure must vary, and keep accessibility behavior inside the primitive. Escape hatches should extend presentation without invalidating semantic guarantees.\n\n## Check yourself\n\nWhy is `onOpenChange(nextOpen)` often a better public contract than exposing `setOpen`?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "A reusable component API defines ownership, allowed variants, event semantics, accessibility behavior, defaults, and escape hatches.",
+    excerpt:
+      "Reusability is not maximum flexibility. Good APIs make common correct usage easy and invalid or inaccessible combinations difficult.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 20 — designing reusable component apis quick refresher a reusable component api defines ownership, allowed variants, event semantics, accessibility behavior, defaults, and escape hatches. why this matters reusability is not maximum flexibility. good apis make common correct usage easy and invalid or inaccessible combinations difficult. core mental model design from consumer intent rather than internal implementation: onopenchange describes the proposed state transition without exposing which internal button was clicked. the component owns focus management, escape handling, and dialog semantics; consumers own whether the dialog is open. useful api questions: who owns the state? what are the valid states and combinations? which semantics must the component guarantee? which html props should be forwarded? does the escape hatch preserve the contract? can the api evolve without breaking callers? prefer explicit names such as onvaluechange when the callback reports a semantic value. keep callbacks stable only when performance evidence or an external subscription requires it—not as a blanket api promise. common traps passing internal setters directly to consumers. adding props for isolated product specific exceptions. accepting arbitrary markup that breaks keyboard or aria relationships. hiding ownership by maintaining a second internal copy of controlled state. interview answer i start a reusable api from the consumer’s states and events. i define one owner for each value, encode closed variants in types, provide composition where structure must vary, and keep accessibility behavior inside the primitive. escape hatches should extend presentation without invalidating semantic guarantees. check yourself why is onopenchange(nextopen) often a better public contract than exposing setopen ?",
+  },
+  {
+    number: 21,
+    slug: "21-compound-and-headless-components",
+    title: "Compound and Headless Components",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      '# Chapter 21 — Compound and Headless Components\n\n## Quick refresher\n\nCompound components expose cooperating pieces under one conceptual API. Headless components provide state and behavior while leaving most rendering and styling to consumers.\n\n## Why this matters\n\nThese patterns support flexible design systems, but they require careful state sharing, semantic constraints, and documentation.\n\n## Core mental model\n\n```tsx\n\u003cTabs defaultValue="profile">\n  \u003cTabs.List aria-label="Account">\n    \u003cTabs.Trigger value="profile">Profile\u003c/Tabs.Trigger>\n    \u003cTabs.Trigger value="security">Security\u003c/Tabs.Trigger>\n  \u003c/Tabs.List>\n  \u003cTabs.Panel value="profile">...\u003c/Tabs.Panel>\n  \u003cTabs.Panel value="security">...\u003c/Tabs.Panel>\n\u003c/Tabs>\n```\n\nThe root owns or receives the active value. Descendants communicate through a focused context. Triggers and panels remain composable while the implementation coordinates IDs, selection, keyboard navigation, and ARIA relationships.\n\nA headless API might instead expose a Hook or render function that returns state and prop-getters. This offers more markup control but transfers more responsibility to consumers and can make correct accessibility harder.\n\nKeep context private to the component family, fail clearly when a child is outside its provider, and split contexts when frequently changing state should not rerender unrelated consumers.\n\n## Common traps\n\n- Treating compound components as styling-only namespaces.\n- Exposing context internals as a public API.\n- Allowing flexible markup that breaks required DOM relationships.\n- Using a headless abstraction when a styled semantic primitive would be safer.\n\n## Interview answer\n\nCompound components provide flexible structure while a shared owner coordinates state and semantics. Headless components separate behavior from presentation more aggressively. I use them when consumers need real structural control, but keep accessibility invariants, ownership, and context scope explicit so flexibility does not make correct usage fragile.\n\n## Check yourself\n\nWhat behavior should `Tabs` keep internal even when its visual presentation is fully customizable?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Compound components expose cooperating pieces under one conceptual API. Headless components provide state and behavior while leaving most rendering and styling to consumers.",
+    excerpt:
+      "These patterns support flexible design systems, but they require careful state sharing, semantic constraints, and documentation.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 21 — compound and headless components quick refresher compound components expose cooperating pieces under one conceptual api. headless components provide state and behavior while leaving most rendering and styling to consumers. why this matters these patterns support flexible design systems, but they require careful state sharing, semantic constraints, and documentation. core mental model the root owns or receives the active value. descendants communicate through a focused context. triggers and panels remain composable while the implementation coordinates ids, selection, keyboard navigation, and aria relationships. a headless api might instead expose a hook or render function that returns state and prop getters. this offers more markup control but transfers more responsibility to consumers and can make correct accessibility harder. keep context private to the component family, fail clearly when a child is outside its provider, and split contexts when frequently changing state should not rerender unrelated consumers. common traps treating compound components as styling only namespaces. exposing context internals as a public api. allowing flexible markup that breaks required dom relationships. using a headless abstraction when a styled semantic primitive would be safer. interview answer compound components provide flexible structure while a shared owner coordinates state and semantics. headless components separate behavior from presentation more aggressively. i use them when consumers need real structural control, but keep accessibility invariants, ownership, and context scope explicit so flexibility does not make correct usage fragile. check yourself what behavior should tabs keep internal even when its visual presentation is fully customizable?",
+  },
+  {
+    number: 22,
+    slug: "22-context-and-provider-design",
+    title: "Context and Provider Design",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      '# Chapter 22 — Context and Provider Design\n\n## Quick refresher\n\nContext lets descendants read a value from the nearest matching provider without passing it through every intermediate component.\n\n## Why this matters\n\nContext solves value distribution, not state modeling, caching, or high-frequency update performance by itself.\n\n## Core mental model\n\n```tsx\nconst ThemeContext = createContext\u003cThemeContextValue | null>(null);\n\nfunction useTheme() {\n  const value = useContext(ThemeContext);\n  if (!value) throw new Error("useTheme must be used within ThemeProvider");\n  return value;\n}\n```\n\nThe provider establishes ownership and lifetime; context distributes access. Good candidates include theme, locale, authenticated identity, or state shared by a compound component.\n\nAll consumers are notified when a provider’s `value` changes according to `Object.is`. Avoid creating needless identities and avoid combining unrelated, frequently changing values into one large context:\n\n```tsx\nconst value = useMemo(() => ({ theme, setTheme }), [theme]);\n```\n\nMemoization helps only if the provider’s parent can render without `theme` changing and consumer work matters. Splitting state and actions or separate domains can produce clearer boundaries. For frequent selective subscriptions, an external store with selectors may fit better.\n\n## Common traps\n\n- Using context as a universal global state solution.\n- Providing a fake default that hides a missing provider.\n- Putting unrelated values into one provider object.\n- Memoizing the value without measuring or understanding update fan-out.\n\n## Interview answer\n\nContext distributes a value through a subtree; it does not decide how that value is modeled. I scope providers by ownership and lifetime, expose a focused custom Hook, and keep values cohesive. Because provider changes notify consumers, I split high-frequency domains or use selector-based external stores when update granularity matters.\n\n## Check yourself\n\nWhy can one large application context cause broad rerenders even when a consumer reads only one field?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Context lets descendants read a value from the nearest matching provider without passing it through every intermediate component.",
+    excerpt:
+      "Context solves value distribution, not state modeling, caching, or high frequency update performance by itself.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 22 — context and provider design quick refresher context lets descendants read a value from the nearest matching provider without passing it through every intermediate component. why this matters context solves value distribution, not state modeling, caching, or high frequency update performance by itself. core mental model the provider establishes ownership and lifetime; context distributes access. good candidates include theme, locale, authenticated identity, or state shared by a compound component. all consumers are notified when a provider’s value changes according to object.is . avoid creating needless identities and avoid combining unrelated, frequently changing values into one large context: memoization helps only if the provider’s parent can render without theme changing and consumer work matters. splitting state and actions or separate domains can produce clearer boundaries. for frequent selective subscriptions, an external store with selectors may fit better. common traps using context as a universal global state solution. providing a fake default that hides a missing provider. putting unrelated values into one provider object. memoizing the value without measuring or understanding update fan out. interview answer context distributes a value through a subtree; it does not decide how that value is modeled. i scope providers by ownership and lifetime, expose a focused custom hook, and keep values cohesive. because provider changes notify consumers, i split high frequency domains or use selector based external stores when update granularity matters. check yourself why can one large application context cause broad rerenders even when a consumer reads only one field?",
+  },
+  {
+    number: 23,
+    slug: "23-error-boundaries",
+    title: "Error Boundaries",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      "# Chapter 23 — Error Boundaries\n\n## Quick refresher\n\nAn error boundary catches rendering errors in its descendant tree and displays fallback UI instead of unmounting the entire application.\n\n## Why this matters\n\nProduction React applications need deliberate failure isolation. Interviewers expect you to know both what boundaries catch and what they do not.\n\n## Core mental model\n\n```tsx\n\u003cAppShell>\n  \u003cErrorBoundary fallback={\u003cPanelError />}>\n    \u003cAccountPanel />\n  \u003c/ErrorBoundary>\n\u003c/AppShell>\n```\n\nPlace boundaries around independently recoverable regions, routes, or risky integrations. A boundary can log component-stack information and offer retry or navigation. Changing its `key` is a common way to reset boundary state for a new resource or retry attempt.\n\nTraditional error boundaries are class components using `getDerivedStateFromError` and optionally `componentDidCatch`; applications commonly consume a framework or library wrapper.\n\nBoundaries catch errors thrown while rendering descendants and in relevant descendant lifecycle work. They do not generally catch errors in event handlers, arbitrary asynchronous callbacks, server rendering, or errors thrown by the boundary itself. Handle expected request failures as explicit data states rather than throwing every failure into a boundary.\n\n## Common traps\n\n- Wrapping only the entire application and losing all UI for one panel failure.\n- Expecting a boundary to catch rejected event-handler promises.\n- Treating validation or an expected 404 as an exceptional render failure.\n- Logging an error without providing recovery or useful context.\n\n## Interview answer\n\nError boundaries isolate unexpected failures in descendant rendering so the rest of the interface can remain usable. I place them at meaningful recovery boundaries, log diagnostic context, and provide retry or navigation. Expected data errors remain explicit UI state, and event-handler or unrelated async errors require their own handling.\n\n## Check yourself\n\nWhy should a dashboard often use panel-level boundaries in addition to a route-level boundary?",
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "An error boundary catches rendering errors in its descendant tree and displays fallback UI instead of unmounting the entire application.",
+    excerpt:
+      "Production React applications need deliberate failure isolation. Interviewers expect you to know both what boundaries catch and what they do not.",
+    readingMinutes: 2,
+    searchText:
+      "chapter 23 — error boundaries quick refresher an error boundary catches rendering errors in its descendant tree and displays fallback ui instead of unmounting the entire application. why this matters production react applications need deliberate failure isolation. interviewers expect you to know both what boundaries catch and what they do not. core mental model place boundaries around independently recoverable regions, routes, or risky integrations. a boundary can log component stack information and offer retry or navigation. changing its key is a common way to reset boundary state for a new resource or retry attempt. traditional error boundaries are class components using getderivedstatefromerror and optionally componentdidcatch ; applications commonly consume a framework or library wrapper. boundaries catch errors thrown while rendering descendants and in relevant descendant lifecycle work. they do not generally catch errors in event handlers, arbitrary asynchronous callbacks, server rendering, or errors thrown by the boundary itself. handle expected request failures as explicit data states rather than throwing every failure into a boundary. common traps wrapping only the entire application and losing all ui for one panel failure. expecting a boundary to catch rejected event handler promises. treating validation or an expected 404 as an exceptional render failure. logging an error without providing recovery or useful context. interview answer error boundaries isolate unexpected failures in descendant rendering so the rest of the interface can remain usable. i place them at meaningful recovery boundaries, log diagnostic context, and provide retry or navigation. expected data errors remain explicit ui state, and event handler or unrelated async errors require their own handling. check yourself why should a dashboard often use panel level boundaries in addition to a route level boundary?",
+  },
+  {
+    number: 24,
+    slug: "24-accessible-interactive-components",
+    title: "Accessible Interactive Components",
+    kind: "chapter",
+    partNumber: 3,
+    partName: "Component Design",
+    markdown:
+      '# Chapter 24 — Accessible Interactive Components\n\n## Quick refresher\n\nStart with native HTML semantics. Add ARIA only when native elements cannot express the required interaction, and implement the complete keyboard and focus behavior of the chosen pattern.\n\n## Why this matters\n\nAccessibility is part of component correctness. A component that works only with a pointer or only visually is incomplete, even if its React state is well designed.\n\n## Core mental model\n\nBuild in this order:\n\n```text\nsemantic element → accessible name → keyboard behavior → focus → state announcement → testing\n```\n\nUse a button instead of a clickable `div`:\n\n```tsx\n\u003cbutton type="button" aria-expanded={open} aria-controls={menuId} onClick={toggle}>\n  Options\n\u003c/button>\n```\n\nThe browser provides focusability, Enter and Space activation, and button semantics. `aria-expanded` communicates component state; `aria-controls` identifies the controlled region.\n\nFor composite widgets such as tabs, listboxes, menus, dialogs, or comboboxes, follow the established interaction pattern. Decide where DOM focus lives, how arrow keys work, how Escape behaves, and where focus returns after dismissal. Do not add an ARIA role without implementing its expected behavior.\n\nTest with keyboard-only navigation, visible focus, accessible-name queries, automated checks, and representative screen-reader testing. Automation cannot verify the complete experience.\n\n## Common traps\n\n- Using `div` click handlers instead of native controls.\n- Adding `tabIndex={0}` without keyboard activation semantics.\n- Treating ARIA as a substitute for semantic HTML.\n- Moving focus unexpectedly or failing to restore it after a dialog closes.\n\n## Interview answer\n\nI begin with native semantics because they provide behavior and accessibility for free. For custom widgets, I implement the recognized keyboard, focus, role, state, and announcement contract—not only ARIA attributes. I verify user-observable behavior with keyboard, accessibility-tree queries, automation, and assistive-technology testing.\n\n## Check yourself\n\nWhy does adding `role="button"` to a `div` still leave important work unfinished?',
+    headings: [
+      "Quick refresher",
+      "Why this matters",
+      "Core mental model",
+      "Common traps",
+      "Interview answer",
+      "Check yourself",
+    ],
+    quickRefresher:
+      "Start with native HTML semantics. Add ARIA only when native elements cannot express the required interaction, and implement the complete keyboard and focus behavior of the chosen pattern.",
+    excerpt:
+      "Accessibility is part of component correctness. A component that works only with a pointer or only visually is incomplete, even if its React state is well designed.",
+    readingMinutes: 2,
+    searchText:
+      'chapter 24 — accessible interactive components quick refresher start with native html semantics. add aria only when native elements cannot express the required interaction, and implement the complete keyboard and focus behavior of the chosen pattern. why this matters accessibility is part of component correctness. a component that works only with a pointer or only visually is incomplete, even if its react state is well designed. core mental model build in this order: use a button instead of a clickable div : the browser provides focusability, enter and space activation, and button semantics. aria expanded communicates component state; aria controls identifies the controlled region. for composite widgets such as tabs, listboxes, menus, dialogs, or comboboxes, follow the established interaction pattern. decide where dom focus lives, how arrow keys work, how escape behaves, and where focus returns after dismissal. do not add an aria role without implementing its expected behavior. test with keyboard only navigation, visible focus, accessible name queries, automated checks, and representative screen reader testing. automation cannot verify the complete experience. common traps using div click handlers instead of native controls. adding tabindex={0} without keyboard activation semantics. treating aria as a substitute for semantic html. moving focus unexpectedly or failing to restore it after a dialog closes. interview answer i begin with native semantics because they provide behavior and accessibility for free. for custom widgets, i implement the recognized keyboard, focus, role, state, and announcement contract—not only aria attributes. i verify user observable behavior with keyboard, accessibility tree queries, automation, and assistive technology testing. check yourself why does adding role="button" to a div still leave important work unfinished?',
+  },
 ];
 
 export const reactPracticeArticles: Chapter[] = [
