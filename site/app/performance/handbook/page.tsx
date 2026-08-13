@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TrackNav } from "../../components/TechnologyNav";
 import { getTrack } from "../../lib/tracks";
 import { performanceChapters } from "@/generated/content";
+import { ChapterRoadmapStatus, HandbookProgress } from "../../components/ChapterRoadmapStatus";
 
 export const metadata: Metadata = {
   title: "Performance Handbook Roadmap",
@@ -16,9 +17,21 @@ const parts = [
     title: "Performance reasoning",
     description: "Learn what to measure, how to reason from evidence, and how to define success.",
     chapters: [
-      [1, "What frontend performance means", "User experience, perceived speed, latency, throughput, and meaningful outcomes."],
-      [2, "Measurement methodology", "Field and lab data, reproducible baselines, percentiles, and experimental discipline."],
-      [3, "Metrics and performance budgets", "Core Web Vitals, diagnostic metrics, budgets, and the limits of aggregate scores."],
+      [
+        1,
+        "What frontend performance means",
+        "User experience, perceived speed, latency, throughput, and meaningful outcomes.",
+      ],
+      [
+        2,
+        "Measurement methodology",
+        "Field and lab data, reproducible baselines, percentiles, and experimental discipline.",
+      ],
+      [
+        3,
+        "Metrics and performance budgets",
+        "Core Web Vitals, diagnostic metrics, budgets, and the limits of aggregate scores.",
+      ],
     ],
   },
   {
@@ -26,11 +39,31 @@ const parts = [
     title: "Loading performance",
     description: "Follow a navigation from the first request to meaningful content on screen.",
     chapters: [
-      [4, "Navigation and network latency", "DNS, connections, TLS, redirects, server response time, CDNs, compression, and caching."],
-      [5, "The critical rendering path", "HTML parsing, DOM, CSSOM, render blocking, parser blocking, and progressive rendering."],
-      [6, "Resource discovery and priority", "Preload scanning, request initiators, hints, priorities, waterfalls, and resource competition."],
-      [7, "JavaScript delivery", "Bundles, parsing, compilation, code splitting, duplicate code, hydration, and third parties."],
-      [8, "Images, fonts, and media", "Responsive assets, formats, LCP discovery, font loading, dimensions, and stability."],
+      [
+        4,
+        "Navigation and network latency",
+        "DNS, connections, TLS, redirects, server response time, CDNs, compression, and caching.",
+      ],
+      [
+        5,
+        "The critical rendering path",
+        "HTML parsing, DOM, CSSOM, render blocking, parser blocking, and progressive rendering.",
+      ],
+      [
+        6,
+        "Resource discovery and priority",
+        "Preload scanning, request initiators, hints, priorities, waterfalls, and resource competition.",
+      ],
+      [
+        7,
+        "JavaScript delivery",
+        "Bundles, parsing, compilation, code splitting, duplicate code, hydration, and third parties.",
+      ],
+      [
+        8,
+        "Images, fonts, and media",
+        "Responsive assets, formats, LCP discovery, font loading, dimensions, and stability.",
+      ],
     ],
   },
   {
@@ -38,10 +71,26 @@ const parts = [
     title: "Runtime performance",
     description: "Understand how application work becomes pixels and responsive interactions.",
     chapters: [
-      [9, "The browser rendering pipeline", "Style, layout, paint, rasterization, compositing, invalidation, and layout thrashing."],
-      [10, "The main thread and event loop", "Tasks, microtasks, rendering opportunities, long tasks, yielding, and workers."],
-      [11, "Interaction responsiveness and INP", "Input delay, processing time, presentation delay, and responsive feedback."],
-      [12, "Animation and scrolling", "Frame budgets, requestAnimationFrame, compositor work, observers, and reduced motion."],
+      [
+        9,
+        "The browser rendering pipeline",
+        "Style, layout, paint, rasterization, compositing, invalidation, and layout thrashing.",
+      ],
+      [
+        10,
+        "The main thread and event loop",
+        "Tasks, microtasks, rendering opportunities, long tasks, yielding, and workers.",
+      ],
+      [
+        11,
+        "Interaction responsiveness and INP",
+        "Input delay, processing time, presentation delay, and responsive feedback.",
+      ],
+      [
+        12,
+        "Animation and scrolling",
+        "Frame budgets, requestAnimationFrame, compositor work, observers, and reduced motion.",
+      ],
     ],
   },
   {
@@ -49,10 +98,26 @@ const parts = [
     title: "Application architecture",
     description: "Connect architectural choices to loading, interaction, and maintenance costs.",
     chapters: [
-      [13, "Rendering architecture", "Client rendering, SSR, static generation, streaming, hydration, islands, and Server Components."],
-      [14, "React performance", "Render and commit cost, state ownership, memoization, Compiler, transitions, and profiling."],
-      [15, "Data loading and caching", "Parallel loading, deduplication, prefetching, cache layers, freshness, and invalidation."],
-      [16, "Large collections and data-heavy interfaces", "DOM size, pagination, virtualization, incremental rendering, and accessibility."],
+      [
+        13,
+        "Rendering architecture",
+        "Client rendering, SSR, static generation, streaming, hydration, islands, and Server Components.",
+      ],
+      [
+        14,
+        "React performance",
+        "Render and commit cost, state ownership, memoization, Compiler, transitions, and profiling.",
+      ],
+      [
+        15,
+        "Data loading and caching",
+        "Parallel loading, deduplication, prefetching, cache layers, freshness, and invalidation.",
+      ],
+      [
+        16,
+        "Large collections and data-heavy interfaces",
+        "DOM size, pagination, virtualization, incremental rendering, and accessibility.",
+      ],
     ],
   },
   {
@@ -60,8 +125,16 @@ const parts = [
     title: "Stability and memory",
     description: "Keep interfaces visually stable and healthy across long-running sessions.",
     chapters: [
-      [17, "Visual stability", "Layout-shift sources, session windows, fonts, media, embeds, and post-load movement."],
-      [18, "Memory and lifecycle", "Reachability, detached DOM, listeners, observers, subscriptions, caches, and heap analysis."],
+      [
+        17,
+        "Visual stability",
+        "Layout-shift sources, session windows, fonts, media, embeds, and post-load movement.",
+      ],
+      [
+        18,
+        "Memory and lifecycle",
+        "Reachability, detached DOM, listeners, observers, subscriptions, caches, and heap analysis.",
+      ],
     ],
   },
   {
@@ -69,10 +142,26 @@ const parts = [
     title: "Performance as engineering practice",
     description: "Turn individual optimizations into a sustainable team capability.",
     chapters: [
-      [19, "Performance tooling", "DevTools, Lighthouse, React profiling, bundle analysis, coverage, and choosing the right tool."],
-      [20, "Real-user monitoring", "Web Vitals collection, attribution, segmentation, sampling, alerting, and release comparison."],
-      [21, "Budgets and continuous delivery", "Automated checks, regression thresholds, journey tests, ownership, and escalation."],
-      [22, "Tradeoffs and communication", "Prioritization, experiment design, proposals, stakeholder communication, and metric gaming."],
+      [
+        19,
+        "Performance tooling",
+        "DevTools, Lighthouse, React profiling, bundle analysis, coverage, and choosing the right tool.",
+      ],
+      [
+        20,
+        "Real-user monitoring",
+        "Web Vitals collection, attribution, segmentation, sampling, alerting, and release comparison.",
+      ],
+      [
+        21,
+        "Budgets and continuous delivery",
+        "Automated checks, regression thresholds, journey tests, ownership, and escalation.",
+      ],
+      [
+        22,
+        "Tradeoffs and communication",
+        "Prioritization, experiment design, proposals, stakeholder communication, and metric gaming.",
+      ],
     ],
   },
 ] as const;
@@ -96,14 +185,27 @@ export default function PerformanceHandbookPage() {
               memory, measurement, and sustainable performance practice.
             </p>
             <div className="wiki-actions">
-              <a className="primary-action" href="#roadmap">Explore the roadmap <span aria-hidden="true">↓</span></a>
-              <Link className="secondary-action" href="/performance/investigations">Open investigations</Link>
+              <a className="primary-action" href="#roadmap">
+                Explore the roadmap <span aria-hidden="true">↓</span>
+              </a>
+              <Link className="secondary-action" href="/performance/investigations">
+                Open investigations
+              </Link>
             </div>
           </div>
           <div className="performance-roadmap-summary" aria-label="Performance handbook statistics">
-            <div><strong>{performanceChapters.length}</strong><span>chapter available</span></div>
-            <div><strong>6</strong><span>connected parts</span></div>
-            <div><strong>8</strong><span>first-release chapters</span></div>
+            <div>
+              <strong>{performanceChapters.length}</strong>
+              <span>chapter available</span>
+            </div>
+            <div>
+              <strong>6</strong>
+              <span>connected parts</span>
+            </div>
+            <div>
+              <strong>8</strong>
+              <span>first-release chapters</span>
+            </div>
           </div>
         </section>
 
@@ -137,6 +239,9 @@ export default function PerformanceHandbookPage() {
               Priority chapters establish the first useful release. Every chapter will connect its
               model to measurements, interview questions, exercises, and practical investigations.
             </p>
+            <HandbookProgress
+              chapterSlugs={performanceChapters.map((chapter) => `performance-${chapter.slug}`)}
+            />
           </div>
 
           <div className="performance-part-list">
@@ -158,17 +263,19 @@ export default function PerformanceHandbookPage() {
                     const available = availableChapterNumbers.has(number);
                     const content = (
                       <>
-                      <span>{String(number).padStart(2, "0")}</span>
-                      <div>
-                        <div className="performance-chapter-title">
-                          <h4>{title}</h4>
-                          {firstRelease.has(number) && <small>First release</small>}
+                        <span>{String(number).padStart(2, "0")}</span>
+                        <div>
+                          <div className="performance-chapter-title">
+                            <h4>{title}</h4>
+                            {firstRelease.has(number) && <small>First release</small>}
+                          </div>
+                          <p>{description}</p>
                         </div>
-                        <p>{description}</p>
-                      </div>
-                      <span className="performance-chapter-status">
-                        {available ? "Available" : "Planned"}
-                      </span>
+                        {available ? (
+                          <ChapterRoadmapStatus slug={`performance-${availableChapter!.slug}`} />
+                        ) : (
+                          <span className="performance-chapter-status">Planned</span>
+                        )}
                       </>
                     );
 

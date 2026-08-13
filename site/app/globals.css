@@ -890,7 +890,9 @@ button {
 .performance-roadmap-hero h1 {
   max-width: 850px;
   margin: 0.9rem 0 1.3rem;
-  font: 700 clamp(3.3rem, 7vw, 6.5rem)/0.94 Georgia, serif;
+  font:
+    700 clamp(3.3rem, 7vw, 6.5rem)/0.94 Georgia,
+    serif;
   letter-spacing: -0.055em;
 }
 .performance-roadmap-hero > div:first-child > p {
@@ -911,7 +913,9 @@ button {
   border-bottom: 1px solid var(--line);
 }
 .performance-roadmap-summary strong {
-  font: 800 2rem/1 Georgia, serif;
+  font:
+    800 2rem/1 Georgia,
+    serif;
 }
 .performance-roadmap-summary span {
   color: var(--muted);
@@ -927,7 +931,9 @@ button {
 }
 .performance-model h2 {
   margin: 0.55rem 0 2rem;
-  font: 700 clamp(2rem, 4vw, 3.2rem)/1 Georgia, serif;
+  font:
+    700 clamp(2rem, 4vw, 3.2rem)/1 Georgia,
+    serif;
   letter-spacing: -0.035em;
 }
 .performance-model ol {
@@ -975,6 +981,51 @@ button {
   padding: clamp(4rem, 8vw, 7rem) max(1.5rem, calc((100vw - 1180px) / 2));
   scroll-margin-top: 8.5rem;
 }
+.handbook-progress {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.handbook-progress-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.handbook-progress-summary strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+.handbook-progress-summary span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+.handbook-progress progress {
+  width: 100%;
+  height: 0.55rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--line) 75%, transparent);
+  color: var(--teal);
+}
+.handbook-progress progress::-webkit-progress-bar {
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--line) 75%, transparent);
+}
+.handbook-progress progress::-webkit-progress-value {
+  border-radius: 99px;
+  background: var(--teal);
+}
+.handbook-progress progress::-moz-progress-bar {
+  border-radius: 99px;
+  background: var(--teal);
+}
 .performance-part-list {
   display: grid;
   gap: 1rem;
@@ -1002,7 +1053,9 @@ button {
 }
 .performance-part h3 {
   margin: -0.15rem 0 0.45rem;
-  font: 700 1.45rem/1.1 Georgia, serif;
+  font:
+    700 1.45rem/1.1 Georgia,
+    serif;
 }
 .performance-part > header p,
 .performance-part li p {
@@ -1024,6 +1077,11 @@ button {
   font-weight: 850;
   text-transform: uppercase;
   white-space: nowrap;
+}
+.performance-chapter-status.completed {
+  border-color: color-mix(in srgb, var(--teal) 65%, var(--line));
+  background: color-mix(in srgb, var(--teal) 14%, transparent);
+  color: var(--teal);
 }
 .performance-part ol {
   margin: 0;
@@ -1072,7 +1130,9 @@ button {
 }
 .performance-chapter-title h4 {
   margin: 0;
-  font: 700 1rem/1.25 Georgia, serif;
+  font:
+    700 1rem/1.25 Georgia,
+    serif;
 }
 .performance-chapter-title small {
   border-color: color-mix(in srgb, var(--teal) 55%, var(--line));
@@ -1093,7 +1153,9 @@ button {
 }
 .performance-roadmap-next h2 {
   margin: 0.55rem 0 0.7rem;
-  font: 700 clamp(1.8rem, 4vw, 3rem)/1 Georgia, serif;
+  font:
+    700 clamp(1.8rem, 4vw, 3rem)/1 Georgia,
+    serif;
 }
 .performance-roadmap-next p {
   max-width: 680px;
@@ -1123,7 +1185,9 @@ button {
 .react-practice-hero h1 {
   max-width: 870px;
   margin: 0.9rem 0 1.3rem;
-  font: 700 clamp(3.2rem, 7vw, 6.3rem)/0.94 Georgia, serif;
+  font:
+    700 clamp(3.2rem, 7vw, 6.3rem)/0.94 Georgia,
+    serif;
   letter-spacing: -0.055em;
 }
 .react-practice-hero > div:first-child > p {
@@ -1144,7 +1208,9 @@ button {
   border-bottom: 1px solid var(--line);
 }
 .react-practice-stats strong {
-  font: 800 2rem/1 Georgia, serif;
+  font:
+    800 2rem/1 Georgia,
+    serif;
 }
 .react-practice-stats span {
   color: var(--muted);
@@ -1157,7 +1223,9 @@ button {
 }
 .react-practice-method h2 {
   margin: 0.55rem 0 0.7rem;
-  font: 700 clamp(2rem, 4vw, 3.4rem)/1 Georgia, serif;
+  font:
+    700 clamp(2rem, 4vw, 3.4rem)/1 Georgia,
+    serif;
   letter-spacing: -0.035em;
 }
 .react-practice-method p {
@@ -1217,7 +1285,9 @@ button {
 }
 .react-task-card h3 {
   margin: 2rem 0 0.75rem;
-  font: 700 clamp(1.5rem, 3vw, 2rem)/1.1 Georgia, serif;
+  font:
+    700 clamp(1.5rem, 3vw, 2rem)/1.1 Georgia,
+    serif;
 }
 .react-task-card > p {
   margin: 0;
@@ -1321,7 +1391,9 @@ button {
 .footer-feedback h2 {
   margin: 0.55rem 0 0.5rem;
   color: #e8f3f1;
-  font: 700 clamp(1.4rem, 3vw, 2rem)/1.15 Georgia, serif;
+  font:
+    700 clamp(1.4rem, 3vw, 2rem)/1.15 Georgia,
+    serif;
 }
 .footer-feedback p {
   margin: 0;
@@ -2756,6 +2828,11 @@ button {
   }
   .performance-chapter-status {
     display: none;
+  }
+  .performance-chapter-status.completed {
+    display: inline-flex;
+    grid-column: 2;
+    justify-self: start;
   }
   .performance-chapter-title {
     align-items: flex-start;

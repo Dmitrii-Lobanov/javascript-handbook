@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notifyCompletionChange } from "./ChapterRoadmapStatus";
 
 export function TextSizeControls() {
   const [scale, setScale] = useState(1);
@@ -56,6 +57,7 @@ export function CompletionControl({ slug }: { slug: string }) {
     else completed.add(slug);
     localStorage.setItem("handbook-completed", JSON.stringify([...completed]));
     setComplete(!complete);
+    notifyCompletionChange();
   }
 
   return (
