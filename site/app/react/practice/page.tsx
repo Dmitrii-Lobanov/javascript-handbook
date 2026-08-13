@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { reactPracticeArticles } from "@/generated/content";
 import { ReactNav } from "../../components/TechnologyNav";
+import { CompletionLabel, SectionProgress } from "../../components/ChapterRoadmapStatus";
 
 export const metadata: Metadata = {
   title: "React Live Coding Articles",
@@ -167,6 +168,12 @@ export default function ReactPracticePage() {
               The collection progresses from reusable UI primitives to asynchronous workflows and
               application-level state.
             </p>
+            <SectionProgress
+              itemSlugs={reactPracticeArticles.map(
+                (article) => `react-practice-${article.slug}`,
+              )}
+              itemLabel="articles"
+            />
           </div>
 
           <div className="react-task-grid">
@@ -176,7 +183,14 @@ export default function ReactPracticePage() {
                 <>
                   <div className="react-task-card-top">
                     <span>{String(index + 1).padStart(2, "0")}</span>
-                    <small>{available ? "Available" : "Article planned"}</small>
+                    {available ? (
+                      <CompletionLabel
+                        className="react-task-status"
+                        slug={`react-practice-${task.slug}`}
+                      />
+                    ) : (
+                      <small>Article planned</small>
+                    )}
                   </div>
                   <h3>{task.title}</h3>
                   <p>{task.description}</p>

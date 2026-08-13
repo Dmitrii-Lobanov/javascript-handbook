@@ -1,20 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Chapter, RoadmapPart } from "@/generated/content";
+import { SectionProgress, useCompletionStatus } from "./ChapterRoadmapStatus";
 
 export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: RoadmapPart[] }) {
   const [query, setQuery] = useState("");
-  const [completed, setCompleted] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      setCompleted(JSON.parse(localStorage.getItem("handbook-completed") ?? "[]"));
-    } catch {
-      setCompleted([]);
-    }
-  }, []);
 
   const search = useMemo(() => {
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -53,15 +45,6 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
     chaptersByPart.set(chapter.partNumber, partChapters);
   });
 
-  const percent = availableChapters.length
-    ? Math.round(
-        (completed.filter((slug) => availableChapters.some((chapter) => chapter.slug === slug))
-          .length /
-          availableChapters.length) *
-          100,
-      )
-    : 0;
-
   return (
     <section className="library-section" id="library">
       <div className="library-heading">
@@ -70,15 +53,7 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
           <h2>Handbook Parts</h2>
           <p>Choose a part, then open the chapter you want to study.</p>
         </div>
-        <div className="progress-card" aria-label={`${percent}% of available chapters complete`}>
-          <div className="progress-label">
-            <span>Reading progress</span>
-            <strong>{percent}%</strong>
-          </div>
-          <div className="progress-track">
-            <span style={{ width: `${percent}%` }} />
-          </div>
-        </div>
+        <SectionProgress itemSlugs={availableChapters.map((chapter) => chapter.slug)} />
       </div>
 
       <label className="search-box">
@@ -108,11 +83,7 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
       {isSearching ? (
         <div className="chapter-grid">
           {search.published.map((chapter) => (
-            <ChapterCard
-              chapter={chapter}
-              isComplete={completed.includes(chapter.slug)}
-              key={chapter.slug}
-            />
+            <ChapterCard chapter={chapter} key={chapter.slug} />
           ))}
         </div>
       ) : (
@@ -142,11 +113,7 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
                   {published.length > 0 ? (
                     <div className="chapter-grid">
                       {published.map((chapter) => (
-                        <ChapterCard
-                          chapter={chapter}
-                          isComplete={completed.includes(chapter.slug)}
-                          key={chapter.slug}
-                        />
+                        <ChapterCard chapter={chapter} key={chapter.slug} />
                       ))}
                     </div>
                   ) : (
@@ -203,7 +170,8 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
   );
 }
 
-function ChapterCard({ chapter, isComplete }: { chapter: Chapter; isComplete: boolean }) {
+function ChapterCard({ chapter }: { chapter: Chapter }) {
+  const isComplete = useCompletionStatus(chapter.slug);
   return (
     <Link className="chapter-card" href={`/javascript/handbook/chapters/${chapter.slug}`}>
       <div className="chapter-card-top">

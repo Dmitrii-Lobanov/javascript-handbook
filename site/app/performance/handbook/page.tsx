@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TrackNav } from "../../components/TechnologyNav";
 import { getTrack } from "../../lib/tracks";
 import { performanceChapters } from "@/generated/content";
-import { ChapterRoadmapStatus, HandbookProgress } from "../../components/ChapterRoadmapStatus";
+import { ChapterRoadmapStatus, SectionProgress } from "../../components/ChapterRoadmapStatus";
 
 export const metadata: Metadata = {
   title: "Performance Handbook Roadmap",
@@ -239,8 +239,8 @@ export default function PerformanceHandbookPage() {
               Priority chapters establish the first useful release. Every chapter will connect its
               model to measurements, interview questions, exercises, and practical investigations.
             </p>
-            <HandbookProgress
-              chapterSlugs={performanceChapters.map((chapter) => `performance-${chapter.slug}`)}
+            <SectionProgress
+              itemSlugs={performanceChapters.map((chapter) => `performance-${chapter.slug}`)}
             />
           </div>
 

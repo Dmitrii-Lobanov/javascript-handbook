@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { reactChapters } from "@/generated/content";
 import { ReactNav } from "../../components/TechnologyNav";
-import { ChapterRoadmapStatus, HandbookProgress } from "../../components/ChapterRoadmapStatus";
+import { ChapterRoadmapStatus, SectionProgress } from "../../components/ChapterRoadmapStatus";
 
 export const metadata: Metadata = {
   title: "React Interview Handbook Roadmap",
@@ -363,8 +363,8 @@ export default function ReactHandbookPage() {
               Handbook chapters develop transferable mental models. Implementation scenarios stay in
               React Practice, where they can include requirements, hints, and complete solutions.
             </p>
-            <HandbookProgress
-              chapterSlugs={reactChapters.map((chapter) => `react-${chapter.slug}`)}
+            <SectionProgress
+              itemSlugs={reactChapters.map((chapter) => `react-${chapter.slug}`)}
             />
           </div>
 

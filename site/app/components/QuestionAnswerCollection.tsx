@@ -1,4 +1,8 @@
+"use client";
+
 import { MarkdownContent } from "./MarkdownContent";
+import { CompletionLabel, SectionProgress } from "./ChapterRoadmapStatus";
+import { CompletionControl } from "./ReaderControls";
 import type { QuestionAnswer, QuestionRoadmapSection } from "@/generated/content";
 
 export function QuestionAnswerCollection({
@@ -14,6 +18,8 @@ export function QuestionAnswerCollection({
 }) {
   const questionCount = roadmap.reduce((total, section) => total + section.questions.length, 0);
   const answersByNumber = new Map(answers.map((answer) => [answer.number, answer]));
+  const completionPrefix = `${technology.toLowerCase()}-q-and-a`;
+  const completionSlugs = answers.map((answer) => `${completionPrefix}-${answer.number}`);
 
   return (
     <main className="questions-page">
@@ -39,6 +45,7 @@ export function QuestionAnswerCollection({
           <span className="eyebrow">Q&amp;A topics</span>
           <h2 id="questions-roadmap-title">Choose a topic</h2>
           <p>Open a question for the concise answer, explanation, and deeper follow-up.</p>
+          <SectionProgress itemSlugs={completionSlugs} itemLabel="questions" />
         </div>
 
         <div className="question-section-list">
@@ -62,6 +69,11 @@ export function QuestionAnswerCollection({
                         <summary>
                           <span>{String(question.number).padStart(3, "0")}</span>
                           <p>{question.title}</p>
+                          <CompletionLabel
+                            className="question-completion-label"
+                            hideIncomplete
+                            slug={`${completionPrefix}-${question.number}`}
+                          />
                           <span className="answer-toggle" aria-hidden="true" />
                         </summary>
                         <div className="answer-body">
@@ -92,6 +104,10 @@ export function QuestionAnswerCollection({
                               </div>
                             </details>
                           )}
+                          <div className="answer-completion">
+                            <span>Finished reviewing this question?</span>
+                            <CompletionControl slug={`${completionPrefix}-${question.number}`} />
+                          </div>
                         </div>
                       </details>
                     </li>

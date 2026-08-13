@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { notifyCompletionChange } from "./ChapterRoadmapStatus";
+import { toggleCompletion, useCompletionStatus } from "./ChapterRoadmapStatus";
 
 export function TextSizeControls() {
   const [scale, setScale] = useState(1);
@@ -38,26 +38,10 @@ export function TextSizeControls() {
 }
 
 export function CompletionControl({ slug }: { slug: string }) {
-  const [complete, setComplete] = useState(false);
-
-  useEffect(() => {
-    try {
-      const completed = JSON.parse(localStorage.getItem("handbook-completed") ?? "[]") as string[];
-      setComplete(completed.includes(slug));
-    } catch {
-      setComplete(false);
-    }
-  }, [slug]);
+  const complete = useCompletionStatus(slug);
 
   function toggleComplete() {
-    const completed = new Set<string>(
-      JSON.parse(localStorage.getItem("handbook-completed") ?? "[]"),
-    );
-    if (complete) completed.delete(slug);
-    else completed.add(slug);
-    localStorage.setItem("handbook-completed", JSON.stringify([...completed]));
-    setComplete(!complete);
-    notifyCompletionChange();
+    toggleCompletion(slug);
   }
 
   return (

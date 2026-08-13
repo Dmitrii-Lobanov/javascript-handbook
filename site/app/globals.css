@@ -992,9 +992,14 @@ button {
 }
 .handbook-progress-summary {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+.handbook-progress-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
 }
 .handbook-progress-summary strong {
   color: var(--ink);
@@ -1004,6 +1009,26 @@ button {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 750;
+}
+.handbook-progress-summary button {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.handbook-progress-summary button:hover:not(:disabled),
+.handbook-progress-summary button:focus-visible {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.handbook-progress-summary button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 .handbook-progress progress {
   width: 100%;
@@ -1025,6 +1050,16 @@ button {
 .handbook-progress progress::-moz-progress-bar {
   border-radius: 99px;
   background: var(--teal);
+}
+@media (max-width: 520px) {
+  .handbook-progress-summary,
+  .handbook-progress-summary > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .handbook-progress-summary {
+    gap: 0.75rem;
+  }
 }
 .performance-part-list {
   display: grid;
