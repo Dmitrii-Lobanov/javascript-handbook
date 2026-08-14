@@ -169,9 +169,7 @@ export default function ReactPracticePage() {
               application-level state.
             </p>
             <SectionProgress
-              itemSlugs={reactPracticeArticles.map(
-                (article) => `react-practice-${article.slug}`,
-              )}
+              itemSlugs={reactPracticeArticles.map((article) => `react-practice-${article.slug}`)}
               itemLabel="articles"
             />
           </div>

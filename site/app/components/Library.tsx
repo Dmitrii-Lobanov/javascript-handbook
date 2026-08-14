@@ -53,7 +53,10 @@ export function Library({ chapters, roadmap }: { chapters: Chapter[]; roadmap: R
           <h2>Handbook Parts</h2>
           <p>Choose a part, then open the chapter you want to study.</p>
         </div>
-        <SectionProgress itemSlugs={availableChapters.map((chapter) => chapter.slug)} />
+        <SectionProgress
+          itemSlugs={availableChapters.map((chapter) => chapter.slug)}
+          resetSlugs={chapters.map((chapter) => chapter.slug)}
+        />
       </div>
 
       <label className="search-box">

@@ -1065,6 +1065,59 @@ button {
   display: grid;
   gap: 1rem;
 }
+.library-heading .handbook-progress {
+  width: min(460px, 100%);
+  margin-top: 0;
+  background: var(--paper);
+}
+.questions-roadmap-heading .handbook-progress {
+  max-width: 760px;
+}
+.react-task-card-top .react-task-status {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.58rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.react-task-card-top .react-task-status.completed,
+.question-completion-label.completed {
+  border-color: color-mix(in srgb, var(--teal) 65%, var(--line));
+  background: color-mix(in srgb, var(--teal) 14%, transparent);
+  color: var(--teal);
+}
+.question-completion-label {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.answer-completion {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.answer-completion > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+.answer-completion .reader-controls {
+  flex: 0 0 auto;
+}
 .performance-part {
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1751,7 +1804,7 @@ button {
 }
 .answered-question details > summary {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 34px;
+  grid-template-columns: 48px minmax(0, 1fr) auto 34px;
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.4rem;
@@ -2995,6 +3048,9 @@ button {
     gap: 0.65rem;
     padding: 0.9rem 1rem;
   }
+  .question-completion-label {
+    display: none;
+  }
   .answer-toggle {
     width: 30px;
     height: 30px;
@@ -3003,6 +3059,11 @@ button {
     grid-template-columns: 1fr;
     gap: 0;
     padding: 0 1rem 1rem 4.1rem;
+  }
+  .answer-completion {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
   }
   .reader-shell {
     padding: 1.5rem 1.1rem 4rem;

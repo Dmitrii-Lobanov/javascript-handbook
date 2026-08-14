@@ -78,9 +78,11 @@ export function CompletionLabel({
 export function SectionProgress({
   itemSlugs,
   itemLabel = "chapters",
+  resetSlugs = itemSlugs,
 }: {
   itemSlugs: string[];
   itemLabel?: string;
+  resetSlugs?: string[];
 }) {
   const completedCount = useSyncExternalStore(
     subscribe,
@@ -95,7 +97,7 @@ export function SectionProgress({
 
   function resetProgress() {
     const completed = readCompletedSlugs();
-    itemSlugs.forEach((slug) => completed.delete(slug));
+    resetSlugs.forEach((slug) => completed.delete(slug));
     localStorage.setItem("handbook-completed", JSON.stringify([...completed]));
     notifyCompletionChange();
   }

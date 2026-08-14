@@ -363,9 +363,7 @@ export default function ReactHandbookPage() {
               Handbook chapters develop transferable mental models. Implementation scenarios stay in
               React Practice, where they can include requirements, hints, and complete solutions.
             </p>
-            <SectionProgress
-              itemSlugs={reactChapters.map((chapter) => `react-${chapter.slug}`)}
-            />
+            <SectionProgress itemSlugs={reactChapters.map((chapter) => `react-${chapter.slug}`)} />
           </div>
 
           <div className="performance-part-list">

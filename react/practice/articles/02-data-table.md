@@ -2,9 +2,9 @@
 
 ## The interview prompt
 
-Build a reusable data table that displays a collection of employees. Users must be able to:
+Build a reusable, typed data table that can display any record shape. The caller supplies rows, stable row identity, and column definitions. Users must be able to:
 
-- sort by name, role, or start date;
+- sort columns that opt into sorting;
 - filter rows with a text query;
 - select individual rows and select all visible rows;
 - move between pages;
@@ -40,7 +40,7 @@ Before coding, establish the contract:
 For this walkthrough:
 
 - sorting uses one column and toggles ascending/descending;
-- filtering searches name and role case-insensitively;
+- filtering searches columns that opt into filtering;
 - select all affects the current page;
 - selection survives filtering and pagination;
 - pagination and all transformations are local;
@@ -51,7 +51,7 @@ For this walkthrough:
 ### Required in the interview version
 
 - Semantic `<table>`, `<thead>`, `<tbody>`, header cells, and captions.
-- Sorting by three columns with a visible and announced direction.
+- Configurable rendering plus opt-in sorting and filtering per column.
 - Text filtering.
 - Stable row selection and select-all-visible behavior.
 - Local pagination whose page remains valid after filtering.
@@ -71,20 +71,20 @@ For this walkthrough:
 Keep only user decisions in state:
 
 ```tsx
-type SortKey = "name" | "role" | "startedAt";
+type RowId = string | number;
 type SortDirection = "ascending" | "descending";
 
 type SortState = {
-  key: SortKey;
+  columnId: string;
   direction: SortDirection;
 };
 
 const [query, setQuery] = useState("");
 const [sort, setSort] = useState<SortState>({
-  key: "name",
+  columnId: "name",
   direction: "ascending",
 });
-const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+const [selectedIds, setSelectedIds] = useState<Set<RowId>>(() => new Set());
 const [page, setPage] = useState(1);
 ```
 
@@ -103,7 +103,7 @@ visible rows
 Important invariants:
 
 - input `rows` are never mutated;
-- selection is identified by `row.id`, not array position;
+- selection is identified by `getRowId(row)`, not by a hard-coded field or array position;
 - page is always between `1` and `pageCount`;
 - the header checkbox describes only visible rows;
 - `aria-sort` exists only on the active sortable header.
@@ -120,54 +120,56 @@ DataTable
 └── pagination controls
 ```
 
-Pure helpers make comparison rules independently testable:
+The generic boundary is a small column contract, not knowledge of a particular record type:
 
 ```tsx
-function compareEmployees(left: Employee, right: Employee, key: SortKey) {
-  if (key === "startedAt") {
-    return Date.parse(left.startedAt) - Date.parse(right.startedAt);
-  }
+type SortValue = string | number | Date;
 
-  return left[key].localeCompare(right[key], undefined, {
-    sensitivity: "base",
-    numeric: true,
-  });
-}
+type ColumnDef<T> = {
+  id: string;
+  header: string;
+  cell: (row: T) => ReactNode;
+  sortValue?: (row: T) => SortValue;
+  searchValue?: (row: T) => string;
+  rowHeader?: boolean;
+};
 ```
 
-Do not begin with a generic column-definition framework. Build the vertical slice, then describe how columns could become configuration if reuse actually requires it.
+The caller owns domain knowledge—how to display a value, which value should be compared, and which text should be searched. The table owns only generic transformations, selection, pagination, and semantics.
 
 ## Step-by-step React solution
 
 ### Step 1: render a semantic table
 
-Start with data and correct HTML before adding state:
+Start with the generic contract and correct HTML before adding state:
 
 ```tsx
-type Employee = {
-  id: string;
-  name: string;
-  role: string;
-  startedAt: string;
-};
-
-function DataTable({ rows }: { rows: Employee[] }) {
+function DataTable<T>({
+  rows,
+  columns,
+  getRowId,
+  caption,
+}: DataTableProps<T>) {
   return (
     <table>
-      <caption>Employees</caption>
+      <caption>{caption}</caption>
       <thead>
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Role</th>
-          <th scope="col">Start date</th>
+          {columns.map(column => (
+            <th scope="col" key={column.id}>{column.header}</th>
+          ))}
         </tr>
       </thead>
       <tbody>
         {rows.map(row => (
-          <tr key={row.id}>
-            <th scope="row">{row.name}</th>
-            <td>{row.role}</td>
-            <td><time dateTime={row.startedAt}>{formatDate(row.startedAt)}</time></td>
+          <tr key={getRowId(row)}>
+            {columns.map(column =>
+              column.rowHeader ? (
+                <th scope="row" key={column.id}>{column.cell(row)}</th>
+              ) : (
+                <td key={column.id}>{column.cell(row)}</td>
+              ),
+            )}
           </tr>
         ))}
       </tbody>
@@ -184,15 +186,15 @@ Put a real button inside each sortable header. The button provides keyboard acti
 
 ```tsx
 const [sort, setSort] = useState<SortState>({
-  key: "name",
+  columnId: "name",
   direction: "ascending",
 });
 
-function requestSort(key: SortKey) {
+function requestSort(columnId: string) {
   setSort(current => ({
-    key,
+    columnId,
     direction:
-      current.key === key && current.direction === "ascending"
+      current.columnId === columnId && current.direction === "ascending"
         ? "descending"
         : "ascending",
   }));
@@ -202,8 +204,13 @@ function requestSort(key: SortKey) {
 Derive a copied, sorted array:
 
 ```tsx
+const sortColumn = columns.find(column => column.id === sort.columnId);
 const sortedRows = [...rows].sort((left, right) => {
-  const result = compareEmployees(left, right, sort.key);
+  if (!sortColumn?.sortValue) return 0;
+  const result = compareValues(
+    sortColumn.sortValue(left),
+    sortColumn.sortValue(right),
+  );
   return sort.direction === "ascending" ? result : -result;
 });
 ```
@@ -213,9 +220,9 @@ Never call `rows.sort(...)`: `sort` mutates the array supplied by the parent.
 Expose the active direction through `aria-sort` on the `<th>`:
 
 ```tsx
-<th scope="col" aria-sort={sort.key === "name" ? sort.direction : undefined}>
-  <button type="button" onClick={() => requestSort("name")}>
-    Name <span aria-hidden="true">{sortIcon("name", sort)}</span>
+<th scope="col" aria-sort={sort.columnId === column.id ? sort.direction : undefined}>
+  <button type="button" onClick={() => requestSort(column.id)}>
+    {column.header}
   </button>
 </th>
 ```
@@ -230,18 +237,19 @@ const normalizedQuery = query.trim().toLocaleLowerCase();
 const filteredRows = rows.filter(row => {
   if (!normalizedQuery) return true;
 
-  return [row.name, row.role].some(value =>
-    value.toLocaleLowerCase().includes(normalizedQuery),
-  );
+  return columns.some(column => {
+    const value = column.searchValue?.(row);
+    return value?.toLocaleLowerCase().includes(normalizedQuery) ?? false;
+  });
 });
 
 const sortedRows = [...filteredRows].sort(/* comparator */);
 ```
 
 ```tsx
-<label htmlFor="employee-filter">Filter employees</label>
+<label htmlFor="table-filter">Filter rows</label>
 <input
-  id="employee-filter"
+  id="table-filter"
   type="search"
   value={query}
   onChange={event => {
@@ -281,7 +289,7 @@ Use `currentPage` rather than setting state during render. It keeps the rendered
 Never mutate the existing `Set`; return a new one so React receives a new state identity:
 
 ```tsx
-function toggleRow(id: string) {
+function toggleRow(id: RowId) {
   setSelectedIds(current => {
     const next = new Set(current);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -293,10 +301,11 @@ function toggleRow(id: string) {
 Derive header checkbox state from the current page:
 
 ```tsx
+const pageIds = pageRows.map(getRowId);
 const allPageRowsSelected =
-  pageRows.length > 0 && pageRows.every(row => selectedIds.has(row.id));
+  pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
 const somePageRowsSelected =
-  pageRows.some(row => selectedIds.has(row.id)) && !allPageRowsSelected;
+  pageIds.some(id => selectedIds.has(id)) && !allPageRowsSelected;
 ```
 
 HTML checkboxes have an `indeterminate` DOM property rather than an attribute, so synchronize it through a ref:
@@ -321,7 +330,7 @@ Keep the table structure when there are no matching rows:
 <tbody>
   {pageRows.length ? rowsMarkup : (
     <tr>
-      <td colSpan={4}>No employees match “{query}”.</td>
+      <td colSpan={columns.length + 1}>No rows match “{query}”.</td>
     </tr>
   )}
 </tbody>
@@ -331,7 +340,7 @@ Provide concise status text outside the table:
 
 ```tsx
 <p role="status" aria-live="polite">
-  {sortedRows.length} employees. {selectedIds.size} selected.
+  {sortedRows.length} rows. {selectedIds.size} selected.
 </p>
 ```
 
@@ -339,75 +348,108 @@ Do not announce every visual detail. Native button, checkbox, table, and `aria-s
 
 ## Complete interview-sized implementation
 
-```tsx
-import { useEffect, useId, useRef, useState } from "react";
+The component below knows nothing about employees, products, invoices, or any other domain. All domain behavior enters through typed props.
 
-type Employee = {
+```tsx
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+type RowId = string | number;
+type SortValue = string | number | Date;
+type SortDirection = "ascending" | "descending";
+type SortState = { columnId: string; direction: SortDirection };
+
+export type ColumnDef<T> = {
   id: string;
-  name: string;
-  role: string;
-  startedAt: string;
+  header: string;
+  cell: (row: T) => ReactNode;
+  sortValue?: (row: T) => SortValue;
+  searchValue?: (row: T) => string;
+  rowHeader?: boolean;
 };
 
-type SortKey = "name" | "role" | "startedAt";
-type SortDirection = "ascending" | "descending";
-type SortState = { key: SortKey; direction: SortDirection };
-
-type Props = {
-  rows: Employee[];
+type DataTableProps<T> = {
+  rows: readonly T[];
+  columns: readonly ColumnDef<T>[];
+  getRowId: (row: T) => RowId;
+  getRowLabel: (row: T) => string;
+  caption: string;
+  initialSort?: SortState;
   pageSize?: number;
 };
 
-function compareEmployees(left: Employee, right: Employee, key: SortKey) {
-  if (key === "startedAt") {
-    return Date.parse(left.startedAt) - Date.parse(right.startedAt);
+function compareValues(left: SortValue, right: SortValue) {
+  if (left instanceof Date && right instanceof Date) {
+    return left.getTime() - right.getTime();
   }
 
-  return left[key].localeCompare(right[key], undefined, {
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+
+  return String(left).localeCompare(String(right), undefined, {
     sensitivity: "base",
     numeric: true,
   });
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(value),
-  );
-}
-
-export function EmployeeTable({ rows, pageSize = 5 }: Props) {
+export function DataTable<T>({
+  rows,
+  columns,
+  getRowId,
+  getRowLabel,
+  caption,
+  initialSort,
+  pageSize = 5,
+}: DataTableProps<T>) {
   const filterId = useId();
   const selectAllRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortState>({
-    key: "name",
-    direction: "ascending",
-  });
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [sort, setSort] = useState<SortState | null>(initialSort ?? null);
+  const [selectedIds, setSelectedIds] = useState<Set<RowId>>(
+    () => new Set(),
+  );
   const [page, setPage] = useState(1);
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const filteredRows = rows.filter(row =>
-    !normalizedQuery
-      ? true
-      : [row.name, row.role].some(value =>
-          value.toLocaleLowerCase().includes(normalizedQuery),
-        ),
-  );
+  const filteredRows = rows.filter(row => {
+    if (!normalizedQuery) return true;
 
-  const sortedRows = [...filteredRows].sort((left, right) => {
-    const result = compareEmployees(left, right, sort.key);
-    return sort.direction === "ascending" ? result : -result;
+    return columns.some(column => {
+      const value = column.searchValue?.(row);
+      return value?.toLocaleLowerCase().includes(normalizedQuery) ?? false;
+    });
   });
+
+  const sortColumn = sort
+    ? columns.find(column => column.id === sort.columnId)
+    : undefined;
+
+  const sortedRows =
+    sort && sortColumn?.sortValue
+      ? [...filteredRows].sort((left, right) => {
+          const result = compareValues(
+            sortColumn.sortValue!(left),
+            sortColumn.sortValue!(right),
+          );
+          return sort.direction === "ascending" ? result : -result;
+        })
+      : [...filteredRows];
 
   const pageCount = Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const startIndex = (currentPage - 1) * pageSize;
   const pageRows = sortedRows.slice(startIndex, startIndex + pageSize);
+  const pageIds = pageRows.map(getRowId);
   const allPageRowsSelected =
-    pageRows.length > 0 && pageRows.every(row => selectedIds.has(row.id));
+    pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
   const somePageRowsSelected =
-    pageRows.some(row => selectedIds.has(row.id)) && !allPageRowsSelected;
+    pageIds.some(id => selectedIds.has(id)) && !allPageRowsSelected;
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -415,18 +457,19 @@ export function EmployeeTable({ rows, pageSize = 5 }: Props) {
     }
   }, [somePageRowsSelected]);
 
-  function requestSort(key: SortKey) {
+  function requestSort(columnId: string) {
     setSort(current => ({
-      key,
+      columnId,
       direction:
-        current.key === key && current.direction === "ascending"
+        current?.columnId === columnId &&
+        current.direction === "ascending"
           ? "descending"
           : "ascending",
     }));
     setPage(1);
   }
 
-  function toggleRow(id: string) {
+  function toggleRow(id: RowId) {
     setSelectedIds(current => {
       const next = new Set(current);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -437,33 +480,18 @@ export function EmployeeTable({ rows, pageSize = 5 }: Props) {
   function togglePage() {
     setSelectedIds(current => {
       const next = new Set(current);
-      for (const row of pageRows) {
-        allPageRowsSelected ? next.delete(row.id) : next.add(row.id);
+      for (const id of pageIds) {
+        allPageRowsSelected ? next.delete(id) : next.add(id);
       }
       return next;
     });
   }
 
-  function sortIcon(key: SortKey) {
-    if (sort.key !== key) return "↕";
-    return sort.direction === "ascending" ? "↑" : "↓";
-  }
-
-  function sortHeader(label: string, key: SortKey) {
-    return (
-      <th scope="col" aria-sort={sort.key === key ? sort.direction : undefined}>
-        <button type="button" onClick={() => requestSort(key)}>
-          {label} <span aria-hidden="true">{sortIcon(key)}</span>
-        </button>
-      </th>
-    );
-  }
-
   return (
-    <section aria-labelledby={`${filterId}-title`}>
-      <h2 id={`${filterId}-title`}>Employees</h2>
+    <section aria-labelledby={`\${filterId}-title`}>
+      <h2 id={`\${filterId}-title`}>{caption}</h2>
 
-      <label htmlFor={filterId}>Filter by name or role</label>
+      <label htmlFor={filterId}>Filter rows</label>
       <input
         id={filterId}
         type="search"
@@ -475,11 +503,11 @@ export function EmployeeTable({ rows, pageSize = 5 }: Props) {
       />
 
       <p role="status" aria-live="polite">
-        {sortedRows.length} employees. {selectedIds.size} selected.
+        {sortedRows.length} rows. {selectedIds.size} selected.
       </p>
 
       <table>
-        <caption>Employee directory</caption>
+        <caption>{caption}</caption>
         <thead>
           <tr>
             <th scope="col">
@@ -489,38 +517,80 @@ export function EmployeeTable({ rows, pageSize = 5 }: Props) {
                 checked={allPageRowsSelected}
                 disabled={pageRows.length === 0}
                 onChange={togglePage}
-                aria-label="Select all employees on this page"
+                aria-label="Select all rows on this page"
               />
             </th>
-            {sortHeader("Name", "name")}
-            {sortHeader("Role", "role")}
-            {sortHeader("Start date", "startedAt")}
+            {columns.map(column => {
+              const active = sort?.columnId === column.id;
+              return (
+                <th
+                  scope="col"
+                  key={column.id}
+                  aria-sort={
+                    active && column.sortValue
+                      ? sort.direction
+                      : undefined
+                  }
+                >
+                  {column.sortValue ? (
+                    <button
+                      type="button"
+                      onClick={() => requestSort(column.id)}
+                    >
+                      {column.header}
+                      <span aria-hidden="true">
+                        {active
+                          ? sort.direction === "ascending"
+                            ? " ↑"
+                            : " ↓"
+                          : " ↕"}
+                      </span>
+                    </button>
+                  ) : (
+                    column.header
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {pageRows.length > 0 ? (
-            pageRows.map(row => (
-              <tr key={row.id}>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(row.id)}
-                    onChange={() => toggleRow(row.id)}
-                    aria-label={`Select ${row.name}`}
-                  />
-                </td>
-                <th scope="row">{row.name}</th>
-                <td>{row.role}</td>
-                <td><time dateTime={row.startedAt}>{formatDate(row.startedAt)}</time></td>
-              </tr>
-            ))
+            pageRows.map(row => {
+              const rowId = getRowId(row);
+              return (
+                <tr key={rowId}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(rowId)}
+                      onChange={() => toggleRow(rowId)}
+                      aria-label={`Select \${getRowLabel(row)}`}
+                    />
+                  </td>
+                  {columns.map(column =>
+                    column.rowHeader ? (
+                      <th scope="row" key={column.id}>
+                        {column.cell(row)}
+                      </th>
+                    ) : (
+                      <td key={column.id}>{column.cell(row)}</td>
+                    ),
+                  )}
+                </tr>
+              );
+            })
           ) : (
-            <tr><td colSpan={4}>No employees match “{query}”.</td></tr>
+            <tr>
+              <td colSpan={columns.length + 1}>
+                No rows match “{query}”.
+              </td>
+            </tr>
           )}
         </tbody>
       </table>
 
-      <nav aria-label="Employee table pages">
+      <nav aria-label={`\${caption} pages`}>
         <button
           type="button"
           disabled={currentPage === 1}
@@ -532,7 +602,9 @@ export function EmployeeTable({ rows, pageSize = 5 }: Props) {
         <button
           type="button"
           disabled={currentPage === pageCount}
-          onClick={() => setPage(value => Math.min(pageCount, value + 1))}
+          onClick={() =>
+            setPage(value => Math.min(pageCount, value + 1))
+          }
         >
           Next
         </button>
@@ -540,6 +612,56 @@ export function EmployeeTable({ rows, pageSize = 5 }: Props) {
     </section>
   );
 }
+```
+
+Here is one employee configuration. A product or invoice table supplies a different row type and column array without changing `DataTable`:
+
+```tsx
+type Employee = {
+  id: string;
+  name: string;
+  role: string;
+  startedAt: string;
+};
+
+const employeeColumns = [
+  {
+    id: "name",
+    header: "Name",
+    cell: (employee: Employee) => employee.name,
+    sortValue: (employee: Employee) => employee.name,
+    searchValue: (employee: Employee) => employee.name,
+    rowHeader: true,
+  },
+  {
+    id: "role",
+    header: "Role",
+    cell: (employee: Employee) => employee.role,
+    sortValue: (employee: Employee) => employee.role,
+    searchValue: (employee: Employee) => employee.role,
+  },
+  {
+    id: "startedAt",
+    header: "Start date",
+    cell: (employee: Employee) => (
+      <time dateTime={employee.startedAt}>
+        {new Intl.DateTimeFormat(undefined, {
+          dateStyle: "medium",
+        }).format(new Date(employee.startedAt))}
+      </time>
+    ),
+    sortValue: (employee: Employee) => new Date(employee.startedAt),
+  },
+] satisfies readonly ColumnDef<Employee>[];
+
+<DataTable
+  rows={employees}
+  columns={employeeColumns}
+  getRowId={employee => employee.id}
+  getRowLabel={employee => employee.name}
+  caption="Employee directory"
+  initialSort={{ columnId: "name", direction: "ascending" }}
+/>;
 ```
 
 ## Why the solution is structured this way
@@ -588,10 +710,10 @@ For large datasets:
 
 Essential integration tests:
 
-1. Initial rows are ordered by name ascending.
-2. Clicking Name toggles descending order and updates `aria-sort`.
+1. The configured initial sort is applied through the column's `sortValue`.
+2. Clicking a sortable header toggles direction and updates `aria-sort`.
 3. Clicking another header activates its ascending sort.
-4. Filtering searches name and role and resets to page one.
+4. Filtering searches only columns with `searchValue` and resets to page one.
 5. Empty filtering retains the table and shows the empty message.
 6. Pagination displays the correct slice and disables boundary buttons.
 7. Row selection survives page and filter changes.
@@ -599,7 +721,7 @@ Essential integration tests:
 9. The header checkbox becomes indeterminate for partial page selection.
 10. Sort buttons and checkboxes work using keyboard interaction.
 
-Unit-test `compareEmployees` separately if its null handling, locale rules, or domain ordering becomes complex.
+Unit-test `compareValues` and domain-specific column accessors separately when null handling, locale rules, or custom ordering becomes complex.
 
 ## Common candidate mistakes
 
@@ -623,13 +745,13 @@ A `<th onClick>` is not automatically keyboard operable. Use a button inside the
 
 State the selection scope before implementation. “All” may mean page, filtered result, loaded records, or every server record.
 
-### Premature generic abstraction
+### Overengineering the generic abstraction
 
-A column framework can consume the interview while hiding the essential reasoning. Prove one typed table first.
+The useful generic boundary is small: identity plus column accessors and renderers. Avoid recreating a full table library with plugins, nested headers, and dozens of options during the interview.
 
 ## Senior-level improvements
 
-- Extract typed column definitions when multiple tables share rendering and comparison behavior.
+- Add reusable column factories for repeated domain patterns such as currency, dates, and status badges.
 - Synchronize filters, sorting, and page with URL search parameters.
 - Add server-state caching and cancellation for remote transformations.
 - Support explicit null ordering and locale-sensitive collators.
@@ -640,7 +762,7 @@ A column framework can consume the interview while hiding the essential reasonin
 
 ## A 60-second solution explanation
 
-I store only user decisions: query, sort descriptor, selected IDs, and page. The displayed rows are derived in a fixed pipeline—filter, copy and sort, then paginate—so there are no synchronized collection states or prop mutation. Selection uses a `Set` of stable IDs and select-all is explicitly scoped to the visible page. Native table elements preserve relationships, sort controls are buttons, and the active header exposes `aria-sort`. The only Effect synchronizes the checkbox’s indeterminate DOM property. For large remote data, I would move transformations to a cached server query and define whole-result selection separately.
+The table is generic over `T`: callers provide columns plus functions for row identity and accessible labels, so the component contains no domain field names. Each column independently defines rendering, sorting, filtering, and row-header behavior. I store only user decisions—query, sort descriptor, selected IDs, and page—and derive rows through filter, sort, and pagination. Selection uses stable caller-provided IDs, native table semantics remain intact, and the only Effect synchronizes the checkbox’s indeterminate DOM property. At server scale I would make these controls report intent to a cached remote query instead of transforming all rows locally.
 
 ## Likely interview follow-ups
 
@@ -667,6 +789,7 @@ Not for ordinary sorting, checkboxes, and links. A grid role implies a more comp
 ## Article summary
 
 - Clarify transformation and selection semantics before coding.
+- Keep domain knowledge in typed column definitions and caller-provided row identity.
 - Store interaction choices; derive displayed collections.
 - Filter, sort, and paginate in an explicit order.
 - Never mutate input arrays.
