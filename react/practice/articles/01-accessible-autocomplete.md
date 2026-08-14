@@ -2,7 +2,7 @@
 
 ## The interview prompt
 
-Build an autocomplete component that lets a user search for a person and select one of the suggested results.
+Build a reusable autocomplete component that lets a user search for and select one suggested record. The caller supplies the record type, asynchronous search function, stable identity, label, and optional rendering.
 
 The component should:
 
@@ -11,7 +11,7 @@ The component should:
 - display loading, empty, and error states;
 - support pointer and keyboard selection;
 - close when a result is selected or the user presses Escape;
-- expose the selected person to its parent.
+- expose the selected option to its parent.
 
 Assume the interview lasts 45–60 minutes. Styling is secondary to behavior, state design, and clear reasoning.
 
@@ -47,11 +47,11 @@ Before writing JSX, clarify the contract.
 
 For this article, use the following decisions:
 
-- results come from an asynchronous `searchPeople` function;
+- results come from an asynchronous caller-provided search function;
 - two characters trigger a request;
 - arbitrary text may remain in the input;
 - requests are debounced by 250 milliseconds;
-- selecting a result calls `onSelect(person)`;
+- selecting a result calls `onSelect(option)`;
 - DOM focus remains in the input while arrow keys change the active suggestion;
 - the first version uses no external component library.
 
@@ -83,22 +83,66 @@ For this article, use the following decisions:
 
 This boundary is important. A live-coding solution should be small enough to complete and rich enough to demonstrate judgment.
 
+## Type contract
+
+Define the reusable boundary before state or JSX. Every progressive checkpoint and the assembled implementation use the same generic contract:
+
+```tsx
+import type { ReactNode } from "react";
+
+type OptionId = string | number;
+
+type SearchState<T> =
+  | { status: "idle"; results: T[] }
+  | { status: "loading"; results: T[] }
+  | { status: "success"; results: T[] }
+  | { status: "error"; results: T[]; message: string };
+
+type AutocompleteProps<T> = {
+  label: string;
+  searchOptions: (
+    query: string,
+    signal: AbortSignal,
+  ) => Promise<T[]>;
+  getOptionId: (option: T) => OptionId;
+  getOptionLabel: (option: T) => string;
+  renderOption?: (option: T) => ReactNode;
+  onSelect: (option: T) => void;
+  minimumQueryLength?: number;
+  debounceDelay?: number;
+  suggestionsLabel?: string;
+};
+```
+
+The responsibilities are explicit:
+
+- `T` is the caller's result type, such as `Person`, `Product`, or `City`.
+- `searchOptions` owns data access and accepts an `AbortSignal`.
+- `getOptionId` provides stable identity without assuming an `id` field.
+- `getOptionLabel` provides input text and an accessible option label.
+- `renderOption` customizes visible content without changing combobox behavior.
+- `onSelect` returns the original typed record to the parent.
+- `debounceDelay` controls search timing without delaying the input value.
+
+For example, one caller may use:
+
+```tsx
+type Product = {
+  sku: string;
+  title: string;
+  price: number;
+};
+```
+
 ## State model and invariants
 
 Start by naming the independent pieces of state.
 
 ```ts
-type Person = {
-  id: string;
-  name: string;
-  role: string;
-};
-
-type SearchState =
-  | { status: "idle"; results: Person[] }
-  | { status: "loading"; results: Person[] }
-  | { status: "success"; results: Person[] }
-  | { status: "error"; results: Person[]; message: string };
+const [searchState, setSearchState] = useState<SearchState<T>>({
+  status: "idle",
+  results: [],
+});
 ```
 
 The component also needs:
@@ -106,10 +150,7 @@ The component also needs:
 ```ts
 const [inputValue, setInputValue] = useState("");
 const [activeIndex, setActiveIndex] = useState(-1);
-const [searchState, setSearchState] = useState<SearchState>({
-  status: "idle",
-  results: [],
-});
+const [dismissed, setDismissed] = useState(false);
 ```
 
 Do not combine these concepts accidentally:
@@ -117,14 +158,15 @@ Do not combine these concepts accidentally:
 - `inputValue` is the editable text.
 - `results` are suggestions for the current debounced query.
 - `activeIndex` identifies the suggestion currently navigated by keyboard.
-- the selected person belongs to the parent through `onSelect`.
+- `dismissed` records an intentional Escape or selection close that cannot be derived.
+- the selected option belongs to the parent through `onSelect`.
 - whether the popup is visible can normally be derived.
 
 Useful invariants:
 
 1. `activeIndex` is `-1` or identifies an existing result.
 2. Results displayed after a request belong to the latest effective query.
-3. Selecting a person sets the input to the selected label and closes the popup.
+3. Selecting an option uses `getOptionLabel`, returns the original record, and closes the popup.
 4. Escape closes the popup without selecting the active option.
 5. DOM focus remains on the input while assistive-technology focus follows the active option.
 
@@ -135,7 +177,7 @@ Avoid a collection of loosely related booleans such as `isLoading`, `hasError`, 
 Keep the interview architecture small:
 
 ```text
-PeopleAutocomplete
+Autocomplete<T>
 ├── input and label
 ├── status message
 └── suggestion list
@@ -146,15 +188,7 @@ One component is acceptable at this size. Extract behavior only when the boundar
 A reasonable public API is:
 
 ```ts
-type PeopleAutocompleteProps = {
-  label: string;
-  searchPeople: (
-    query: string,
-    signal: AbortSignal,
-  ) => Promise<Person[]>;
-  onSelect: (person: Person) => void;
-  minimumQueryLength?: number;
-};
+type ProductAutocompleteProps = AutocompleteProps<Product>;
 ```
 
 This API makes the data source injectable. The component does not know the endpoint, authentication mechanism, or application store. That makes it easier to test and reuse.
@@ -185,120 +219,86 @@ Combobox semantics
 
 If the interview ends early, you still have a working checkpoint and can explain the next step.
 
-### Step 1: build the synchronous version
+### Step 1: build a synchronous generic version
 
-Start without networking, debouncing, keyboard state, or ARIA. Validate the central data flow:
-
-```text
-input text → filtered suggestions → selected person
-```
+Start with caller-supplied local options and the type contract defined above:
 
 ```tsx
-import { useState } from "react";
-
-type Person = {
-  id: string;
-  name: string;
-  role: string;
+type LocalAutocompleteProps<T> = Pick<
+  AutocompleteProps<T>,
+  "label" | "getOptionId" | "getOptionLabel" | "renderOption" | "onSelect"
+> & {
+  options: readonly T[];
 };
 
-type Props = {
-  people: Person[];
-  onSelect: (person: Person) => void;
-};
-
-export function PeopleAutocomplete({ people, onSelect }: Props) {
+export function LocalAutocomplete<T>({
+  label,
+  options,
+  getOptionId,
+  getOptionLabel,
+  renderOption,
+  onSelect,
+}: LocalAutocompleteProps<T>) {
   const [inputValue, setInputValue] = useState("");
-
-  const normalizedQuery = inputValue.trim().toLocaleLowerCase();
-  const results = normalizedQuery
-    ? people.filter(person =>
-        person.name.toLocaleLowerCase().includes(normalizedQuery),
+  const query = inputValue.trim().toLocaleLowerCase();
+  const results = query
+    ? options.filter(option =>
+        getOptionLabel(option).toLocaleLowerCase().includes(query),
       )
     : [];
 
-  function selectPerson(person: Person) {
-    setInputValue(person.name);
-    onSelect(person);
+  function selectOption(option: T) {
+    setInputValue(getOptionLabel(option));
+    onSelect(option);
   }
 
   return (
     <div>
-      <label htmlFor="person-search">Person</label>
-      <input
-        id="person-search"
-        value={inputValue}
-        onChange={event => setInputValue(event.target.value)}
-      />
-
-      {results.length > 0 && (
-        <ul>
-          {results.map(person => (
-            <li key={person.id}>
-              <button type="button" onClick={() => selectPerson(person)}>
-                <strong>{person.name}</strong>
-                <span>{person.role}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <label>
+        {label}
+        <input
+          value={inputValue}
+          onChange={event => setInputValue(event.target.value)}
+        />
+      </label>
+      <ul>
+        {results.map(option => (
+          <li key={getOptionId(option)}>
+            <button type="button" onClick={() => selectOption(option)}>
+              {renderOption?.(option) ?? getOptionLabel(option)}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 ```
 
-At this stage, explain two decisions:
+The component assumes nothing about the shape of T. Identity, searchable labels, visible content, and the selected record all come from typed caller props.
 
-- filtered results are derived during rendering instead of synchronized through an Effect;
-- `person.id` provides stable identity, while an array index would describe position rather than the person.
+### Step 2: replace local options with asynchronous search
 
-Verify before continuing:
-
-- typing immediately updates the input;
-- matching people appear;
-- selecting a person updates the input and calls `onSelect`.
-
-### Step 2: replace local filtering with asynchronous search
-
-Change the API so the component receives a search function:
-
-```ts
-type Props = {
-  searchPeople: (query: string) => Promise<Person[]>;
-  onSelect: (person: Person) => void;
-};
-```
-
-Add explicit request state:
+Use the generic request state from the opening contract:
 
 ```tsx
-type SearchState =
-  | { status: "idle"; results: Person[] }
-  | { status: "loading"; results: Person[] }
-  | { status: "success"; results: Person[] }
-  | { status: "error"; results: Person[]; message: string };
-
-const [searchState, setSearchState] = useState<SearchState>({
+const [searchState, setSearchState] = useState<SearchState<T>>({
   status: "idle",
   results: [],
 });
-```
 
-Now synchronize results with `inputValue`:
-
-```tsx
 useEffect(() => {
   const query = inputValue.trim();
 
-  if (query.length < 2) {
+  if (query.length < minimumQueryLength) {
     setSearchState({ status: "idle", results: [] });
     return;
   }
 
+  const signal = new AbortController().signal;
   setSearchState({ status: "loading", results: [] });
 
-  searchPeople(query)
+  searchOptions(query, signal)
     .then(results => {
       setSearchState({ status: "success", results });
     })
@@ -309,63 +309,28 @@ useEffect(() => {
         message: "Suggestions could not be loaded.",
       });
     });
-}, [inputValue, searchPeople]);
+}, [inputValue, minimumQueryLength, searchOptions]);
 ```
 
-Render the status and remote results:
+Render loading, empty, and error states independently from generic option rendering:
 
 ```tsx
 {searchState.status === "loading" && <p>Loading…</p>}
-{searchState.status === "error" && <p>{searchState.message}</p>}
+{searchState.status === "error" && <p role="alert">{searchState.message}</p>}
 {searchState.status === "success" && searchState.results.length === 0 && (
-  <p>No people found.</p>
-)}
-
-{searchState.results.length > 0 && (
-  <ul>
-    {searchState.results.map(person => (
-      <li key={person.id}>
-        <button type="button" onClick={() => selectPerson(person)}>
-          {person.name}
-        </button>
-      </li>
-    ))}
-  </ul>
+  <p>No suggestions found.</p>
 )}
 ```
-
-This version demonstrates loading, success, empty, and error states, but it contains an important bug: responses can arrive out of order.
 
 ### Step 3: protect against stale responses
 
-Consider this sequence:
-
-```text
-search("rea") starts
-search("react") starts
-search("react") resolves
-search("rea") resolves later and replaces the correct results
-```
-
-Extend the search contract with an abort signal:
-
-```ts
-type Props = {
-  searchPeople: (
-    query: string,
-    signal: AbortSignal,
-  ) => Promise<Person[]>;
-  onSelect: (person: Person) => void;
-};
-```
-
-Then give every Effect execution its own controller and cleanup guard:
+Each Effect execution owns one request:
 
 ```tsx
 useEffect(() => {
   const query = inputValue.trim();
 
-  if (query.length < 2) {
+  if (query.length < minimumQueryLength) {
     setSearchState({ status: "idle", results: [] });
     return;
   }
@@ -378,89 +343,9 @@ useEffect(() => {
     results: previous.results,
   }));
 
-  searchPeople(query, controller.signal)
+  searchOptions(query, controller.signal)
     .then(results => {
-      if (ignore) return;
-      setSearchState({ status: "success", results });
-    })
-    .catch(error => {
-      const aborted =
-        error instanceof DOMException && error.name === "AbortError";
-
-      if (ignore || aborted) return;
-
-      setSearchState({
-        status: "error",
-        results: [],
-        message: "Suggestions could not be loaded.",
-      });
-    });
-
-  return () => {
-    ignore = true;
-    controller.abort();
-  };
-}, [inputValue, searchPeople]);
-```
-
-Why use both mechanisms?
-
-- `controller.abort()` asks the underlying operation to stop doing unnecessary work.
-- `ignore` guarantees that this Effect execution cannot commit state after cleanup, even if the supplied search function does not fully honor cancellation.
-
-The component is now correct under out-of-order responses, but it still starts a request for nearly every key press.
-
-### Step 4: debounce the query, not the input
-
-Do not debounce `inputValue`. It controls what the user sees in the input and must update immediately.
-
-Extract the timing concern into a small reusable hook. The hook delays a value; it does not know anything about autocomplete or requests:
-
-```tsx
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => window.clearTimeout(timer);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-```
-
-Use the hook to derive a query for external work while keeping the controlled input immediate:
-
-```tsx
-const [inputValue, setInputValue] = useState("");
-const debouncedQuery = useDebounce(inputValue.trim(), 250);
-```
-
-Then change the request Effect to use `debouncedQuery`:
-
-```tsx
-useEffect(() => {
-  if (debouncedQuery.length < 2) {
-    setSearchState({ status: "idle", results: [] });
-    return;
-  }
-
-  const controller = new AbortController();
-  let ignore = false;
-
-  setSearchState(previous => ({
-    status: "loading",
-    results: previous.results,
-  }));
-
-  searchPeople(debouncedQuery, controller.signal)
-    .then(results => {
-      if (!ignore) {
-        setSearchState({ status: "success", results });
-      }
+      if (!ignore) setSearchState({ status: "success", results });
     })
     .catch(error => {
       const aborted =
@@ -479,44 +364,49 @@ useEffect(() => {
     ignore = true;
     controller.abort();
   };
-}, [debouncedQuery, searchPeople]);
+}, [inputValue, minimumQueryLength, searchOptions]);
 ```
 
-Verify this distinction explicitly:
+Cancellation reduces work; the ignore guard prevents obsolete results even when a supplied search implementation does not fully honor abort.
 
-- the text field changes on every key press;
-- the request starts only after 250 milliseconds without another input change;
-- replacing one query with another cleans up the previous request.
+### Step 4: debounce the query, not the input
 
-### Step 5: add active-option state and keyboard navigation
-
-Introduce one new state value:
+Extract timing into a reusable value Hook:
 
 ```tsx
-const [activeIndex, setActiveIndex] = useState(-1);
-```
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
 
-Reset it whenever the query or result set changes:
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
 
-```tsx
-function handleInputChange(value: string) {
-  setInputValue(value);
-  setActiveIndex(-1);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
-// After accepting new results:
-setSearchState({ status: "success", results });
-setActiveIndex(-1);
+const debouncedQuery = useDebounce(
+  inputValue.trim(),
+  debounceDelay,
+);
 ```
 
-Implement the keyboard contract:
+The input still displays inputValue immediately. Only the Effect that starts external work changes from inputValue to debouncedQuery.
+
+### Step 5: add generic keyboard navigation
+
+The active index navigates the current typed result array:
 
 ```tsx
-function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-  const results = searchState.results;
+const results = searchState.results;
+const activeOption =
+  activeIndex >= 0 ? results[activeIndex] : undefined;
 
+function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
   if (event.key === "Escape") {
-    event.preventDefault();
     setDismissed(true);
     setActiveIndex(-1);
     return;
@@ -526,77 +416,41 @@ function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
 
   if (event.key === "ArrowDown") {
     event.preventDefault();
-    setDismissed(false);
     setActiveIndex(index =>
       index < results.length - 1 ? index + 1 : 0,
     );
-    return;
-  }
-
-  if (event.key === "ArrowUp") {
+  } else if (event.key === "ArrowUp") {
     event.preventDefault();
-    setDismissed(false);
     setActiveIndex(index =>
       index > 0 ? index - 1 : results.length - 1,
     );
-    return;
-  }
-
-  if (event.key === "Enter" && activeIndex >= 0) {
+  } else if (event.key === "Enter" && activeOption) {
     event.preventDefault();
-    selectPerson(results[activeIndex]);
+    selectOption(activeOption);
   }
 }
 ```
 
-Add `dismissed` because closing through Escape is a user decision that cannot be derived from the query and results:
+Selection uses getOptionLabel for input text and returns the original T:
 
 ```tsx
-const [dismissed, setDismissed] = useState(false);
-
-const canShowPopup =
-  !dismissed &&
-  inputValue.trim().length >= 2 &&
-  searchState.status !== "idle";
+function selectOption(option: T) {
+  setInputValue(getOptionLabel(option));
+  setDismissed(true);
+  setActiveIndex(-1);
+  onSelect(option);
+}
 ```
 
-Keep the active option visible in a scrollable result list:
+### Step 6: add generic combobox semantics
+
+Caller-provided identity creates stable React keys and active-descendant IDs:
 
 ```tsx
-const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
-
-useEffect(() => {
-  if (activeIndex >= 0) {
-    optionRefs.current[activeIndex]?.scrollIntoView({
-      block: "nearest",
-    });
-  }
-}, [activeIndex]);
-```
-
-At this checkpoint, pointer and keyboard selection both work. Accessibility semantics are the final step, not a separate afterthought.
-
-### Step 6: add combobox semantics and announcements
-
-Generate stable relationships for the input, listbox, options, and status message:
-
-```tsx
-const reactId = useId();
-const inputId = `${reactId}-input`;
-const listboxId = `${reactId}-listbox`;
-const statusId = `${reactId}-status`;
-
-const activePerson =
-  activeIndex >= 0 ? searchState.results[activeIndex] : undefined;
-
-const activeOptionId = activePerson
-  ? `${reactId}-option-${activePerson.id}`
+const activeOptionId = activeOption
+  ? `\${reactId}-option-\${getOptionId(activeOption)}`
   : undefined;
-```
 
-Update the input:
-
-```tsx
 <input
   id={inputId}
   role="combobox"
@@ -605,52 +459,38 @@ Update the input:
   aria-controls={listboxId}
   aria-activedescendant={activeOptionId}
   aria-describedby={statusId}
-  autoComplete="off"
   value={inputValue}
   onChange={event => handleInputChange(event.target.value)}
   onKeyDown={handleKeyDown}
-  onFocus={() => setDismissed(false)}
 />
-```
 
-Keep DOM focus in this input. `aria-activedescendant` moves the assistive-technology focus among suggestions without taking away native text editing.
-
-Update the suggestion list:
-
-```tsx
-<ul id={listboxId} role="listbox" aria-label="People suggestions">
-  {searchState.results.map((person, index) => {
+<ul id={listboxId} role="listbox" aria-label={suggestionsLabel}>
+  {results.map((option, index) => {
+    const optionId = getOptionId(option);
     const active = index === activeIndex;
 
     return (
       <li
-        id={`${reactId}-option-${person.id}`}
+        id={`\${reactId}-option-\${optionId}`}
         role="option"
         aria-selected={active}
-        key={person.id}
+        key={optionId}
         ref={node => {
           optionRefs.current[index] = node;
         }}
         onMouseDown={event => event.preventDefault()}
-        onClick={() => selectPerson(person)}
+        onClick={() => selectOption(option)}
       >
-        <strong>{person.name}</strong>
-        <span>{person.role}</span>
+        {renderOption?.(option) ?? getOptionLabel(option)}
       </li>
     );
   })}
 </ul>
 ```
 
-Finally, announce asynchronous changes without moving focus:
+The autocomplete owns listbox semantics and keyboard behavior. Callers customize only typed data access and visible option content.
 
-```tsx
-<div id={statusId} role="status" className="sr-only">
-  {statusMessage}
-</div>
-```
-
-This completes the step-by-step implementation. The final assembled component appears below for reference.
+This completes the generic vertical slice. The assembled component below repeats the contract so it is self-contained and ready to copy.
 
 ## Complete interview-sized implementation
 
@@ -663,28 +503,30 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 
-type Person = {
-  id: string;
-  name: string;
-  role: string;
-};
+type OptionId = string | number;
 
-type SearchState =
-  | { status: "idle"; results: Person[] }
-  | { status: "loading"; results: Person[] }
-  | { status: "success"; results: Person[] }
-  | { status: "error"; results: Person[]; message: string };
+type SearchState<T> =
+  | { status: "idle"; results: T[] }
+  | { status: "loading"; results: T[] }
+  | { status: "success"; results: T[] }
+  | { status: "error"; results: T[]; message: string };
 
-type Props = {
+type AutocompleteProps<T> = {
   label: string;
-  searchPeople: (
+  searchOptions: (
     query: string,
     signal: AbortSignal,
-  ) => Promise<Person[]>;
-  onSelect: (person: Person) => void;
+  ) => Promise<T[]>;
+  getOptionId: (option: T) => OptionId;
+  getOptionLabel: (option: T) => string;
+  renderOption?: (option: T) => ReactNode;
+  onSelect: (option: T) => void;
   minimumQueryLength?: number;
+  debounceDelay?: number;
+  suggestionsLabel?: string;
 };
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -701,22 +543,27 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export function PeopleAutocomplete({
+export function Autocomplete<T>({
   label,
-  searchPeople,
+  searchOptions,
+  getOptionId,
+  getOptionLabel,
+  renderOption,
   onSelect,
   minimumQueryLength = 2,
-}: Props) {
+  debounceDelay = 250,
+  suggestionsLabel = `${label} suggestions`,
+}: AutocompleteProps<T>) {
   const reactId = useId();
   const inputId = `${reactId}-input`;
   const listboxId = `${reactId}-listbox`;
   const statusId = `${reactId}-status`;
 
   const [inputValue, setInputValue] = useState("");
-  const debouncedQuery = useDebounce(inputValue.trim(), 250);
+  const debouncedQuery = useDebounce(inputValue.trim(), debounceDelay);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [dismissed, setDismissed] = useState(false);
-  const [searchState, setSearchState] = useState<SearchState>({
+  const [searchState, setSearchState] = useState<SearchState<T>>({
     status: "idle",
     results: [],
   });
@@ -738,7 +585,7 @@ export function PeopleAutocomplete({
       results: previous.results,
     }));
 
-    searchPeople(debouncedQuery, controller.signal)
+    searchOptions(debouncedQuery, controller.signal)
       .then(results => {
         if (ignore) return;
         setSearchState({ status: "success", results });
@@ -761,7 +608,7 @@ export function PeopleAutocomplete({
       ignore = true;
       controller.abort();
     };
-  }, [debouncedQuery, minimumQueryLength, searchPeople]);
+  }, [debouncedQuery, minimumQueryLength, searchOptions]);
 
   const results = searchState.results;
   const canShowPopup =
@@ -771,9 +618,9 @@ export function PeopleAutocomplete({
       searchState.status === "error" ||
       searchState.status === "success");
 
-  const activePerson = activeIndex >= 0 ? results[activeIndex] : undefined;
-  const activeOptionId = activePerson
-    ? `${reactId}-option-${activePerson.id}`
+  const activeOption = activeIndex >= 0 ? results[activeIndex] : undefined;
+  const activeOptionId = activeOption
+    ? `${reactId}-option-${getOptionId(activeOption)}`
     : undefined;
 
   useEffect(() => {
@@ -784,11 +631,11 @@ export function PeopleAutocomplete({
     }
   }, [activeIndex]);
 
-  function selectPerson(person: Person) {
-    setInputValue(person.name);
+  function selectOption(option: T) {
+    setInputValue(getOptionLabel(option));
     setDismissed(true);
     setActiveIndex(-1);
-    onSelect(person);
+    onSelect(option);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -821,9 +668,9 @@ export function PeopleAutocomplete({
       return;
     }
 
-    if (event.key === "Enter" && activePerson) {
+    if (event.key === "Enter" && activeOption) {
       event.preventDefault();
-      selectPerson(activePerson);
+      selectOption(activeOption);
     }
   }
 
@@ -880,28 +727,28 @@ export function PeopleAutocomplete({
           )}
 
           {searchState.status === "success" && results.length === 0 && (
-            <p>No people found.</p>
+            <p>No suggestions found.</p>
           )}
 
           {results.length > 0 && (
-            <ul id={listboxId} role="listbox" aria-label="People suggestions">
-              {results.map((person, index) => {
+            <ul id={listboxId} role="listbox" aria-label={suggestionsLabel}>
+              {results.map((option, index) => {
+                const optionId = getOptionId(option);
                 const active = index === activeIndex;
 
                 return (
                   <li
-                    id={`${reactId}-option-${person.id}`}
+                    id={`${reactId}-option-${optionId}`}
                     role="option"
                     aria-selected={active}
-                    key={person.id}
+                    key={optionId}
                     ref={node => {
                       optionRefs.current[index] = node;
                     }}
                     onMouseDown={event => event.preventDefault()}
-                    onClick={() => selectPerson(person)}
+                    onClick={() => selectOption(option)}
                   >
-                    <strong>{person.name}</strong>
-                    <span>{person.role}</span>
+                    {renderOption?.(option) ?? getOptionLabel(option)}
                   </li>
                 );
               })}
@@ -912,6 +759,26 @@ export function PeopleAutocomplete({
     </div>
   );
 }
+```
+
+Here is one product configuration. A city, repository, or employee search supplies different accessors and rendering without changing `Autocomplete`:
+
+```tsx
+<Autocomplete<Product>
+  label="Product"
+  searchOptions={searchProducts}
+  getOptionId={product => product.sku}
+  getOptionLabel={product => product.title}
+  renderOption={product => (
+    <>
+      <strong>{product.title}</strong>
+      <span>{formatCurrency(product.price)}</span>
+    </>
+  )}
+  onSelect={product => addToCart(product)}
+  minimumQueryLength={2}
+  debounceDelay={250}
+/>
 ```
 
 ## Why the solution is structured this way
@@ -997,7 +864,9 @@ Debouncing reduces requests during continuous typing. It does not make a slow en
 A small cache can make repeated queries instant:
 
 ```ts
-const cache = new Map<string, Person[]>();
+function createSearchCache<T>() {
+  return new Map<string, T[]>();
+}
 ```
 
 But a cache creates questions:
@@ -1012,7 +881,7 @@ For production, a server-state library or framework cache may be more appropriat
 
 ### Result identity
 
-Use `person.id` for React keys and option IDs. An array index changes meaning when results are inserted, removed, or reordered.
+Use `getOptionId(option)` for React keys and option IDs. An array index changes meaning when results are inserted, removed, or reordered.
 
 ### Selected value versus input text
 
@@ -1039,7 +908,7 @@ Test observable behavior, not internal state variables.
 5. Arrow Down and Arrow Up change the active option.
 6. Enter selects the active option.
 7. Escape closes without selecting.
-8. Pointer selection calls `onSelect` with the correct person.
+8. Pointer selection calls `onSelect` with the original typed option.
 9. The input exposes the expected combobox state.
 10. The active descendant points to an existing option.
 
@@ -1051,15 +920,17 @@ it("does not display an older response", async () => {
   const user = userEvent.setup();
 
   render(
-    <PeopleAutocomplete
-      label="Person"
-      searchPeople={requests.search}
+    <Autocomplete<Product>
+      label="Product"
+      searchOptions={requests.search}
+      getOptionId={product => product.sku}
+      getOptionLabel={product => product.title}
       onSelect={() => {}}
     />,
   );
 
   const input = screen.getByRole("combobox", {
-    name: "Person",
+    name: "Product",
   });
 
   await user.type(input, "rea");
@@ -1067,11 +938,11 @@ it("does not display an older response", async () => {
   await user.type(input, "ct");
   await advanceDebounce();
 
-  requests.resolve("react", [reactPerson]);
-  expect(await screen.findByText("React Person")).toBeVisible();
+  requests.resolve("react", [reactProduct]);
+  expect(await screen.findByText("React Product")).toBeVisible();
 
-  requests.resolve("rea", [olderPerson]);
-  expect(screen.queryByText("Older Person")).not.toBeInTheDocument();
+  requests.resolve("rea", [olderProduct]);
+  expect(screen.queryByText("Older Product")).not.toBeInTheDocument();
 });
 ```
 
@@ -1131,7 +1002,7 @@ Do not claim every improvement belongs in every product. A reusable design-syste
 
 ## A 60-second solution explanation
 
-I separated the immediate input value from the debounced query so typing stays responsive while requests are limited. The request Effect owns an `AbortController` and an ignore guard, which prevents an older result from replacing the current query. Request state is modeled as an explicit status rather than contradictory booleans, and popup visibility is derived except for intentional dismissal. For accessibility, DOM focus stays in the input, the input exposes combobox state, and `aria-activedescendant` identifies the active listbox option while arrow keys navigate and Enter selects. In production I would evaluate a framework or server-state cache, test across assistive technologies, and make required-selection versus free-text behavior explicit.
+The component is generic over `T`: callers provide search, identity, label, and optional rendering while the component owns asynchronous and accessible combobox behavior. I separate the immediate input from the configurable debounced query, and the request Effect uses `AbortController` plus an ignore guard to prevent stale results. Request state is an explicit status, popup visibility is mostly derived, and DOM focus stays in the input while `aria-activedescendant` tracks keyboard navigation. In production I would evaluate a framework or server-state cache, test across assistive technologies, and make controlled selection and free-text behavior explicit.
 
 ## Likely interview follow-ups
 
@@ -1145,7 +1016,7 @@ Not automatically. A framework loader or server-state library may provide cachin
 
 ### How would you support controlled selection?
 
-Accept `selectedPerson` and `onSelectedPersonChange`, define how input text relates to the selected value, and avoid copying the controlled prop into independent state without an intentional editing model.
+Accept `selectedOption` and `onSelectedOptionChange`, define how input text relates to the selected value, and avoid copying the controlled prop into independent state without an intentional editing model.
 
 ### How would you avoid request waterfalls?
 
@@ -1158,6 +1029,7 @@ Accept a render function or structured slots while keeping listbox and option se
 ## Article summary
 
 - Clarify whether text is free-form or selection is required.
+- Keep record-specific identity, labels, and rendering in typed caller props.
 - Keep raw input, debounced query, active option, and selected value conceptually separate.
 - Debounce external work rather than the controlled input.
 - Cancel or ignore stale requests.
@@ -1166,11 +1038,3 @@ Accept a render function or structured slots while keeping listbox and option se
 - Implement keyboard behavior in addition to ARIA relationships.
 - Use stable domain identity for keys and option IDs.
 - Build a complete vertical slice before production hardening.
-- Explain caching, testing, and framework tradeoffs instead of silently overengineering them.
-
-## Further reading
-
-- [WAI-ARIA Authoring Practices: Combobox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)
-- [WAI-ARIA Authoring Practices: Developing a Keyboard Interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)
-- [React: You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
-- [MDN: AbortSignal](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
