@@ -66,12 +66,15 @@ For this walkthrough:
 - URL synchronization.
 - Persisted selection across unloaded server pages.
 
-## State model and invariants
+## Type contract
 
-Keep only user decisions in state:
+Define the reusable boundary before writing component logic. Every later snippet uses these types:
 
 ```tsx
+import type { ReactNode } from "react";
+
 type RowId = string | number;
+type SortValue = string | number | Date;
 type SortDirection = "ascending" | "descending";
 
 type SortState = {
@@ -79,11 +82,53 @@ type SortState = {
   direction: SortDirection;
 };
 
+type ColumnDef<T> = {
+  id: string;
+  header: string;
+  cell: (row: T) => ReactNode;
+  sortValue?: (row: T) => SortValue;
+  searchValue?: (row: T) => string;
+  rowHeader?: boolean;
+};
+
+type DataTableProps<T> = {
+  rows: readonly T[];
+  columns: readonly ColumnDef<T>[];
+  getRowId: (row: T) => RowId;
+  getRowLabel: (row: T) => string;
+  caption: string;
+  initialSort?: SortState;
+  pageSize?: number;
+};
+```
+
+The roles are deliberately separate:
+
+- `T` is the caller's record type, such as `Employee`, `Product`, or `Invoice`.
+- `ColumnDef<T>` contains domain-specific accessors and cell rendering.
+- `DataTableProps<T>` contains generic table configuration.
+- `getRowId` avoids assuming that every record has an `id` property.
+- `getRowLabel` supplies an accessible name for its selection checkbox.
+- `SortValue` limits sorting to values the shared comparator understands.
+
+For example, one caller could supply this model without changing the table:
+
+```tsx
+type Product = {
+  sku: string;
+  title: string;
+  price: number;
+  available: boolean;
+};
+```
+
+## State model and invariants
+
+Keep only user decisions in state:
+
+```tsx
 const [query, setQuery] = useState("");
-const [sort, setSort] = useState<SortState>({
-  columnId: "name",
-  direction: "ascending",
-});
+const [sort, setSort] = useState<SortState | null>(initialSort ?? null);
 const [selectedIds, setSelectedIds] = useState<Set<RowId>>(() => new Set());
 const [page, setPage] = useState(1);
 ```
@@ -120,19 +165,23 @@ DataTable
 └── pagination controls
 ```
 
-The generic boundary is a small column contract, not knowledge of a particular record type:
+The shared comparator supports the `SortValue` union from the type contract:
 
 ```tsx
-type SortValue = string | number | Date;
+function compareValues(left: SortValue, right: SortValue) {
+  if (left instanceof Date && right instanceof Date) {
+    return left.getTime() - right.getTime();
+  }
 
-type ColumnDef<T> = {
-  id: string;
-  header: string;
-  cell: (row: T) => ReactNode;
-  sortValue?: (row: T) => SortValue;
-  searchValue?: (row: T) => string;
-  rowHeader?: boolean;
-};
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+
+  return String(left).localeCompare(String(right), undefined, {
+    sensitivity: "base",
+    numeric: true,
+  });
+}
 ```
 
 The caller owns domain knowledge—how to display a value, which value should be compared, and which text should be searched. The table owns only generic transformations, selection, pagination, and semantics.
@@ -185,16 +234,13 @@ Use stable IDs for keys. A table already gives assistive technologies relationsh
 Put a real button inside each sortable header. The button provides keyboard activation without custom handlers:
 
 ```tsx
-const [sort, setSort] = useState<SortState>({
-  columnId: "name",
-  direction: "ascending",
-});
+const [sort, setSort] = useState<SortState | null>(initialSort ?? null);
 
 function requestSort(columnId: string) {
   setSort(current => ({
     columnId,
     direction:
-      current.columnId === columnId && current.direction === "ascending"
+      current?.columnId === columnId && current.direction === "ascending"
         ? "descending"
         : "ascending",
   }));
@@ -204,15 +250,20 @@ function requestSort(columnId: string) {
 Derive a copied, sorted array:
 
 ```tsx
-const sortColumn = columns.find(column => column.id === sort.columnId);
-const sortedRows = [...rows].sort((left, right) => {
-  if (!sortColumn?.sortValue) return 0;
-  const result = compareValues(
-    sortColumn.sortValue(left),
-    sortColumn.sortValue(right),
-  );
-  return sort.direction === "ascending" ? result : -result;
-});
+const sortColumn = sort
+  ? columns.find(column => column.id === sort.columnId)
+  : undefined;
+
+const sortedRows =
+  sort && sortColumn?.sortValue
+    ? [...rows].sort((left, right) => {
+        const result = compareValues(
+          sortColumn.sortValue!(left),
+          sortColumn.sortValue!(right),
+        );
+        return sort.direction === "ascending" ? result : -result;
+      })
+    : [...rows];
 ```
 
 Never call `rows.sort(...)`: `sort` mutates the array supplied by the parent.
@@ -220,7 +271,7 @@ Never call `rows.sort(...)`: `sort` mutates the array supplied by the parent.
 Expose the active direction through `aria-sort` on the `<th>`:
 
 ```tsx
-<th scope="col" aria-sort={sort.columnId === column.id ? sort.direction : undefined}>
+<th scope="col" aria-sort={sort?.columnId === column.id ? sort.direction : undefined}>
   <button type="button" onClick={() => requestSort(column.id)}>
     {column.header}
   </button>

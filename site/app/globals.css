@@ -2523,6 +2523,52 @@ button {
   background: none;
   color: inherit;
 }
+.copyable-code-block {
+  position: relative;
+  margin: 1.5em 0;
+}
+.prose .copyable-code-block pre,
+.answer-card-section .copyable-code-block pre {
+  margin: 0;
+  padding-top: 3.1rem;
+}
+.answer-card-section .copyable-code-block {
+  margin: 0.85rem 0;
+}
+.code-copy-button {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 30px;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid color-mix(in srgb, #e9e4d7 24%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--code) 86%, #fff);
+  color: #d8d5cb;
+  font:
+    750 0.66rem/1 system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.code-copy-button:hover,
+.code-copy-button:focus-visible,
+.code-copy-button.copied {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.code-copy-button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
 :is(.prose, .answer-card-section) .hljs-comment,
 :is(.prose, .answer-card-section) .hljs-quote {
   color: var(--syntax-comment);
