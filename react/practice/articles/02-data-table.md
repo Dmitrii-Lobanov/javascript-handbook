@@ -99,6 +99,7 @@ type DataTableProps<T> = {
   caption: string;
   initialSort?: SortState;
   pageSize?: number;
+  filterDelay?: number;
 };
 ```
 
@@ -278,12 +279,32 @@ Expose the active direction through `aria-sort` on the `<th>`:
 </th>
 ```
 
-### Step 3: derive filtered rows before sorting
+### Step 3: debounce the filter query, then derive rows
 
-Filtering is a render calculation, not an Effect:
+Keep `query` immediate so the controlled input never lags. A reusable Hook produces a delayed value for expensive filtering:
 
 ```tsx
-const normalizedQuery = query.trim().toLocaleLowerCase();
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+```
+
+Debounce only the value that triggers filtering—not the state bound to the input:
+
+```tsx
+const [query, setQuery] = useState("");
+const debouncedQuery = useDebounce(query, 200);
+const normalizedQuery = debouncedQuery.trim().toLocaleLowerCase();
 
 const filteredRows = rows.filter(row => {
   if (!normalizedQuery) return true;
@@ -311,6 +332,8 @@ const sortedRows = [...filteredRows].sort(/* comparator */);
 ```
 
 Resetting the page belongs in the filter event because the event changes the result set. No Effect is needed to synchronize page with query.
+
+For a small local collection, filtering on every keystroke is usually fast enough and debounce may be unnecessary. It is included here because interview datasets can be large and the same state model transfers to remote filtering. In production, choose the delay from measured behavior rather than treating `200` milliseconds as universal.
 
 ### Step 4: paginate the derived result
 
@@ -432,6 +455,7 @@ type DataTableProps<T> = {
   caption: string;
   initialSort?: SortState;
   pageSize?: number;
+  filterDelay?: number;
 };
 
 function compareValues(left: SortValue, right: SortValue) {
@@ -449,6 +473,20 @@ function compareValues(left: SortValue, right: SortValue) {
   });
 }
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function DataTable<T>({
   rows,
   columns,
@@ -457,6 +495,7 @@ export function DataTable<T>({
   caption,
   initialSort,
   pageSize = 5,
+  filterDelay = 200,
 }: DataTableProps<T>) {
   const filterId = useId();
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -467,7 +506,9 @@ export function DataTable<T>({
   );
   const [page, setPage] = useState(1);
 
-  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const debouncedQuery = useDebounce(query, filterDelay);
+  const normalizedQuery = debouncedQuery.trim().toLocaleLowerCase();
+  const isFiltering = query !== debouncedQuery;
   const filteredRows = rows.filter(row => {
     if (!normalizedQuery) return true;
 
@@ -554,7 +595,9 @@ export function DataTable<T>({
       />
 
       <p role="status" aria-live="polite">
-        {sortedRows.length} rows. {selectedIds.size} selected.
+        {isFiltering
+          ? "Filtering rows…"
+          : `${sortedRows.length} rows. ${selectedIds.size} selected.`}
       </p>
 
       <table>
@@ -756,6 +799,7 @@ For large datasets:
 - define whether select-all means loaded rows, filtered rows, or the entire server result;
 - virtualize only when DOM size is the demonstrated bottleneck;
 - consider `useDeferredValue` for expensive local filtering while keeping input urgent.
+- debounce remote filters to avoid starting a request for every keystroke.
 
 ## Testing strategy
 
@@ -764,13 +808,15 @@ Essential integration tests:
 1. The configured initial sort is applied through the column's `sortValue`.
 2. Clicking a sortable header toggles direction and updates `aria-sort`.
 3. Clicking another header activates its ascending sort.
-4. Filtering searches only columns with `searchValue` and resets to page one.
+4. Filtering waits for the configured debounce delay, searches only columns with `searchValue`, and resets to page one.
 5. Empty filtering retains the table and shows the empty message.
 6. Pagination displays the correct slice and disables boundary buttons.
 7. Row selection survives page and filter changes.
 8. Select-all selects and clears only visible rows.
 9. The header checkbox becomes indeterminate for partial page selection.
 10. Sort buttons and checkboxes work using keyboard interaction.
+
+Use fake timers for the debounce test: type a query, confirm the input updates immediately, advance by `filterDelay`, and then assert the rows change.
 
 Unit-test `compareValues` and domain-specific column accessors separately when null handling, locale rules, or custom ordering becomes complex.
 
@@ -813,7 +859,7 @@ The useful generic boundary is small: identity plus column accessors and rendere
 
 ## A 60-second solution explanation
 
-The table is generic over `T`: callers provide columns plus functions for row identity and accessible labels, so the component contains no domain field names. Each column independently defines rendering, sorting, filtering, and row-header behavior. I store only user decisions—query, sort descriptor, selected IDs, and page—and derive rows through filter, sort, and pagination. Selection uses stable caller-provided IDs, native table semantics remain intact, and the only Effect synchronizes the checkbox’s indeterminate DOM property. At server scale I would make these controls report intent to a cached remote query instead of transforming all rows locally.
+The table is generic over `T`: callers provide columns plus functions for row identity and accessible labels, so the component contains no domain field names. Each column independently defines rendering, sorting, filtering, and row-header behavior. The controlled input updates immediately while `useDebounce` delays only the query used by the filter. I store only user decisions—query, sort descriptor, selected IDs, and page—and derive rows through filter, sort, and pagination. Selection uses stable caller-provided IDs, native table semantics remain intact, and the other Effect synchronizes the checkbox’s indeterminate DOM property. At server scale I would make these controls report debounced intent to a cached remote query instead of transforming all rows locally.
 
 ## Likely interview follow-ups
 
@@ -824,6 +870,10 @@ They contain no independent information. Storing them duplicates `rows` and `que
 ### When would you use `useMemo`?
 
 After profiling shows that repeated filtering or sorting is meaningful and inputs often remain unchanged. It is an optimization, not a source of truth.
+
+### Why debounce instead of `useDeferredValue`?
+
+Debounce waits for a quiet period and reduces how often filtering or a remote request starts. `useDeferredValue` allows React to begin rendering a lagging version with lower priority, so it improves scheduling but does not guarantee fewer calculations or requests. For remote search, debounce is usually the relevant first tool; for expensive local rendering, deferral may provide a more responsive experience.
 
 ### How would server-side sorting change the component?
 
@@ -842,6 +892,7 @@ Not for ordinary sorting, checkboxes, and links. A grid role implies a more comp
 - Clarify transformation and selection semantics before coding.
 - Keep domain knowledge in typed column definitions and caller-provided row identity.
 - Store interaction choices; derive displayed collections.
+- Keep the input immediate and debounce only the value that triggers filtering.
 - Filter, sort, and paginate in an explicit order.
 - Never mutate input arrays.
 - Identify rows by stable IDs.
