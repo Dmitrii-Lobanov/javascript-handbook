@@ -1667,12 +1667,26 @@ button {
 }
 .answer-card-section p:last-child,
 .answer-card-section ul:last-child,
+.answer-card-section ol:last-child,
 .answer-card-section pre:last-child {
   margin-bottom: 0;
 }
+.answer-card-section ul,
+.answer-card-section ol {
+  margin: 0 0 0.8rem;
+  padding-left: 1.45rem;
+}
 .answer-card-section ul {
-  margin: 0;
-  padding-left: 1.2rem;
+  list-style: disc;
+}
+.answer-card-section ol {
+  list-style: decimal;
+}
+.answer-card-section ul ul {
+  list-style: circle;
+}
+.answer-card-section ul ul ul {
+  list-style: square;
 }
 .answer-card-section li {
   margin: 0.25rem 0;

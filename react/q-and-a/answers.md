@@ -1132,6 +1132,8 @@
 - details  
   Props support configuration and composition. State represents information that changes over time and affects rendering. Shared state should live in the nearest common owner.
 
+  A useful interview distinction is ownership: the parent owns a prop, while the component owns its state. A child can ask the parent to change data by calling a callback, but it cannot change the prop itself. Avoid copying props into state unless you intentionally need a separate draft with its own lifecycle; otherwise the two sources can drift apart.
+
 ---
 
 ### Card 32
@@ -1140,13 +1142,22 @@
   What is composition, and why is it generally preferred over inheritance in React?
 
 - answer  
-  Composition builds interfaces by nesting and combining components through props and `children`.
+  Composition builds interfaces by combining smaller components through props, `children`, slots, and Hooks. It is usually preferred because relationships remain explicit and behavior can be assembled without a rigid inheritance hierarchy.
 
 - explanation  
   It makes dependencies explicit and allows behavior and presentation to be combined without rigid class hierarchies.
 
 - details  
-  Common composition techniques include slots, compound components, render props, and custom Hooks. Inheritance is still a JavaScript feature, but it is rarely needed for React component reuse.
+  Common composition techniques include slots, compound components, render props, and custom Hooks:
+
+  ```jsx
+  <Card>
+    <Card.Header>Account</Card.Header>
+    <Card.Body><Profile /></Card.Body>
+  </Card>
+  ```
+
+  Use component composition for UI structure and custom Hooks for reusable stateful behavior. Inheritance is still a JavaScript feature, but React component reuse rarely needs it. A senior answer should also warn that composition can become obscure when a component exposes too many implicit slots or relies on hidden Context contracts.
 
 ---
 
@@ -1156,13 +1167,24 @@
   What are Fragments, and when are they useful?
 
 - answer  
-  Fragments group multiple children without adding an extra DOM element.
+  Fragments group multiple children without adding an extra DOM element, which is useful when an extra wrapper would break semantics, layout, or styling.
 
 - explanation  
   They preserve valid structure and avoid unnecessary wrapper elements.
 
 - details  
-  Use `<>...</>` for ordinary grouping. Use `<Fragment key={id}>...</Fragment>` when a keyed group is rendered in a list.
+  Use `<>...</>` for ordinary grouping. Use `<Fragment key={id}>...</Fragment>` when a keyed group is rendered in a list:
+
+  ```jsx
+  items.map(item => (
+    <Fragment key={item.id}>
+      <dt>{item.term}</dt>
+      <dd>{item.description}</dd>
+    </Fragment>
+  ));
+  ```
+
+  The shorthand syntax cannot receive a key. A Fragment affects the React tree but does not create a DOM node, styling hook, accessibility landmark, or event target; use a real semantic element when one is required.
 
 ---
 
@@ -1178,7 +1200,9 @@
   Handlers receive an event with familiar APIs such as `target`, `currentTarget`, `preventDefault`, and `stopPropagation`.
 
 - details  
-  React events mostly follow DOM propagation, but some behavior is normalized. Use native listeners when integrating directly with browser APIs and clean them up in an Effect.
+  React events mostly follow DOM propagation. `event.currentTarget` is the element whose handler is running; `event.target` is where the event originated. Returning `false` does not prevent default behavior—call `preventDefault()` explicitly.
+
+  Events from portals bubble through the React tree, and React batches state updates made by handlers. Use native listeners when integrating with browser or third-party APIs, attach them in an Effect, and remove the exact same listener during cleanup. Do not reach for native listeners merely to avoid understanding React propagation.
 
 ---
 
@@ -1194,7 +1218,13 @@
   Context and React event propagation follow the React tree, not the portal's physical DOM position.
 
 - details  
-  Portals are useful for dialogs, popovers, and tooltips. They do not automatically solve focus management, stacking, keyboard behavior, or accessibility.
+  Portals are useful for dialogs, popovers, and tooltips that must escape clipping or stacking containers:
+
+  ```jsx
+  return createPortal(<Dialog />, document.body);
+  ```
+
+  A click inside the dialog can still trigger an ancestor React handler even though the DOM nodes are elsewhere. Stop propagation only when that is the intended interaction contract. Portals do not automatically solve focus management, background inertness, stacking, keyboard behavior, server rendering, or accessible naming.
 
 ---
 
@@ -1212,7 +1242,9 @@
   It reduces unnecessary renders, coupling, synchronization, and global-store complexity.
 
 - details  
-  Lift state only when multiple branches genuinely need coordinated access. Server, URL, form, and transient UI state may have different appropriate owners.
+  Lift state only when multiple branches genuinely need coordinated access. For example, keep an accordion item's hover state local, but lift the selected item when a details panel and a list must agree.
+
+  Ownership also depends on the kind of state: shareable navigation state may belong in the URL, remote records in a server-state cache, field state in the form, and transient interaction state in the component. “Put everything in one store” is not a scalable state model; it broadens subscriptions and hides ownership.
 
 ---
 
@@ -1228,7 +1260,14 @@
   Excessively high state broadens render impact and makes components harder to reuse.
 
 - details  
-  Sometimes composition or moving related components together avoids lifting. Do not globalize state solely to avoid passing one or two props.
+  Sometimes composition or moving related components together avoids lifting. When state is lifted, pass both the value and an intentional update API so there is one owner:
+
+  ```jsx
+  <SearchInput value={query} onQueryChange={setQuery} />
+  <Results query={query} />
+  ```
+
+  Do not globalize state solely to avoid passing one or two props. Global state is justified when distant consumers need coordinated access, persistence, external updates, or selective subscriptions—not simply because prop passing is visible.
 
 ---
 
@@ -1260,7 +1299,13 @@
   Prefer derivation because duplicated state can become inconsistent.
 
 - details  
-  Memoize an expensive derivation only after measuring. Store a separate value only when it has an independent lifecycle, such as an editable draft initialized from server data.
+  Derive during render:
+
+  ```jsx
+  const visibleTodos = todos.filter(todo => matches(todo, filter));
+  ```
+
+  Avoid storing `visibleTodos` and updating it in an Effect; that adds an extra render and creates an invalid intermediate state. Memoize an expensive derivation only after measuring. Store a separate value when it has an independent lifecycle, such as an editable draft initialized from server data. Decide explicitly whether later server updates should reset, merge with, or leave that draft alone.
 
 ---
 
@@ -1276,7 +1321,9 @@
   Validate at appropriate times without making typing unresponsive, and always validate again on the server.
 
 - details  
-  Complex forms benefit from schemas, field-level subscriptions, accessible error associations, pending states, and a clear reset strategy.
+  Start with the platform: meaningful field names, labels, suitable input types, native constraints, and `FormData`. Controlled state is useful when values immediately drive other UI; uncontrolled fields or field-level subscriptions can avoid rerendering an entire large form on every keystroke.
+
+  Complex forms benefit from a shared validation schema, but client validation is only feedback—the server must validate and authorize again. Distinguish field errors from form-level and transport errors, preserve user input after failure, focus or summarize invalid fields accessibly, prevent accidental duplicate submission, and define what reset means after success. Reach for a form library when it reduces these requirements, not merely to store input values.
 
 ---
 
@@ -1308,7 +1355,17 @@
   It makes allowed states and events explicit and testable.
 
 - details  
-  Examples include payment flows, multi-step forms, uploads, and authentication. Simple independent state does not need a machine.
+  Replace contradictory flags such as `isLoading`, `isSuccess`, and `hasError` with one discriminated state:
+
+  ```ts
+  type RequestState =
+    | { status: "idle" }
+    | { status: "pending" }
+    | { status: "success"; data: User }
+    | { status: "error"; error: Error };
+  ```
+
+  A reducer may be enough when transitions are local. A state-machine library becomes valuable for guarded transitions, parallel states, retries, timeouts, and visualization. Examples include payment flows, multi-step forms, uploads, and authentication. Simple independent state does not need a machine.
 
 ---
 
@@ -1326,7 +1383,16 @@
   Dependencies are determined by reactive values read by the callback, not by which values a developer prefers to track.
 
 - details  
-  Objects and functions created during rendering have new identities. Restructure code before suppressing the exhaustive-dependencies lint rule.
+  Every reactive value referenced by the callback—props, state, and variables or functions declared in the component—belongs in the dependency list unless it is proven non-reactive. Objects and functions created during rendering have new identities, so depending on them can retrigger work:
+
+  ```jsx
+  useEffect(() => {
+    const options = { roomId };
+    return connect(options);
+  }, [roomId]);
+  ```
+
+  Moving `options` inside the Effect removes the unnecessary object dependency. Other fixes include moving constants outside the component, using functional state updates, or extracting non-reactive Effect Events. `useMemo` and `useCallback` are performance tools, not loopholes for incorrect dependencies. Restructure code before suppressing the exhaustive-dependencies lint rule.
 
 ---
 
@@ -1342,7 +1408,9 @@
   An infinite loop requires the Effect to update state and that update to change one of its dependencies.
 
 - details  
-  Remove an unnecessary Effect, derive data during render, use a functional update, or stabilize only the genuinely required dependency. Do not blindly remove dependencies.
+  Add temporary logging to compare dependencies with `Object.is`, then trace the cycle: Effect → state update → render → changed dependency → Effect. A common example is depending on a newly created object or setting derived state on every run.
+
+  First ask whether the Effect synchronizes with an external system. If not, derive the value during render or move action-specific logic into its event handler. Otherwise use a functional update, move object creation into the Effect, or stabilize only the genuinely required identity. Do not blindly remove dependencies, add an empty array, or use a ref to conceal a reactive value; those changes trade a visible loop for stale behavior.
 
 ---
 
@@ -1358,7 +1426,23 @@
   Completion order does not necessarily match request order.
 
 - details  
-  Abort obsolete work with `AbortController`, ignore stale results with a lifecycle flag or request ID, or use a data framework that manages request identity.
+  Cancel obsolete work and still guard the result because not every asynchronous stage observes an abort:
+
+  ```jsx
+  useEffect(() => {
+    const controller = new AbortController();
+
+    loadUser(userId, { signal: controller.signal })
+      .then(user => setUser(user))
+      .catch(error => {
+        if (error.name !== "AbortError") setError(error);
+      });
+
+    return () => controller.abort();
+  }, [userId]);
+  ```
+
+  A request ID or ignore flag can protect non-cancellable work. For real applications, a router or server-state library can additionally provide deduplication, caching, retries, and request identity. Cleanup prevents stale UI; it is not a substitute for server-side correctness.
 
 ---
 
@@ -1920,13 +2004,36 @@
   What does `useFormStatus` provide?
 
 - answer  
-  `useFormStatus` exposes status information about a parent form submission, including pending state and submitted data.
+  `useFormStatus` exposes the status of a parent `<form>` submission. It returns `pending`, `data`, `method`, and `action` for the latest submission handled by that form.
 
 - explanation  
-  Descendant controls can respond to submission state without manually threading props through the form.
+  Descendant controls can respond to submission state without manually threading props through the form. The component calling the Hook must be rendered inside the form; calling it in the same component that renders the form does not observe that form.
 
 - details  
-  Call it from a component rendered inside the relevant form. Use pending state for both interaction control and accessible feedback.
+  Put submission UI in a child component:
+
+  ```jsx
+  function SubmitButton() {
+    const { pending } = useFormStatus();
+
+    return (
+      <button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save"}
+      </button>
+    );
+  }
+
+  function ProfileForm({ saveProfile }) {
+    return (
+      <form action={saveProfile}>
+        <input name="displayName" />
+        <SubmitButton />
+      </form>
+    );
+  }
+  ```
+
+  `data` is the submitted `FormData`, `method` is usually `get` or `post`, and `action` identifies the submitted action. Use `pending` for interaction control and pair visual feedback with an accessible status message where needed.
 
 ---
 
@@ -1976,7 +2083,13 @@
   It separates reusable behavior from rendering decisions.
 
 - details  
-  Custom Hooks replace many render-prop use cases, but render props remain useful when a component must explicitly control rendering scope or lifecycle.
+  ```jsx
+  <MousePosition>
+    {({ x, y }) => <Cursor x={x} y={y} />}
+  </MousePosition>
+  ```
+
+  Custom Hooks replace many render-prop use cases with less nesting, but render props remain useful when a component must control where UI is rendered or expose state inside a specific provider or lifecycle boundary. Treat the function as part of the public API, document when it runs, and avoid creating deeply nested “wrapper pyramids.” A new function identity can also defeat memoization when passed through other memoized components.
 
 ---
 
@@ -2154,7 +2267,14 @@
   Avoid fixed sleeps; wait for meaningful conditions.
 
 - details  
-  Include Suspense and Error Boundaries used in production, test retries, and ensure deferred work and pending indicators behave accessibly.
+  Prefer a controllable Promise or network mock over a fixed delay:
+
+  1. Render and assert the loading or Suspense fallback.
+  2. Resolve the request and await the expected content.
+  3. In a separate test, reject it and assert the production error boundary.
+  4. Exercise retry, cancellation, or stale-response behavior when it matters.
+
+  Include the same providers, Suspense boundaries, and Error Boundaries used in production. Use `findByRole` or `waitFor` for observable results rather than calling `act` around arbitrary sleeps. Also verify that pending indicators are named, status changes are announced when necessary, and stale content behaves as intended during a transition.
 
 ---
 
@@ -2236,7 +2356,9 @@
   Input validation alone does not make arbitrary HTML safe.
 
 - details  
-  Restrict allowed elements, attributes, and URL schemes; keep sanitizer rules updated; and never rely solely on Content Security Policy.
+  Sanitize at a trusted boundary and render only the sanitized result. Configure an allowlist for elements, attributes, and URL schemes; dangerous values can appear in event attributes, CSS, SVG, `data:` URLs, and malformed markup—not only in `<script>` tags.
+
+  Do not build a sanitizer with regular expressions. Use a maintained library appropriate to the server or browser environment, keep its rules and dependencies updated, and test representative attack payloads. Content Security Policy and Trusted Types provide defense in depth, but neither replaces contextual sanitization. If the product only needs formatting such as bold text and links, a constrained structured format is safer than accepting arbitrary HTML.
 
 ---
 
@@ -2252,7 +2374,9 @@
   This preserves navigation context and prevents interaction with obscured background content.
 
 - details  
-  Choose meaningful initial focus, support Escape according to product rules, mark the rest of the page inert, and handle removal of the original trigger.
+  On open, save the trigger and move focus to a meaningful element: often the dialog heading, first invalid field, or least destructive action. Do not always focus the first button if that makes destructive confirmation too easy.
+
+  While open, prevent interaction with background content using a well-tested dialog primitive or `inert`; implement Tab wrapping only if the platform primitive does not provide it. Support Escape unless the workflow has a documented reason not to, and keep focus visible throughout animations. On close, restore focus to the trigger or a sensible successor if the trigger was removed. A portal and `role="dialog"` alone do not implement these behaviors.
 
 ---
 
@@ -2284,7 +2408,15 @@
   Screen-reader users may otherwise receive no indication that loading, saving, or validation completed.
 
 - details  
-  Keep announcements concise, avoid repeatedly replacing the live-region node, and use assertive announcements only for genuinely urgent messages.
+  Keep a persistent live-region node mounted and update its text:
+
+  ```jsx
+  <p role="status" aria-live="polite">
+    {statusMessage}
+  </p>
+  ```
+
+  `role="status"` is appropriate for non-urgent progress such as “Profile saved.” Use `role="alert"` or assertive announcements sparingly because they interrupt current speech. Do not announce every keystroke or duplicate text already conveyed through focus. Loading indicators also need an accessible name, and long operations should communicate both that work started and how it ended.
 
 ---
 
@@ -2300,7 +2432,9 @@
   Adding `role` does not automatically add keyboard behavior.
 
 - details  
-  Follow the established pattern for the widget, manage `tabIndex`, support required keys, expose state with ARIA, preserve visible focus, and test with keyboard and assistive technology.
+  Start with the native element whenever possible; a `<button>` already supplies focus, Enter and Space activation, disabled behavior, and semantics. For a composite widget such as tabs, listbox, or menu, follow its established ARIA Authoring Practices pattern rather than inventing keyboard behavior.
+
+  Typical responsibilities include roving `tabIndex` or `aria-activedescendant`, required arrow-key navigation, Home and End behavior, Escape handling, visible focus, and state such as `aria-expanded`, `aria-selected`, or `aria-checked`. Do not add `role="button"` to a `<div>` without implementing the full interaction contract. Test with keyboard-only navigation, browser accessibility inspection, and at least representative screen-reader checks.
 
 ---
 
@@ -2886,62 +3020,49 @@
 
 ---
 
-## Senior interview scenarios
+## Emerging rendering APIs
 
 ### Card 119
 
 - question  
-  Hydration fails only for users in certain locales. How would you investigate it?
+  What is partial pre-rendering, and how does it differ from ordinary streaming SSR?
 
 - answer  
-  Compare the exact server and first client output, then look for locale-sensitive formatting, time-zone differences, browser-only data, invalid HTML, random values, or data that changed between rendering and hydration.
+  Partial pre-rendering creates a reusable static shell ahead of time and later resumes server rendering to fill dynamic regions. Streaming SSR starts rendering for a request and progressively sends completed content, but does not necessarily reuse a precomputed shell.
 
 - explanation  
-  Dates and numbers can produce different strings when the server locale or time zone differs from the browser's settings.
+  The goal is to combine fast delivery of stable content with request-time rendering for personalized or fresh content. Suspense boundaries identify where prerendering can pause and where resumed work can continue.
 
 - details  
-  A disciplined investigation should:
+  React's server APIs separate the work into two stages:
 
-  1. Capture the hydration warning and component stack.
-  2. Reproduce with the affected locale and time zone.
-  3. Inspect the server HTML before client code changes it.
-  4. Identify the first differing node rather than the largest reported subtree.
-  5. Make the initial render deterministic.
+  1. Prerender as much of the tree as possible and save the result plus resumable state.
+  2. Resume later with request-specific data and stream the remaining content.
 
-  Possible fixes include formatting with an explicit shared locale and time zone, sending the formatted value from the server, or rendering a deterministic placeholder and updating it after hydration.
+  Partial pre-rendering is infrastructure for framework authors and is normally consumed through a framework rather than assembled directly in application code. It does not make all content static, remove hydration, or replace sensible cache and data-loading decisions.
 
-  `suppressHydrationWarning` is appropriate only for a deliberately unavoidable text difference and works at limited depth. It should not hide an unexplained mismatch.
+  In an interview, explain the trade-off: a static shell can improve time to first content and cacheability, while dynamic regions still pay request-time data and rendering costs.
 
 ---
 
 ### Card 120
 
 - question  
-  A Server Function receives a hidden `userId` field from a form. What security problem can this create?
+  What problem does React's `<ViewTransition>` solve, and is it ready for general production use?
 
 - answer  
-  Hidden fields are controlled by the client. Trusting the submitted `userId` can let an attacker act as another user or access a resource they do not own.
+  `<ViewTransition>` coordinates animated transitions for DOM changes caused by React updates. It is currently available in React's Canary channel, so teams should not treat it as a stable API for general production adoption yet.
 
 - explanation  
-  A Server Function is a public server entry point. It must authenticate the caller, authorize the requested operation, and validate all submitted data.
+  React can activate a browser View Transition when an update reveals, hides, reorders, or changes content inside a transition boundary. This lets the animation follow React's commit rather than relying on manual DOM snapshots.
 
 - details  
-  The server should derive identity from a verified session, not from a user identifier supplied by the browser:
-
   ```jsx
-  "use server";
-
-  async function updateProfile(formData) {
-    const session = await requireSession();
-    const input = validateProfile(formData);
-
-    await updateAuthorizedProfile(
-      session.user.id,
-      input
-    );
-  }
+  <ViewTransition>
+    <Page route={route} />
+  </ViewTransition>
   ```
 
-  Authorization must also check ownership or role for the particular resource. UI restrictions, disabled buttons, hidden inputs, TypeScript types, and Client Component boundaries are not security controls.
+  Transition-aware updates commonly originate from a Transition, Suspense reveal, or navigation integration. Stable `name` values can connect matching elements across the old and new UI, but duplicate names can prevent a transition.
 
-  Consider CSRF protection where the framework and authentication design require it, avoid returning sensitive error detail, and log rejected authorization attempts without exposing secrets.
+  Prefer progressive enhancement: the interface must remain correct without animation, honor reduced-motion preferences, and avoid transitions that obscure focus or interaction state. Because the component and its related APIs are Canary, verify the current React and framework documentation before adopting them.
