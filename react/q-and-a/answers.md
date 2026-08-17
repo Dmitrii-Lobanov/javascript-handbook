@@ -736,30 +736,27 @@
   A render that produces no DOM changes may be inexpensive. Focus on user-visible delay, long tasks, repeated expensive calculations, and unnecessarily broad updates.
 
 - details  
-  Investigate:
+  Use a measure-first workflow instead of adding memoization immediately.
 
-  - Which interaction is slow
-  - Which components render
-  - Why they render
-  - How long render and commit take
-  - Whether Context updates are too broad
-  - Whether lists require virtualization
-  - Whether state is located too high
-  - Whether Effects cause update chains
+  1. **Define the slow interaction.** Record a concrete action such as typing in search, opening a panel, or changing a filter. Note the device, data size, and network conditions so the result is reproducible.
+  2. **Separate React work from browser work.** Use the browser Performance panel to check whether time is spent in JavaScript, style calculation, layout, paint, network activity, or React rendering. React cannot optimize a slow image decode or an expensive CSS layout with `memo`.
+  3. **Profile the React update.** Record the interaction with React DevTools Profiler. Inspect long commits, components with high self time, and components that render many times. Use “Why did this render?” information to trace changed props, state, Context, or external-store snapshots.
+  4. **Find the update source.** Look for state placed too high in the tree, broad Context providers, unstable object or callback props, Effect-driven update chains, duplicated derived state, and subscriptions that notify more consumers than necessary.
+  5. **Apply the smallest relevant fix.** Change the architecture before adding widespread memoization.
+  6. **Measure again.** Compare the same interaction and confirm that user-visible latency improved without breaking behavior.
 
-  Common improvements include:
+  Match the optimization to the bottleneck:
 
-  - Colocating state
-  - Splitting contexts
-  - Removing unnecessary Effects
-  - Memoizing measured expensive work
-  - Stabilizing important identities
-  - Virtualizing long lists
-  - Deferring non-urgent work
-  - Reducing component work
-  - Code splitting
+  - **Too many components update:** colocate state, split Context, narrow store subscriptions, or compose children so unrelated subtrees are not recreated.
+  - **One component performs expensive work:** simplify the calculation, precompute it, move it off the critical path, or memoize it when its dependencies are stable.
+  - **A large collection creates too much DOM work:** paginate or virtualize it and keep row keys stable.
+  - **An urgent interaction waits for non-urgent UI:** use a Transition or `useDeferredValue`. This changes scheduling; it does not make the calculation cheaper.
+  - **Effects cause repeated commits:** remove derived-state Effects, fix dependency cycles, and keep user-triggered work in event handlers.
+  - **The initial load is slow:** reduce client JavaScript, split code at meaningful boundaries, and investigate data or asset waterfalls.
 
-  Test performance with production builds because development checks and Strict Mode intentionally add work.
+  `memo`, `useMemo`, and `useCallback` are useful only when they skip work that costs more than their comparisons and cache maintenance. They can be ineffective when dependencies or props receive new identities on every render.
+
+  Profile a production build with representative data. Development mode adds warnings and Strict Mode checks, and a fast desktop with a tiny dataset can hide the bottleneck users actually experience.
 
 ---
 
@@ -1098,7 +1095,27 @@
   JSX creates elements; React calls components and preserves their state according to tree identity.
 
 - details  
-  Elements are plain values, not DOM nodes. Function components are invoked by React, not instantiated with `new`. Informally, “instance” means the state and lifecycle associated with one mounted position.
+  A React element is the value created by JSX:
+
+  ```jsx
+  const element = <Profile user={user} />;
+  ```
+
+  Conceptually, it records the element type (`Profile`), its props, and identity information such as its key. It is a lightweight description, not a DOM node, a rendered component, or something whose props should be mutated.
+
+  A component is the reusable definition:
+
+  ```jsx
+  function Profile({ user }) {
+    return <h2>{user.name}</h2>;
+  }
+  ```
+
+  React calls the component while rendering and uses the returned elements to calculate the next UI. Call components through JSX rather than invoking `Profile()` yourself; React needs to control their rendering and Hook lifecycle.
+
+  “Component instance” requires care. Class components have a literal class instance. Function components do not: React stores their Hook state and lifecycle data internally. In everyday discussion, an instance usually means one mounted occurrence of a component at a particular position in the tree.
+
+  Two `<Profile />` elements can therefore represent two independent mounted occurrences with separate state. React preserves an occurrence when its type, position, and key still match; changing those identity signals can create a new occurrence and reset its state.
 
 ---
 
@@ -1114,7 +1131,41 @@
   React associates Hook state with call order. Conditional calls can shift that order between renders and connect state to the wrong Hook.
 
 - details  
-  Use conditions inside a Hook rather than around it, or extract a conditional subtree into another component. The Hooks linter detects most violations.
+  React relies on Hooks being called in the same order on every render:
+
+  ```jsx
+  function Profile({ userId, enabled }) {
+    const [user, setUser] = useState(null); // Hook 1
+
+    if (enabled) {
+      useEffect(() => {                     // 🚩 sometimes Hook 2
+        loadUser(userId).then(setUser);
+      }, [userId]);
+    }
+  }
+  ```
+
+  If `enabled` changes, the Hook sequence changes. React can no longer reliably associate each call with its previous state, Effect, or memoized value.
+
+  Keep the Hook unconditional and put the condition inside it:
+
+  ```jsx
+  useEffect(() => {
+    if (!enabled) return;
+
+    const controller = new AbortController();
+    loadUser(userId, { signal: controller.signal })
+      .then(setUser);
+
+    return () => controller.abort();
+  }, [enabled, userId]);
+  ```
+
+  Hooks may be called only while React is rendering a function component or another custom Hook. Do not call them in event handlers, callbacks, module scope, class methods, or ordinary utility functions. Extract a component when an entire conditional branch needs its own Hooks, or extract a custom Hook when reusable React behavior is needed.
+
+  The `use` API has special conditional and loop support, but it still may only run from a component or Hook and should not be wrapped in `try`/`catch`. It does not relax the rules for APIs such as `useState` or `useEffect`.
+
+  Use `eslint-plugin-react-hooks`; runtime symptoms can be confusing, while the linter catches call-order and component/Hook-boundary mistakes during development.
 
 ---
 
@@ -1130,9 +1181,43 @@
   A component must not mutate props or state directly; it requests state changes with setters or dispatches actions.
 
 - details  
-  Props support configuration and composition. State represents information that changes over time and affects rendering. Shared state should live in the nearest common owner.
+  Props describe what a parent wants a child to render or do. They can contain data, callbacks, elements, or children:
 
-  A useful interview distinction is ownership: the parent owns a prop, while the component owns its state. A child can ask the parent to change data by calling a callback, but it cannot change the prop itself. Avoid copying props into state unless you intentionally need a separate draft with its own lifecycle; otherwise the two sources can drift apart.
+  ```jsx
+  <SearchInput
+    value={query}
+    onValueChange={setQuery}
+  />
+  ```
+
+  `SearchInput` reads `value`, but the parent owns it. The child requests a change by calling `onValueChange`; it must not assign to or mutate the prop.
+
+  State is memory owned by a mounted component occurrence:
+
+  ```jsx
+  const [isOpen, setIsOpen] = useState(false);
+  ```
+
+  Calling the setter queues another render. It does not mutate the state variable captured by the current render, so code should treat both props and state as immutable snapshots. When the next value depends on the previous one, use a functional update:
+
+  ```jsx
+  setCount(current => current + 1);
+  ```
+
+  Ownership determines where state belongs:
+
+  - Keep state local when only one subtree needs it.
+  - Lift it to the nearest common owner when multiple components must stay coordinated.
+  - Put shareable navigation state in the URL when appropriate.
+  - Treat remote server data separately from transient interface state.
+
+  Avoid copying a prop into state by default:
+
+  ```jsx
+  const [name, setName] = useState(user.name); // does not follow later user.name changes
+  ```
+
+  Usually, render directly from the prop or derive the required value. A separate state value is appropriate when it intentionally has its own lifecycle, such as an editable draft. In that case, define explicitly when the draft resets, whether later prop changes are merged, and how unsaved edits are handled.
 
 ---
 
@@ -1277,13 +1362,69 @@
   How can you avoid prop drilling?
 
 - answer  
-  Use component composition, colocate state, pass complete child elements, introduce focused Context, or use an external store when subscription needs justify it.
+  First decide whether prop drilling is actually a problem. A few explicit props are often the clearest solution. When many intermediate components forward data they do not use, reduce the distance with state colocation or composition, use focused Context for shared subtree dependencies, and introduce an external store only when broad access and selective subscriptions justify it.
 
 - explanation  
-  Prop drilling is not automatically harmful; explicit props are often easier to trace than hidden dependencies.
+  Props make dependencies visible and keep components reusable. Context and stores remove forwarding code, but they introduce implicit dependencies and can broaden the impact of updates. The goal is better ownership and component boundaries—not zero prop passing.
 
 - details  
-  Choose Context for broadly relevant, relatively stable dependencies. Split contexts when unrelated values change at different rates.
+  Use the smallest solution that matches the problem.
+
+  **1. Keep ordinary props when the dependency is direct.**
+
+  Passing data through one or two components is not harmful:
+
+  ```jsx
+  <ProfilePage user={user} />
+  ```
+
+  Props document what `ProfilePage` needs, work naturally with TypeScript, and make the data flow easy to trace. Do not add Context solely because a prop appears more than once.
+
+  **2. Colocate state with the components that use it.**
+
+  Prop drilling often indicates that state was placed too high. If only `SearchPanel` needs `query`, keep it there instead of storing it at the page or application root. Colocation reduces both forwarding and unrelated rerenders.
+
+  **3. Use composition to bypass intermediaries.**
+
+  A layout does not need to know every dependency of its descendants:
+
+  ```jsx
+  function App() {
+    return (
+      <PageLayout
+        sidebar={<UserMenu user={user} />}
+      >
+        <Dashboard />
+      </PageLayout>
+    );
+  }
+  ```
+
+  `PageLayout` receives complete UI rather than accepting `user` only to forward it to `UserMenu`. This keeps the layout generic and moves knowledge to the component that performs the composition.
+
+  **4. Use Context for a shared subtree dependency.**
+
+  Context fits values such as theme, locale, authenticated-user capabilities, or a compound component's shared state:
+
+  ```jsx
+  const PermissionsContext = createContext(null);
+
+  function App({ permissions }) {
+    return (
+      <PermissionsContext value={permissions}>
+        <Workspace />
+      </PermissionsContext>
+    );
+  }
+  ```
+
+  Keep each Context focused. Memoize a provider object when its identity would otherwise change unnecessarily, and split unrelated values that update at different rates. A Context update rerenders consumers that read that Context; `memo` does not block it.
+
+  **5. Use an external store for genuinely shared mutable state.**
+
+  A store becomes useful when distant parts of the application need the same changing data, updates can originate outside React, or consumers require selectors and narrow subscriptions. Examples include a collaborative document, normalized client cache, or complex cross-route workflow. A store should solve ownership and subscription requirements, not merely hide props.
+
+  In an interview, explain the trade-off: props favor explicit dependencies, Context favors convenient subtree access, and stores favor independently subscribed shared state. Choosing among them is an architectural decision about ownership, update frequency, and reuse.
 
 ---
 
@@ -1333,13 +1474,72 @@
   How can component state be intentionally preserved or reset?
 
 - answer  
-  React preserves state when a component retains the same type, position, and key. Change its key or render a different type to reset it.
+  React preserves state while the same component type remains at the same position in the rendered tree with the same key. To reset a subtree, give it a different key, render a different component type at that position, or remove it from the tree. Preserve state by keeping those identity signals stable.
 
 - explanation  
-  State belongs to a tree position rather than to JSX text or a variable name.
+  State is associated with a component’s identity in the rendered tree—not with a JSX variable, a particular conditional branch in the source code, or the component function by itself. React uses type, position, and key to decide whether the next element represents the existing mounted occurrence.
 
 - details  
-  Stable keys preserve list-item state during reordering. A key based on an entity ID can intentionally reset an editor when the selected entity changes.
+  **Preserving state**
+
+  If both branches place the same component at the same tree position, its state is preserved:
+
+  ```jsx
+  return isCompact
+    ? <Counter compact />
+    : <Counter compact={false} />;
+  ```
+
+  The props change, but the element is still a `Counter` in the same position. Moving JSX into a variable or helper does not change identity by itself; the resulting tree is what matters.
+
+  Stable data keys preserve the correct item state when a list is reordered:
+
+  ```jsx
+  todos.map(todo => (
+    <TodoEditor key={todo.id} todo={todo} />
+  ));
+  ```
+
+  An array index is unsafe when items can move, be inserted, or be removed because state may become attached to the wrong item.
+
+  **Resetting state**
+
+  A key can declare that two otherwise identical elements represent different identities:
+
+  ```jsx
+  <ProfileEditor
+    key={selectedUserId}
+    userId={selectedUserId}
+  />
+  ```
+
+  When `selectedUserId` changes, React unmounts the previous editor, runs its Effect cleanup, creates new state from the initial values, and mounts a fresh editor. This is often clearer than an Effect that tries to reset several fields after the new user has already rendered.
+
+  Rendering a different type also resets the subtree:
+
+  ```jsx
+  {isEditing
+    ? <ProfileForm />
+    : <ProfileSummary />}
+  ```
+
+  Removing a component with conditional rendering resets it when it later returns. CSS hiding usually leaves it mounted, so state and Effects remain active. `<Activity mode="hidden">` is another option when state should be retained while Effects are temporarily cleaned up.
+
+  **Choose the reset boundary carefully.** A key resets the entire keyed subtree, including focus, uncontrolled input values, child state, refs, and Effects. Use a narrower key or an explicit state update when only one field should reset. Before resetting an edited form, also decide what should happen to unsaved work and where focus should move.
+
+  Avoid defining a component inside another component:
+
+  ```jsx
+  function Page() {
+    function Editor() {
+      return <input />;
+    }
+
+    return <Editor />;
+  }
+  ```
+
+  `Editor` is a new component type on every `Page` render, so React can reset its subtree unexpectedly. Declare component types at module scope unless creating a new type is intentional.
 
 ---
 
@@ -1452,13 +1652,46 @@
   When should logic remain in an event handler instead of moving into an Effect?
 
 - answer  
-  Keep logic in an event handler when it occurs because of a specific user action. Use an Effect when synchronization is caused by the component being displayed or reactive values changing.
+  Keep logic in an event handler when a particular interaction causes it. Use an Effect when rendering the component—or a change to its reactive inputs—requires synchronization with an external system. If the value can be calculated from props or state, calculate it during rendering instead of using either mechanism to maintain duplicate state.
 
 - explanation  
-  Event handlers preserve the cause of an operation and prevent delayed or repeated execution.
+  Event handlers run once for the interaction that triggered them and have access to that render’s snapshot. Effects run after a commit and may run again whenever synchronization dependencies change. Moving action-specific work into an Effect loses its cause and can repeat it after remounting, navigation, or state restoration.
 
 - details  
-  Submitting a purchase belongs in the submit handler. Connecting to a room while `roomId` is active belongs in an Effect.
+  Ask: **“Why should this code run?”**
+
+  If the answer is “because the user clicked Submit,” keep it in the handler:
+
+  ```jsx
+  async function handleSubmit(event) {
+    event.preventDefault();
+    await placeOrder(cart);
+    navigate("/confirmation");
+  }
+  ```
+
+  Do not set `submitted` and watch it with an Effect merely to call `placeOrder`. That separates the operation from its cause, adds another render, and risks duplicate submission if state is restored or the component remounts.
+
+  If the answer is “because this component is currently showing room 42,” use an Effect:
+
+  ```jsx
+  useEffect(() => {
+    const connection = connect(roomId);
+    connection.open();
+
+    return () => connection.close();
+  }, [roomId]);
+  ```
+
+  This expresses synchronization: while a particular `roomId` is rendered, the matching connection should exist. Cleanup mirrors setup whenever the room changes or the component unmounts.
+
+  Do neither when the result is derivable:
+
+  ```jsx
+  const fullName = `${firstName} ${lastName}`;
+  ```
+
+  Storing `fullName` and updating it in an Effect creates redundant state and an extra commit. A useful interview summary is: rendering calculates UI, handlers perform interaction-caused work, and Effects synchronize committed UI with systems outside React.
 
 ---
 
@@ -1468,13 +1701,53 @@
   How do you read the latest value inside a callback without unnecessarily restarting an Effect?
 
 - answer  
-  Use functional updates, restructure reactive logic, or keep non-rendering mutable data in a ref when appropriate.
+  Choose the technique according to what the callback needs: use a functional state update when calculating from previous state, `useEffectEvent` when Effect-owned event logic needs the latest committed values without resubscribing, and a ref for mutable non-rendering data used by an external callback. Do not omit real dependencies merely to keep an Effect from restarting.
 
 - explanation  
-  A ref can expose the latest value without becoming an Effect dependency, but it should not replace state used for rendering.
+  Closures capture values from the render that created them. That snapshot is normally desirable, but a long-lived timer, subscription, or third-party callback may need a current value. The correct solution depends on whether that value is reactive to the synchronization itself.
 
 - details  
-  Prefer designs that make dependencies honest. Use escape-hatch patterns only when the callback deliberately needs non-reactive access to a current value.
+  **Use a functional update when only the previous state is needed:**
+
+  ```jsx
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCount(count => count + 1);
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, []);
+  ```
+
+  The updater receives the latest queued state, so `count` does not need to be captured by the interval Effect.
+
+  **Use `useEffectEvent` for non-reactive logic triggered by an Effect:**
+
+  ```jsx
+  const onConnected = useEffectEvent(() => {
+    showNotification(`Connected as ${user.name}`, theme);
+  });
+
+  useEffect(() => {
+    const connection = connect(roomId);
+    connection.on("connected", onConnected);
+    return () => connection.disconnect();
+  }, [roomId]);
+  ```
+
+  Changing `roomId` must reconnect, so it remains a dependency. Changing `theme` should only affect the next notification, so the Effect Event reads its latest value without reconnecting. Effect Events must be called from Effects or other Effect Events, must remain local to the owning component or Hook, and must not be used to hide dependencies that should resynchronize the Effect.
+
+  **Use a ref for imperative mutable data that does not render:**
+
+  ```jsx
+  const latestPosition = useRef(position);
+
+  useEffect(() => {
+    latestPosition.current = position;
+  }, [position]);
+  ```
+
+  A third-party listener can read `latestPosition.current`, but changing it will not rerender the component. If users should see the value, it belongs in state. Prefer an honest reactive design first; refs and Effect Events are targeted escape hatches, not replacements for dependency arrays.
 
 ---
 
@@ -1484,13 +1757,41 @@
   What is `useId`, and why should it not be used for list keys?
 
 - answer  
-  `useId` generates stable IDs for accessibility relationships and server/client consistency.
+  `useId` generates an identifier that is stable for a component occurrence and coordinates correctly between server rendering and hydration. It is intended for accessibility relationships and reusable component markup—not for identifying application data.
 
 - explanation  
-  List keys must come from the data because they represent item identity; `useId` represents a component call position.
+  A list key tells React which data item a child represents across insertions and reordering. A `useId` value is associated with where the Hook is called in the component tree, so it cannot provide the data identity that reconciliation needs.
 
 - details  
-  Use it for relationships such as `aria-describedby` and corresponding element IDs. Do not use it as a database or globally persistent identifier.
+  Use the generated prefix to connect related elements inside a reusable component:
+
+  ```jsx
+  function PasswordField({ hint }) {
+    const id = useId();
+    const inputId = `${id}-input`;
+    const hintId = `${id}-hint`;
+
+    return (
+      <div>
+        <label htmlFor={inputId}>Password</label>
+        <input id={inputId} aria-describedby={hintId} />
+        <p id={hintId}>{hint}</p>
+      </div>
+    );
+  }
+  ```
+
+  Multiple `PasswordField` occurrences receive distinct relationships without requiring callers to coordinate IDs. This is especially useful in component libraries and avoids server/client ID mismatches that can occur with a module counter or random value during rendering.
+
+  Do not call `useId` inside a loop to generate keys. Hooks cannot be called in loops, and the resulting value would still describe Hook position rather than item identity:
+
+  ```jsx
+  items.map(item => (
+    <Row key={item.id} item={item} />
+  ));
+  ```
+
+  Use an ID from the data or create one when the item itself is created. `useId` is also not a database ID, analytics identifier, CSS selector contract, or globally persistent value. If an explicit `id` prop is part of the component API, accept it and use `useId` as the fallback.
 
 ---
 
@@ -1500,13 +1801,50 @@
   What does the `use` API do?
 
 - answer  
-  `use` reads a supported resource, such as a Promise or Context, during rendering and integrates with Suspense and Error Boundaries.
+  `use` reads a supported resource during rendering. With a Promise, it returns the fulfilled value, suspends at the nearest Suspense boundary while pending, or sends a rejection to the nearest Error Boundary. With Context, it reads the nearest provider value similarly to `useContext`.
 
 - explanation  
-  A pending Promise suspends; a fulfilled Promise returns its value; a rejected Promise throws its error.
+  Unlike an Effect, `use` participates in rendering, so React can coordinate pending and failed resources with declarative boundaries. Unlike most Hooks, `use` may be called conditionally or in a loop, but it must still be called while React is rendering a component or custom Hook.
 
 - details  
-  Unlike ordinary Hooks, `use` has special conditional usage rules. Its practical use is commonly coordinated by a framework supporting Suspense and Server Components.
+  A Server Component can create a Promise and pass it to a Client Component:
+
+  ```jsx
+  // Server Component
+  function Page() {
+    const commentsPromise = loadComments();
+
+    return (
+      <Suspense fallback={<CommentsSkeleton />}>
+        <Comments commentsPromise={commentsPromise} />
+      </Suspense>
+    );
+  }
+  ```
+
+  ```jsx
+  "use client";
+
+  function Comments({ commentsPromise }) {
+    const comments = use(commentsPromise);
+    return comments.map(comment => (
+      <Comment key={comment.id} comment={comment} />
+    ));
+  }
+  ```
+
+  Do not create a new uncached Promise during every Client Component render; retries can continually produce new work and React warns about unsupported uncached Promises. Prefer a framework data source, a cached server-created Promise, or another Suspense-compatible resource.
+
+  Context reads may be conditional:
+
+  ```jsx
+  if (shouldUseTheme) {
+    const theme = use(ThemeContext);
+    return <Panel theme={theme} />;
+  }
+  ```
+
+  `use` cannot be called in `try`/`catch` to handle a rejected Promise. Use an Error Boundary for failures and Suspense for pending UI. It also does not by itself define caching, request invalidation, or server authorization; those responsibilities belong to the resource and framework integration.
 
 ---
 
@@ -1516,13 +1854,43 @@
   When would you use `useImperativeHandle`?
 
 - answer  
-  Use it to expose a small imperative API through a ref instead of exposing an entire internal DOM node or implementation.
+  Use `useImperativeHandle` when a parent legitimately needs a small imperative capability—such as `focus()`, `scrollToError()`, or `reset()`—but should not receive the child’s entire DOM node or internal implementation.
 
 - explanation  
-  It is appropriate for actions such as `focus`, `scrollTo`, or `reset` that are inherently imperative.
+  Most component coordination should remain declarative through props and state. An imperative handle is an escape hatch for operations that naturally describe commands and cannot be expressed cleanly as rendered output.
 
 - details  
-  Prefer declarative props for ordinary behavior. Keep the exposed handle minimal and stable, and avoid using refs as a general communication channel.
+  In React 19, a function component can receive `ref` as a prop and expose a constrained handle:
+
+  ```jsx
+  function SearchInput({ ref }) {
+    const inputRef = useRef(null);
+
+    useImperativeHandle(ref, () => ({
+      focus() {
+        inputRef.current?.focus();
+      },
+      select() {
+        inputRef.current?.select();
+      }
+    }), []);
+
+    return <input ref={inputRef} type="search" />;
+  }
+  ```
+
+  The parent can call `searchRef.current.focus()` but cannot mutate arbitrary properties of the internal input. React versions before 19 commonly use `forwardRef` to receive the ref.
+
+  Include every reactive value used to create the handle in its dependency array. Otherwise methods can close over stale props or state. Keep the API small and behavioral: `focus()` is a better boundary than exposing internal nodes, state setters, or child implementation details.
+
+  Avoid using an imperative handle to coordinate ordinary data flow:
+
+  - Use props to configure rendering.
+  - Use callbacks to report child events.
+  - Lift state when parent and child need one source of truth.
+  - Use refs only for commands that are genuinely imperative.
+
+  Also consider timing and lifecycle: the handle is available after commit, becomes `null` when the child unmounts, and should normally be used from an event handler or Effect rather than during rendering.
 
 ---
 
@@ -1534,13 +1902,39 @@
   Why does a child component render when its parent renders?
 
 - answer  
-  By default, React recursively renders child components when their parent renders.
+  When a parent renders, React normally evaluates the child elements it returns and calls their component functions to calculate the next subtree. This does not mean React remounts the children or changes their DOM. State is preserved when identity matches, and React commits only actual host changes.
 
 - explanation  
-  React must calculate the next subtree before it can determine whether DOM changes are necessary.
+  A parent’s new render can produce different child props or structure, so React generally needs the child’s next output before reconciliation can determine what changed. Render propagation and DOM mutation are separate concepts.
 
 - details  
-  A render is not necessarily expensive and does not necessarily change the DOM. Use `memo` only when measured work justifies comparison overhead.
+  Consider this update:
+
+  ```jsx
+  function Parent() {
+    const [count, setCount] = useState(0);
+
+    return (
+      <>
+        <button onClick={() => setCount(value => value + 1)}>
+          {count}
+        </button>
+        <Profile name="Ada" />
+      </>
+    );
+  }
+  ```
+
+  Clicking the button renders `Parent` and, by default, calls `Profile` again even though its visible prop is unchanged. If `Profile` returns equivalent output, React may perform no DOM mutation for it. Its local state is also preserved because it remains the same type at the same position.
+
+  This default behavior keeps data flow predictable and is often cheap. Investigate only when profiling shows meaningful cost. Possible boundaries include:
+
+  - `memo` for a component whose unchanged props frequently allow expensive work to be skipped.
+  - State colocation so an update starts lower in the tree.
+  - Narrower Context or external-store subscriptions.
+  - Composition that lets a stateful wrapper receive an already-created child element.
+
+  Do not confuse rerendering with remounting. A remount creates new state, DOM, refs, and Effects; a rerender recalculates an existing occurrence. Also do not memoize every child preemptively—the comparison and identity-management costs may exceed the render work.
 
 ---
 
@@ -1550,13 +1944,36 @@
   What causes a memoized component to render again?
 
 - answer  
-  A memoized component renders when its props change, its own state changes, consumed Context changes, or an external subscription produces a new snapshot.
+  A component wrapped in `memo` can render when a prop is not `Object.is`-equal to its previous value, its own state changes, a Context it reads changes, or an external subscription supplies a new snapshot. `memo` is a props-based optimization, not a guarantee that React will never call the component again.
 
 - explanation  
-  `memo` only compares props; it does not block state or Context updates.
+  By default, `memo` compares each prop shallowly with `Object.is`. It can skip render work caused by the parent when props are equal, but a component must still react to the state and shared data it consumes directly.
 
 - details  
-  New object, array, and function identities can make props unequal. React may also render for development checks or other internal reasons.
+  ```jsx
+  const UserRow = memo(function UserRow({ user, onSelect }) {
+    const theme = useContext(ThemeContext);
+    return (
+      <button className={theme} onClick={() => onSelect(user.id)}>
+        {user.name}
+      </button>
+    );
+  });
+  ```
+
+  `UserRow` can render again because:
+
+  - `user` is a different object reference, even if its fields contain the same values.
+  - `onSelect` is a newly created function.
+  - Its own state changes.
+  - `ThemeContext` provides a changed value.
+  - A store Hook used inside it returns a changed snapshot.
+
+  A parent render alone can be skipped only when all props compare equal. Passing children also counts as passing a prop; freshly created JSX can therefore break a memo boundary.
+
+  A custom comparator is possible, but it must compare every prop, including callbacks that may close over changing values. Deep comparison can be slower than rendering and can freeze stale behavior when implemented incorrectly.
+
+  React may call memoized components again for development checks or discard cached work for implementation reasons. Components must remain correct without memoization. Use the Profiler to confirm both that the component is costly and that its props remain stable often enough for `memo` to help.
 
 ---
 
@@ -1566,13 +1983,42 @@
   Why can inline objects and functions affect memoization?
 
 - answer  
-  Object and function literals create new references on every render, so shallow prop comparison treats them as changed.
+  Inline object, array, function, and JSX expressions usually create new references on every render. When those references are props of a memoized child or dependencies of a Hook, React sees them as changed even if their contents or behavior look equivalent.
 
 - explanation  
-  This matters only when reference identity participates in memoization or a dependency array.
+  Referential identity is not inherently a performance problem. It matters only at a boundary that compares references, such as `memo`, a dependency array, a Context provider value, or a selector cache.
 
 - details  
-  Move constants outside components, use stable primitives, or memoize when beneficial. Do not eliminate inline values without evidence of a performance problem.
+  This defeats the `memo` boundary on every parent render:
+
+  ```jsx
+  <Results
+    options={{ sort: "name" }}
+    onSelect={item => setSelectedId(item.id)}
+  />
+  ```
+
+  Possible fixes depend on what the values capture:
+
+  ```jsx
+  const options = useMemo(
+    () => ({ sort }),
+    [sort]
+  );
+
+  const handleSelect = useCallback(
+    item => setSelectedId(item.id),
+    []
+  );
+
+  <Results options={options} onSelect={handleSelect} />;
+  ```
+
+  Prefer simpler fixes first: pass primitives instead of a configuration object, move a true constant to module scope, accept an item ID instead of closing over an item, or move object creation inside the Effect that uses it.
+
+  `useMemo` and `useCallback` do not prevent creation of all values or make a function faster. They preserve a reference between renders while dependencies remain equal. That has its own comparison, memory, and readability cost.
+
+  Inline handlers on ordinary DOM elements are normally fine. If there is no meaningful identity-sensitive boundary or measured bottleneck, keeping the inline expression is clearer than adding defensive memoization everywhere.
 
 ---
 
@@ -1582,13 +2028,23 @@
   How would you render a list containing thousands of items efficiently?
 
 - answer  
-  Render only the visible window, keep item keys stable, minimize row work, and paginate or incrementally load data when appropriate.
+  Start by limiting how much data and DOM the interface needs at once. Paginate or incrementally load remote data, virtualize large scrollable collections, keep row identity stable, and prevent unrelated state changes from rerendering every row. Then profile React work and browser layout or paint separately.
 
 - explanation  
-  Thousands of mounted DOM nodes increase layout, paint, memory, and React rendering costs.
+  Large lists have several independent costs: fetching and transforming data, calling row components, creating DOM nodes, calculating layout, painting, and retaining memory. Optimizing only React renders may not fix the dominant browser cost.
 
 - details  
-  Use list virtualization, measured row sizing, overscan, and accessible focus behavior. Profile before and after because virtualization adds complexity.
+  Use a staged approach:
+
+  1. **Reduce the dataset.** Apply server-side filtering and pagination when users do not need every record locally. Avoid downloading 100,000 rows merely to display 20.
+  2. **Keep data operations efficient.** Do not repeatedly sort or filter the whole collection in every row. Compute once per relevant change, move expensive processing to the server or a worker when appropriate, and debounce only input that should intentionally lag.
+  3. **Keep identity stable.** Use a durable row key such as `row.id`, not the array index. Preserve row objects when their data has not changed so selective memoization or store subscriptions can work.
+  4. **Limit DOM size.** Virtualize a genuinely large scrollable list so only visible rows plus a small overscan region are mounted.
+  5. **Limit update scope.** Colocate hover or edit state in the row, subscribe rows to only the data they need, and avoid a Context value that changes for every pointer or keystroke event.
+
+  Virtualization is not free. Variable row heights require measurement, and unmounting off-screen items complicates browser find, printing, focus, screen-reader navigation, sticky content, and scroll restoration. Pagination may provide a better user experience for searchable business data; virtualization is often better for continuous feeds or dense explorers.
+
+  Test with representative row counts and interactions. Measure scripting, layout, paint, memory, and responsiveness—not only the number of React renders.
 
 ---
 
@@ -1598,13 +2054,35 @@
   What is list virtualization?
 
 - answer  
-  Virtualization renders a small window representing the currently visible portion of a much larger collection.
+  List virtualization, or windowing, renders only the items in or near the viewport while simulating the full collection’s scrollable size. As the user scrolls, the rendered window moves and DOM nodes are created, removed, or reused.
 
 - explanation  
-  Spacer measurements preserve the apparent scroll range while off-screen rows remain unmounted.
+  The virtualizer calculates which item indices intersect the viewport from scroll position and item measurements. Padding, spacers, or positioned rows preserve the scrollbar geometry even though most items are not mounted.
 
 - details  
-  Challenges include dynamic heights, keyboard navigation, focus retention, screen-reader behavior, sticky elements, and scroll restoration.
+  A simplified fixed-height calculation is:
+
+  ```js
+  const start = Math.floor(scrollTop / rowHeight);
+  const visibleCount = Math.ceil(viewportHeight / rowHeight);
+  const from = Math.max(0, start - overscan);
+  const to = Math.min(items.length, start + visibleCount + overscan);
+  ```
+
+  Only `items.slice(from, to)` is rendered, offset to its logical position. Overscan renders a few extra rows before and after the viewport so fast scrolling does not reveal blank gaps.
+
+  Production implementations must address:
+
+  - Dynamic heights and measurement changes
+  - Resize and responsive layout
+  - Stable keys and item reordering
+  - Scroll anchoring and restoration
+  - Focus moving to an item that would otherwise unmount
+  - Keyboard navigation to an off-screen item
+  - Screen-reader expectations and collection metadata
+  - Sticky headers, printing, and browser find
+
+  Use a mature virtualizer unless the requirements are extremely simple. Provide programmatic scrolling for focused or selected items and test zoom, reduced motion, keyboard-only use, and assistive technology. For modest collections, ordinary rendering may be faster to build, more accessible, and sufficiently performant.
 
 ---
 
@@ -1614,13 +2092,42 @@
   How do code splitting and route-based lazy loading differ?
 
 - answer  
-  Code splitting is the general technique of producing independently loadable bundles. Route-based lazy loading places split points around route boundaries.
+  Code splitting divides application code into independently loadable chunks. Route-based lazy loading is a code-splitting strategy that loads the code for a route only when navigation requires—or deliberately prefetches—it. Routes are good default boundaries, while large optional features may justify additional component-level splits.
 
 - explanation  
-  Routes are useful split points because users often need only one route during initial loading.
+  Splitting lowers the initial JavaScript download, parse, and execution cost, but it moves some work to later navigation. A useful boundary ships less unused code without creating a waterfall of tiny chunks and disruptive loading states.
 
 - details  
-  Component and feature splits may further reduce initial JavaScript. Balance chunk size, request overhead, caching, loading UX, and failure handling.
+  `lazy` loads a component module when React first attempts to render it:
+
+  ```jsx
+  const ReportsPage = lazy(() => import("./ReportsPage.js"));
+
+  function App() {
+    return (
+      <Suspense fallback={<PageSkeleton />}>
+        <ReportsPage />
+      </Suspense>
+    );
+  }
+  ```
+
+  The import Promise and resolved module are cached. If loading fails, the rejection should reach an Error Boundary that can offer retry or navigation recovery. The basic `lazy` contract expects the module’s `.default` export to be a valid component.
+
+  Framework routers usually provide stronger route-level integration: matching routes before rendering, loading code and data in parallel, streaming, prefetching likely destinations, and producing route-specific error UI. Prefer that integration over adding a single Suspense boundary around the whole application.
+
+  Good additional split points include rarely opened editors, charts, admin tools, and large optional libraries. Avoid splitting a tiny component used immediately on every page; request overhead and fallback churn may outweigh the saved bytes.
+
+  Evaluate:
+
+  - Initial and route-specific transferred JavaScript
+  - Parse and execution time, not only compressed bundle size
+  - Cache stability between deployments
+  - Code-and-data waterfalls
+  - Loading, error, and offline behavior
+  - Whether hover, viewport, or idle prefetching improves navigation
+
+  Code splitting improves delivery. It does not reduce the runtime cost of code after that code has loaded.
 
 ---
 
@@ -1630,13 +2137,42 @@
   How does React prioritize urgent and non-urgent updates?
 
 - answer  
-  React treats direct interactions such as typing as urgent and lets developers mark interruptible background work as a Transition.
+  Ordinary state updates are urgent by default. A Transition marks selected updates as non-urgent and interruptible, allowing urgent updates such as controlled-input changes to commit without waiting for expensive background rendering. `useDeferredValue` applies similar scheduling to a value received by a subtree.
 
 - explanation  
-  Urgent work can interrupt and supersede non-urgent rendering, helping the interface remain responsive.
+  React may pause, restart, or discard Transition rendering when a newer urgent update arrives, while the currently committed UI remains interactive. Priority changes when work is shown; it does not make the underlying calculation faster.
 
 - details  
-  Scheduling does not reduce the calculation itself. Use `startTransition`, `useTransition`, or `useDeferredValue` where stale intermediate UI is acceptable.
+  Separate the immediate input update from the expensive result update:
+
+  ```jsx
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(event) {
+    const nextQuery = event.target.value;
+    setQuery(nextQuery); // urgent: controls the input
+
+    startTransition(() => {
+      setFilter(nextQuery); // non-urgent: updates expensive results
+    });
+  }
+  ```
+
+  Do not place the controlled input’s `setQuery` inside the Transition; React-controlled inputs must reflect typing synchronously. Use `isPending` to communicate background work without replacing useful existing content with a global spinner.
+
+  `useDeferredValue(query)` is useful when a component receives `query` but does not control the update that produces it. The deferred value initially remains stale while React attempts the background render.
+
+  Transition caveats include:
+
+  - Transition work can be interrupted and restarted, so rendering must remain pure.
+  - Updates after an `await` may need another `startTransition` to retain Transition priority.
+  - Multiple concurrent Transitions may currently be batched together.
+  - A Transition does not debounce, throttle, cancel network requests, or reduce CPU work.
+  - Do not use it when stale UI would be incorrect or unsafe.
+
+  If a calculation itself blocks the main thread for too long, optimize or move that work; scheduling alone cannot make the browser responsive during one uninterrupted JavaScript task.
 
 ---
 
@@ -1646,13 +2182,41 @@
   What problems does React Compiler solve?
 
 - answer  
-  React Compiler analyzes components and Hooks at build time and can automatically memoize values and component work.
+  React Compiler analyzes components and Hooks at build time and automatically applies memoization where it can safely reuse values or UI. Its main benefit is reducing routine manual `memo`, `useMemo`, and `useCallback` work while enabling more precise updates.
 
 - explanation  
-  It reduces manual `memo`, `useMemo`, and `useCallback` usage while preserving React semantics.
+  The compiler relies on the Rules of React—especially pure rendering and correct Hook usage—to prove that reuse is safe. It optimizes valid React code; it is not a runtime diffing replacement or a tool that repairs incorrect component behavior.
 
 - details  
-  Code must follow React's purity and Hook rules. The compiler does not fix poor state ownership, expensive algorithms, large DOM trees, or unnecessary network work.
+  Without the compiler, developers often stabilize a child and its props manually:
+
+  ```jsx
+  const visibleTodos = useMemo(
+    () => filterTodos(todos, tab),
+    [todos, tab]
+  );
+
+  const handleSelect = useCallback(
+    id => setSelectedId(id),
+    []
+  );
+
+  return <TodoList todos={visibleTodos} onSelect={handleSelect} />;
+  ```
+
+  The compiler can infer many equivalent reuse opportunities from component data flow. This reduces identity plumbing and the risk of adding memoization in the wrong places.
+
+  Adoption still requires engineering work:
+
+  - Enable the recommended Hooks and compiler lint rules.
+  - Fix render-time mutation and other Rules-of-React violations.
+  - Roll out incrementally when the application has risky legacy patterns.
+  - Monitor diagnostics and avoid broadly suppressing skipped compilation.
+  - Run behavior tests and compare production performance profiles.
+
+  Existing manual memoization does not need to be removed immediately. It may document an intentional identity contract or support uncompiled code. Remove it only when compiler coverage, tests, and measurement show that simpler code remains correct and performant.
+
+  The compiler does not solve poor state ownership, broad Context updates, inefficient algorithms, network waterfalls, large DOM trees, layout or paint bottlenecks, or memory leaks. Components must remain correct when a cached value is recomputed; memoization is still an optimization rather than semantic state.
 
 ---
 
@@ -1662,13 +2226,35 @@
   When can memoization make performance worse?
 
 - answer  
-  Memoization can cost more than recomputation when work is cheap, dependencies change frequently, comparisons are expensive, or cached values increase memory pressure.
+  Memoization can make performance and maintainability worse when the skipped work is cheaper than dependency checks, prop comparison, and cache retention; when inputs change almost every render; or when developers add expensive custom equality logic. Incorrect dependencies can additionally preserve stale values and behavior.
 
 - explanation  
-  It also adds cognitive complexity and can introduce stale dependency bugs.
+  Memoization is not free: React must retain a value, compare dependencies or props, and maintain another identity contract that future code must understand. It helps only when a cache hit skips meaningful work often enough to repay those costs.
 
 - details  
-  Use profiler evidence. Prefer architectural improvements such as state colocation and narrower subscriptions before adding widespread memoization.
+  Low-value memoization often looks like:
+
+  ```jsx
+  const fullName = useMemo(
+    () => `${firstName} ${lastName}`,
+    [firstName, lastName]
+  );
+  ```
+
+  Concatenating two strings is cheaper and clearer than maintaining this cache. Memoization is more plausible when a measured expensive calculation repeats with unchanged inputs or a costly memoized child frequently receives otherwise stable props.
+
+  Common failure modes include:
+
+  - A new object or callback dependency invalidates the cache every render.
+  - A custom `memo` comparator performs a deep comparison slower than rendering.
+  - A comparator ignores a callback and preserves a stale closure.
+  - Large cached values increase retained memory.
+  - `useCallback` is added even though the function is not passed to an identity-sensitive consumer.
+  - Dependency arrays are intentionally incomplete, turning an optimization into a correctness bug.
+
+  Prefer structural improvements first: colocate state, derive rather than synchronize values, narrow Context or store subscriptions, reduce DOM size, and eliminate Effect update chains. These changes reduce the work itself rather than attempting to cache around an overly broad update.
+
+  Use production profiling to compare the complete interaction before and after. Count neither `useMemo` calls nor rerenders as the success metric; measure user-visible latency, commit duration, main-thread work, and memory where relevant.
 
 ---
 
@@ -1678,13 +2264,31 @@
   How would you investigate a component that renders too frequently?
 
 - answer  
-  Reproduce the interaction, use the React Profiler, identify the update source, and inspect changed props, state, Context, and external-store snapshots.
+  First determine whether the renders are both unexpected and expensive. Reproduce one interaction, record it with React DevTools Profiler, identify what scheduled each update, and trace changed props, local state, Context, or external-store snapshots. Fix the narrowest update source, then profile the same interaction again.
 
 - explanation  
-  First determine whether the renders create a measurable user-facing cost.
+  Render count alone is not a performance metric. A frequently rendered small component may be harmless, while one infrequent render can block the main thread. Diagnosis must connect an update to measured render or commit cost and user-visible delay.
 
 - details  
-  Look for lifted state, unstable provider values, Effect update chains, recreated props, broad subscriptions, and development-only Strict Mode behavior.
+  Use this investigation sequence:
+
+  1. **Establish the trigger.** Choose one action—typing a character, selecting a row, or receiving a store update—and reproduce it with representative data.
+  2. **Profile a production build.** Development Strict Mode deliberately repeats some rendering and Effect work. It can reveal bugs, but it is not representative performance data.
+  3. **Find the costly commit.** In React DevTools Profiler, inspect which components rendered, their self time, and why their props or state changed. Use browser Performance tools when layout, paint, or other JavaScript may dominate.
+  4. **Trace the update source.** Follow the state setter, Context provider, reducer dispatch, router update, or external-store notification that scheduled the work.
+  5. **Verify the fix.** Repeat the same profile and compare user-visible timing, not only the component count.
+
+  Frequent causes include:
+
+  - State is lifted above a large subtree even though only one branch needs it.
+  - A provider creates `{ user, permissions }` on every render or combines values with different update frequencies.
+  - An Effect sets derived state, producing a second commit after every relevant render.
+  - A store selector returns a fresh object or subscribes to the entire store.
+  - A parent recreates props that defeat a valuable `memo` boundary.
+  - A component sets state unconditionally during an Effect or subscription callback.
+  - A list uses unstable keys, causing remounts rather than ordinary rerenders.
+
+  Match the fix to the cause: colocate state, split Context, return stable store snapshots, remove derived-state Effects, preserve data identity, or memoize only a measured expensive boundary. If the render is cheap and produces no user-visible problem, the correct fix may be no change.
 
 ---
 
@@ -1696,13 +2300,36 @@
   What is the difference between Suspense and an Error Boundary?
 
 - answer  
-  Suspense handles supported pending resources; an Error Boundary handles rendering failures in descendant components.
+  Suspense handles supported work that is not ready yet and shows a fallback while React waits. An Error Boundary handles errors thrown while rendering a descendant tree and replaces that failed region with error UI. Pending and failed are different states, so robust interfaces commonly use both boundaries.
 
 - explanation  
-  A pending resource displays a Suspense fallback, while a thrown error activates the nearest Error Boundary.
+  A Suspense-compatible resource communicates pending work to React, while a rejected resource or rendering exception propagates to an Error Boundary. Suspense does not catch errors, and an Error Boundary is not a loading indicator.
 
 - details  
-  They are complementary and are often nested. Neither automatically handles every event-handler or arbitrary Effect error.
+  Combine the boundaries around a meaningful region:
+
+  ```jsx
+  <ErrorBoundary fallback={<ReportsError />}>
+    <Suspense fallback={<ReportsSkeleton />}>
+      <Reports />
+    </Suspense>
+  </ErrorBoundary>
+  ```
+
+  If `Reports` reads a pending lazy import or supported Promise, the Suspense fallback appears. If rendering throws or that Promise rejects, the Error Boundary displays its fallback.
+
+  Suspense works only with integrated sources such as:
+
+  - Components loaded with `lazy`
+  - Promises read with `use`
+  - Suspense-enabled framework data sources
+  - Streaming server rendering
+
+  It does not detect a `fetch` started inside an Effect or automatically show a fallback for any arbitrary asynchronous operation.
+
+  Error Boundaries catch errors in descendant rendering and relevant lifecycle work. They do not normally catch errors from event handlers, arbitrary asynchronous callbacks, server rendering, or the boundary’s own fallback. Handle an event failure in the event workflow and put it into state when the UI should display it.
+
+  Boundary order controls scope. A boundary outside Suspense can handle both the content and loading subtree. More focused boundaries can let one failed widget degrade without replacing an entire page. Always provide recovery where possible and report errors with useful component and request context.
 
 ---
 
@@ -1712,13 +2339,33 @@
   Where should Suspense boundaries be placed?
 
 - answer  
-  Place boundaries around meaningful regions that can reveal together and have a useful independent loading experience.
+  Place a Suspense boundary around a user-visible region that can load and reveal as one unit, has a useful fallback, and can remain independent from surrounding content. Use boundaries to express the intended loading experience—not around every asynchronous component mechanically.
 
 - explanation  
-  One huge boundary hides too much; excessive tiny boundaries create visual noise.
+  One page-level boundary can replace useful existing content with a large spinner, while many tiny boundaries produce layout shifts and a patchwork of skeletons. The correct granularity follows the design’s reveal sequence and navigation behavior.
 
 - details  
-  Align boundaries with design skeletons, navigation behavior, streaming opportunities, and content dependencies.
+  Good boundary candidates include a route body, search-results region, comments panel, or secondary dashboard widget. Ask:
+
+  - Can this region show a meaningful skeleton or retained previous state?
+  - Should it reveal independently from nearby content?
+  - If it is slow, should the rest of the page remain interactive?
+  - On the server, is it a useful streaming boundary?
+  - Where should errors and retries be isolated?
+
+  ```jsx
+  <Article />
+
+  <Suspense fallback={<CommentsSkeleton />}>
+    <Comments articleId={articleId} />
+  </Suspense>
+  ```
+
+  The article can remain visible while comments load. In contrast, placing one boundary around both would hide the already useful article.
+
+  When already displayed content suspends during a non-urgent update, use a Transition or deferred value where appropriate so React can retain stale content instead of immediately replacing it with a fallback. Communicate that refresh is pending rather than making the interface appear to disappear.
+
+  Design fallbacks to preserve approximate dimensions, accessible labels, and context. Avoid spinner-only interfaces for large regions and avoid announcing every nested boundary independently. Boundary placement should be agreed with the product loading design, not decided only from component-file boundaries.
 
 ---
 
@@ -1728,13 +2375,29 @@
   How do nested Suspense boundaries coordinate progressive loading?
 
 - answer  
-  Each boundary can reveal its subtree when ready while an outer boundary coordinates broader fallback behavior.
+  Nested Suspense boundaries create a reveal sequence. The outer boundary controls the first larger region; after it can reveal its primary content, an inner boundary may continue showing its own fallback until its slower subtree is ready.
 
 - explanation  
-  This lets essential content appear before slower secondary content.
+  Nesting allows React to reveal useful content progressively without exposing an incomplete subtree outside the loading states designed for it. Each boundary coordinates everything directly inside it until a deeper boundary takes responsibility.
 
 - details  
-  If a fallback itself suspends, React searches for the next parent boundary. Boundary placement determines reveal sequence and perceived stability.
+  ```jsx
+  <Suspense fallback={<PageSkeleton />}>
+    <Biography />
+
+    <Suspense fallback={<AlbumsSkeleton />}>
+      <Albums />
+    </Suspense>
+  </Suspense>
+  ```
+
+  Initially, `PageSkeleton` appears if the outer primary content cannot reveal. Once `Biography` and the structure containing the inner boundary are ready, React can show them while `AlbumsSkeleton` remains. `Albums` replaces only its local fallback when ready.
+
+  Sibling components inside one boundary reveal together from the user’s perspective. Give them separate boundaries only when independent reveal is desirable. If a fallback itself suspends, React looks for the next Suspense boundary above it, so fallbacks should usually be simple and immediately renderable.
+
+  Nested boundaries do not automatically prevent network waterfalls. Start independent code and data requests in parallel through the router, framework, or resource layer; otherwise the inner request may not begin until an earlier component renders.
+
+  Watch for layout movement and repeated announcements as fallbacks are replaced. Skeletons should reserve useful space, and accessibility messaging should describe meaningful loading progress without producing noise for every small region.
 
 ---
 
@@ -1744,13 +2407,49 @@
   How can an Error Boundary be reset?
 
 - answer  
-  Reset its error state after an explicit retry or change its key to create a fresh boundary subtree.
+  An Error Boundary must clear its recorded error before it can attempt to render its children again. Reset it through an explicit retry supported by the boundary, or change its key when a route, entity, or other identity change should create a fresh boundary and subtree.
 
 - explanation  
-  A retry should occur only after the condition that caused the error may have changed.
+  Simply rendering the same broken children again can immediately throw the same error. Recovery should first change the failed condition—retry a request, discard invalid state, load a different entity, or deploy corrected code—and then reset the boundary.
 
 - details  
-  Reset on route or entity changes, provide a retry control, and report the original error with component context.
+  A class Error Boundary commonly stores `hasError` in state and exposes a retry action that clears it:
+
+  ```jsx
+  class ErrorBoundary extends Component {
+    state = { error: null };
+
+    static getDerivedStateFromError(error) {
+      return { error };
+    }
+
+    retry = () => {
+      this.setState({ error: null });
+    };
+
+    render() {
+      if (this.state.error) {
+        return <ErrorFallback onRetry={this.retry} />;
+      }
+
+      return this.props.children;
+    }
+  }
+  ```
+
+  In production, the retry usually also invalidates or restarts the failed resource. A library boundary may provide `resetErrorBoundary`, reset keys, and an `onReset` callback for this coordination.
+
+  A changed key performs a full reset:
+
+  ```jsx
+  <ErrorBoundary key={projectId} fallback={<ProjectError />}>
+    <Project projectId={projectId} />
+  </ErrorBoundary>
+  ```
+
+  This is appropriate when the project identity changes, but it also remounts the entire subtree and loses its local state. Do not use an excessively broad key when only the failed request needs retrying.
+
+  The fallback should explain what failed, offer a safe next action, remain keyboard accessible, and avoid retry loops. Report the original error with component context while filtering secrets and user data from logs.
 
 ---
 
@@ -1760,13 +2459,35 @@
   How should loading, empty, error, and stale states be represented?
 
 - answer  
-  Model them explicitly and allow valid combinations, such as stale data being displayed during a background refresh.
+  Represent asynchronous UI with explicit states and metadata rather than unrelated Booleans. Distinguish initial loading, successful empty data, successful populated data, blocking failure, background refresh, and stale data with a refresh error. Some of these states legitimately overlap.
 
 - explanation  
-  One Boolean `isLoading` cannot represent initial loading, refreshing, failure with cached data, and empty success accurately.
+  `isLoading`, `isError`, and `hasData` can produce contradictory combinations and encourage the UI to discard useful content. A state model should preserve the information needed to choose the correct user experience.
 
 - details  
-  Design state around user experience, accessible announcements, retry behavior, retained content, and whether an error blocks the entire region.
+  A discriminated model makes invalid states harder to express:
+
+  ```ts
+  type ResourceState<T> =
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "success"; data: T; refreshing: boolean }
+    | { status: "error"; error: Error }
+    | { status: "stale-error"; data: T; error: Error };
+  ```
+
+  Render each state deliberately:
+
+  - **Initial loading:** show a skeleton or progress indicator because no useful content exists yet.
+  - **Empty success:** explain that the request succeeded but returned no results; provide an appropriate next action rather than showing an error.
+  - **Populated success:** render the data normally.
+  - **Background refresh:** retain existing data, indicate subtle progress, and avoid replacing the whole region with a loading fallback.
+  - **Blocking error:** show failure UI and a retry path when no usable data exists.
+  - **Stale error:** retain cached data, mark it as potentially outdated, and explain that refresh failed.
+
+  Empty must be defined by the domain: an empty filtered result is different from a new account with no records. Likewise, a `404`, validation error, permission failure, offline state, and server failure may need different actions.
+
+  Accessibility is part of the model. Give loading indicators accessible names, announce meaningful asynchronous completion with a restrained live region, associate field errors with controls, and avoid moving focus for ordinary background refreshes. The state model should also carry retry eligibility, timestamps, and request identity when the interface needs them.
 
 ---
 
@@ -1776,13 +2497,50 @@
   How would you prevent an outdated request from replacing newer data?
 
 - answer  
-  Cancel obsolete requests, associate results with request identity, or use a server-state library that rejects stale updates.
+  Abort obsolete work when possible and independently guard state updates with request identity. Cancellation saves resources, while an identity check ensures that only the result belonging to the latest active query can update the UI. A router or server-state library should provide this behavior when data fetching is application-wide.
 
 - explanation  
-  Requests can complete in a different order from the order in which they started.
+  Network completion order is nondeterministic. If request A starts first, request B starts second, and A finishes last, an unconditional A result can overwrite the newer B result. Unmounting and rapid dependency changes create the same class of stale completion.
 
 - details  
-  `AbortController` reduces unnecessary work. A request counter or query key can also ensure that only the current result commits.
+  Combine cleanup with a request guard:
+
+  ```jsx
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
+
+    setState(current => ({
+      ...current,
+      status: current.data ? "refreshing" : "loading"
+    }));
+
+    search(query, { signal: controller.signal })
+      .then(data => {
+        if (requestId === requestIdRef.current) {
+          setState({ status: "success", data });
+        }
+      })
+      .catch(error => {
+        if (
+          error.name !== "AbortError" &&
+          requestId === requestIdRef.current
+        ) {
+          setState({ status: "error", error });
+        }
+      });
+
+    return () => controller.abort();
+  }, [query]);
+  ```
+
+  `AbortController` tells cooperative APIs such as `fetch` to stop, but cancellation is not a complete correctness guarantee. Work may already have resolved, parsing may continue, or a custom Promise may ignore the signal. The request ID protects the commit even when cancellation cannot stop the work.
+
+  For mutations, “latest wins” may be incorrect: every write may matter, ordering may be significant, and retry can create duplicates. Use operation IDs, idempotency keys, optimistic-update reconciliation, or serialization according to the domain.
+
+  Prefer router loaders or a server-state library when you also need cache keys, deduplication, invalidation, retries, pagination, SSR, and shared subscriptions. The component should not reimplement an incomplete request cache in Effects.
 
 ---
 
@@ -1794,13 +2552,34 @@
   What causes hydration mismatches, and how would you debug them?
 
 - answer  
-  Mismatches occur when initial client output differs from server HTML, often because of time, randomness, browser-only data, invalid nesting, locale, or inconsistent data.
+  A hydration mismatch occurs when the client’s first render does not produce the same structure and content as the server HTML React is attaching to. Common causes include time or randomness, locale and time-zone differences, browser-only branches, invalid HTML nesting, changed data, and DOM modification before React starts.
 
 - explanation  
-  Hydration expects equivalent initial markup so React can attach behavior safely.
+  Hydration reuses existing server DOM instead of constructing it from scratch. React therefore expects the server render and initial client render to describe equivalent UI; a mismatch can force recovery and may attach behavior to an unexpected structure.
 
 - details  
-  Compare server and first-client output, fix nondeterminism, serialize initial data consistently, and treat broad suppression as an escape hatch.
+  Diagnose the first divergence rather than the largest subtree mentioned by the warning:
+
+  1. Capture the full hydration warning and component stack.
+  2. Inspect the original server response before client scripts mutate it.
+  3. Reproduce with the same URL, authentication state, locale, time zone, feature flags, and initial data.
+  4. Compare the server HTML with the client’s first render—not with the DOM after Effects run.
+  5. Validate HTML nesting; browsers may repair invalid markup before React sees it.
+
+  Typical nondeterministic code includes:
+
+  ```jsx
+  // 🚩 Different values on the server and client
+  <p>{new Date().toLocaleString()}</p>
+  <span>{Math.random()}</span>
+  {typeof window !== "undefined" && <ClientMenu />}
+  ```
+
+  Prefer deterministic initial output. Serialize the same initial data to the client, format with an explicit shared locale and time zone, or render a stable placeholder and update it after hydration. For browser-only behavior, move the behavior—not arbitrary markup differences—behind a Client Component or Effect.
+
+  Also check third-party scripts, password managers, browser extensions, CDNs that rewrite HTML, CSS-in-JS configuration, and incorrectly nested tags. A mismatch reported at one node may originate from invalid markup above it.
+
+  `suppressHydrationWarning` is a limited escape hatch for deliberately unavoidable differences such as a timestamp. It works only at limited depth and does not repair the content. Do not apply it broadly to hide an unexplained mismatch.
 
 ---
 
@@ -1810,13 +2589,37 @@
   What is streaming server rendering?
 
 - answer  
-  Streaming sends server-rendered HTML progressively as sections become ready instead of waiting for the entire page.
+  Streaming server rendering sends an initial HTML shell as soon as it is ready, then progressively streams later Suspense regions as their server work completes. The browser can display useful content before the entire React tree has finished rendering.
 
 - explanation  
-  Users can receive and view useful content earlier while slower Suspense regions continue rendering.
+  Traditional all-or-nothing SSR waits for every server dependency before sending the page. Streaming lets fast and slow regions progress independently, improving time to first content while preserving a declarative loading design.
 
 - details  
-  Streaming requires coordinated fallbacks, error handling, caching, infrastructure support, and a framework or server integration.
+  Suspense boundaries define the streaming units:
+
+  ```jsx
+  <PageLayout>
+    <Article />
+    <Suspense fallback={<CommentsSkeleton />}>
+      <Comments />
+    </Suspense>
+  </PageLayout>
+  ```
+
+  The server can send the layout, article, and comments fallback first. When `Comments` is ready, React streams additional HTML and instructions that replace the fallback in the correct location.
+
+  React provides server APIs such as `renderToPipeableStream` for Node streams and `renderToReadableStream` for Web Streams, but frameworks normally manage routing, data loading, status codes, head metadata, caching, aborts, and deployment integration.
+
+  A production design must decide:
+
+  - Which content belongs in the initial shell
+  - Where Suspense and Error Boundaries isolate slow or failed regions
+  - When headers and HTTP status become committed
+  - How disconnected clients abort server work
+  - Whether proxies and hosting infrastructure buffer the stream
+  - How streamed HTML is protected by the site’s CSP and nonce strategy
+
+  Streaming improves delivery order; it does not make slow data sources faster. Start independent requests early and in parallel, otherwise the server can still stream a waterfall one delayed boundary at a time.
 
 ---
 
@@ -1826,13 +2629,19 @@
   What is selective hydration?
 
 - answer  
-  Selective hydration lets React hydrate server-rendered regions according to readiness and interaction priority rather than strictly hydrating the whole page in one blocking pass.
+  Selective hydration lets React attach interactivity to server-rendered Suspense regions according to code/data readiness and user priority instead of hydrating the entire application as one blocking operation. An interaction can cause React to prioritize the relevant boundary.
 
 - explanation  
-  User interaction with one region can be prioritized while other regions wait.
+  Server HTML may already be visible while its Client Component JavaScript is still loading or waiting to hydrate. React can hydrate available regions independently and prioritize an attempted interaction so the page becomes useful sooner.
 
 - details  
-  It is integrated with Suspense and streaming and is normally coordinated by a React framework.
+  Imagine a streamed page containing an article and a comments widget. If the comments bundle is delayed, React can hydrate the article without waiting. If the user interacts with the comments region, React can raise that boundary’s priority and replay supported events after hydration completes.
+
+  Suspense boundaries provide the units React can coordinate. Streaming controls when server HTML arrives; code splitting controls when Client Component code arrives; selective hydration controls when React attaches behavior to each region. These features complement one another but describe different stages.
+
+  Selective hydration is not the same as completely independent “islands.” The regions remain part of one React tree with normal Context and event semantics. It also does not remove the cost of hydration—large Client Component trees still ship, parse, and execute JavaScript.
+
+  Improve hydration by keeping Client Component boundaries narrow, splitting code at useful interaction boundaries, avoiding large synchronous initialization, and ensuring server/client output matches. Framework integration normally coordinates these details.
 
 ---
 
@@ -1842,13 +2651,47 @@
   What determines whether a component should be a Server Component or a Client Component?
 
 - answer  
-  Use a Server Component for server data access and non-interactive rendering; use a Client Component for state, Effects, event handlers, refs, and browser APIs.
+  Make a component a Client Component when its module needs client-only capabilities such as state, Effects, event handlers, refs, browser APIs, or client Context. Keep data access, secret-bearing work, and non-interactive composition in Server Components where possible. Choose the boundary from dependencies, not from whether the component sounds like a page or widget.
 
 - explanation  
-  Keep client boundaries narrow to reduce shipped JavaScript while preserving required interactivity.
+  A `"use client"` directive creates a client module boundary: that module and the client-side dependencies it imports become part of the client graph. A narrow interactive leaf can therefore preserve a mostly server-rendered tree and reduce shipped JavaScript.
 
 - details  
-  Server Components may render Client Components. The choice is a dependency-boundary decision, not simply a page-versus-widget distinction.
+  Server Components are suitable for:
+
+  - Reading databases or internal services close to the data source
+  - Using server-only credentials without exposing them to the bundle
+  - Transforming large data into minimal UI props
+  - Rendering non-interactive structure and content
+  - Composing Client Components
+
+  Client Components are required for:
+
+  - `useState`, `useReducer`, Effects, and most browser-oriented Hooks
+  - Event handlers such as `onClick`
+  - DOM refs and imperative browser APIs
+  - Client-side Context providers and consumers
+  - Browser storage, observers, geolocation, and similar APIs
+
+  Keep the boundary near the interaction:
+
+  ```jsx
+  // Server Component
+  export default async function ProductPage({ id }) {
+    const product = await getProduct(id);
+
+    return (
+      <article>
+        <ProductDescription product={product} />
+        <AddToCartButton productId={product.id} />
+      </article>
+    );
+  }
+  ```
+
+  Only `AddToCartButton` needs to be client code. Marking the entire page `"use client"` can move unnecessary dependencies and data-fetching work into the browser.
+
+  A Client Component cannot directly import a Server Component as ordinary client code, but a Server Component can compose server-rendered content into a Client Component through supported props such as `children`. Audit third-party packages too: a dependency using browser APIs can force the boundary upward or require a small client wrapper.
 
 ---
 
@@ -1858,13 +2701,36 @@
   What data can cross the Server Component and Client Component boundary?
 
 - answer  
-  Props crossing into Client Components must be serializable by the framework's React transport, with supported exceptions such as Server Function references.
+  Values passed from a Server Component to a Client Component must be serializable by React’s Server Component transport. Supported data includes common serializable values and React-specific references, but not arbitrary executable closures, DOM nodes, database connections, request objects, or secret-bearing server resources.
 
 - explanation  
-  Arbitrary closures, browser objects, and ordinary server-only resources cannot be transferred to the browser.
+  The boundary is a network serialization boundary, not an in-memory component call. React must encode the value on the server and reconstruct a supported representation for the client, so the public prop contract must be designed accordingly.
 
 - details  
-  Pass minimal data, preserve authorization on the server, and avoid leaking secrets merely because a value is provided through props.
+  Prefer a minimal view model:
+
+  ```jsx
+  // Server Component
+  const account = await database.account.findById(accountId);
+
+  return (
+    <AccountCard
+      account={{
+        id: account.id,
+        displayName: account.displayName,
+        plan: account.plan
+      }}
+    />
+  );
+  ```
+
+  Do not pass the database model, connection, session object, or unused private fields merely because the client currently ignores them. Serialized props can be inspected by the user and may appear in framework payloads.
+
+  Functions are not generally serializable. Server Function references are a deliberate supported exception: React and the framework encode a reference that the client can invoke as a server request. Treat that function as a public endpoint and authenticate, authorize, and validate every call.
+
+  React’s transport supports more than JSON in supported configurations, but exact types and framework behavior should be checked against the current integration. Convert custom class instances into explicit data contracts instead of relying on prototypes or methods surviving the boundary.
+
+  Security does not follow visual ownership. A value read in a Server Component is not automatically safe to send to a Client Component. Apply data minimization and authorization before constructing client props, and never include secrets, internal tokens, or unrestricted records.
 
 ---
 
@@ -1874,13 +2740,34 @@
   What is the difference between a Server Component and SSR?
 
 - answer  
-  SSR generates HTML on the server for initial display. Server Components execute on the server and send a serialized component result without shipping their component code to the client.
+  SSR renders React output to HTML so users can see an initial page before client JavaScript hydrates it. Server Components render into a serialized React component payload and do not ship their component code to the browser. They can be used together, but they optimize different parts of the architecture.
 
 - explanation  
-  The technologies can be used together but solve different problems.
+  SSR addresses initial HTML delivery for a React tree that may include Client Components. Server Components address where component code and data access execute, reducing client JavaScript and enabling server-only composition across initial loads and later navigations.
 
 - details  
-  Client Components may be server-rendered to HTML and later hydrated. Server Components can refetch and compose server/client trees without becoming client JavaScript.
+  Compare their responsibilities:
+
+  - **SSR output:** HTML for the initial visual result.
+  - **SSR client behavior:** Client Component JavaScript still downloads and hydrates to become interactive.
+  - **Server Component output:** a serialized React tree representation that a framework merges with the client tree.
+  - **Server Component JavaScript:** remains on the server and is not hydrated in the browser.
+
+  A Client Component can participate in both systems:
+
+  ```jsx
+  // Server Component
+  export default async function ProductPage({ id }) {
+    const product = await getProduct(id);
+    return <BuyButton productId={product.id} />;
+  }
+  ```
+
+  `ProductPage` executes only on the server. `BuyButton` may be included in server-generated HTML for the first load and then hydrate in the browser because it needs interaction.
+
+  SSR without Server Components can still produce fast initial HTML, but the component modules generally belong to the client application and their data-fetching logic needs a separate server strategy. Server Components without initial SSR could still provide a server-generated component payload, but users would not receive the same immediately rendered HTML experience.
+
+  Frameworks combine Server Components, SSR, streaming, routing, caching, and code splitting. In an interview, avoid saying that Server Components “replace SSR” or that anything rendered on a server is automatically a Server Component.
 
 ---
 
@@ -1890,13 +2777,43 @@
   What are Server Functions, and what security considerations apply to them?
 
 - answer  
-  Server Functions are remotely callable server-side functions exposed through React framework integration.
+  A Server Function is a function that runs on the server but can be referenced from client-facing React code through framework integration, commonly as a form Action or mutation callback. Invocation crosses a network boundary, so it must be designed and protected like any other server endpoint.
 
 - explanation  
-  Treat every invocation as an untrusted network request, regardless of where the call originated.
+  The framework may generate the transport automatically, but the browser and every submitted argument remain untrusted. A hidden input, disabled button, TypeScript type, or Server Component parent is not an authorization control.
 
 - details  
-  Authenticate, authorize, validate input, protect sensitive output, handle CSRF according to the framework, enforce rate limits, and avoid exposing secrets in errors.
+  A protected mutation should derive identity from the verified session and authorize the specific resource:
+
+  ```jsx
+  "use server";
+
+  async function updateProject(projectId, formData) {
+    const session = await requireSession();
+    const input = parseProjectUpdate(formData);
+
+    const project = await loadProject(projectId);
+    if (!canEditProject(session.user, project)) {
+      throw new ForbiddenError();
+    }
+
+    await saveProject(project.id, input);
+  }
+  ```
+
+  Required controls include:
+
+  - Authenticate every protected invocation.
+  - Authorize the operation against the requested record, tenant, or role.
+  - Validate and normalize every argument at runtime.
+  - Derive user identity from the session, not a submitted `userId`.
+  - Apply CSRF protection according to the framework and authentication model.
+  - Add rate limits, idempotency, and audit logging where the operation requires them.
+  - Return minimal safe errors and outputs without secrets or internal details.
+
+  Bound arguments and hidden form fields improve API ergonomics but can still be manipulated or replayed. Recheck current permissions at execution time because authorization may change after the UI was rendered.
+
+  Mutations must also handle concurrency. Use transactions, version checks, idempotency keys, or conflict responses when duplicate or out-of-order submissions could corrupt data. Invalidate or update affected caches only after the authoritative write succeeds.
 
 ---
 
@@ -1906,13 +2823,48 @@
   How would you avoid network request waterfalls?
 
 - answer  
-  Start independent requests in parallel, preload predictable data, fetch at route or server boundaries, and avoid nesting fetch initiation behind avoidable client renders.
+  Start independent requests as early and in parallel as possible, colocate dependent requests with the data they require, preload predictable resources, and move request initiation to router or server boundaries when nested client rendering would delay it. First identify whether the waterfall is code, data, or both.
 
 - explanation  
-  Sequential request latency accumulates even when the operations do not depend on one another.
+  If request B starts only after request A completes, total latency includes both waits. This sequencing is necessary when B needs A’s result, but accidental waterfalls commonly come from fetching only after a child mounts or loading code before discovering its data dependency.
 
 - details  
-  Use `Promise.all`, router loaders, server aggregation, Suspense-aware preloading, and caching. Preserve sequencing only for genuinely dependent requests.
+  Start independent server work before awaiting it:
+
+  ```jsx
+  async function Dashboard() {
+    const userPromise = getUser();
+    const projectsPromise = getProjects();
+
+    const [user, projects] = await Promise.all([
+      userPromise,
+      projectsPromise
+    ]);
+
+    return <DashboardView user={user} projects={projects} />;
+  }
+  ```
+
+  A real dependency remains sequential:
+
+  ```jsx
+  const user = await getUser();
+  const permissions = await getPermissions(user.id);
+  ```
+
+  Do not force parallelism when the second request cannot be formed safely without the first result.
+
+  Common waterfall sources and fixes:
+
+  - **Fetch-on-mount children:** use route loaders, Server Components, or a query layer that starts known requests before child Effects run.
+  - **Code then data:** preload the route module and its data together instead of waiting for the lazy component to render.
+  - **Many backend round trips:** aggregate on the server or provide a purpose-built endpoint while avoiding an unmaintainable “fetch everything” response.
+  - **Duplicate reads:** deduplicate by a stable request or cache key.
+  - **Late discovered assets:** use framework preloading or appropriate resource hints for predictable critical resources.
+
+  Suspense allows independent regions to stream as they finish, but it does not automatically start requests early. The data source must initiate work before or during the correct render boundary without serial parent-child discovery.
+
+  Verify with a browser network waterfall and server tracing. Parallel requests can increase backend load, so respect connection limits, rate limits, and dependencies rather than applying `Promise.all` indiscriminately.
 
 ---
 
@@ -1922,13 +2874,35 @@
   How would you design cache invalidation for server data?
 
 - answer  
-  Define cache keys, freshness windows, ownership, mutation effects, refetch triggers, and consistency requirements before choosing an invalidation strategy.
+  Design invalidation from the data’s consistency requirements. Define what a cache entry represents, how it is keyed and scoped, how long it may be stale, which mutations affect it, and whether consumers need immediate consistency or may use stale-while-revalidate behavior.
 
 - explanation  
-  A cache is correct only when consumers know whether data is fresh, stale, invalid, or being refreshed.
+  Caching creates another copy of server state. Without an ownership and invalidation model, it can return data for the wrong user, preserve obsolete relationships, overwrite optimistic changes, or trigger repeated refetching that removes the original benefit.
 
 - details  
-  Strategies include time-based staleness, event invalidation, tag invalidation, mutation-driven updates, optimistic changes, and background revalidation.
+  Start with a precise key that includes every input affecting the result:
+
+  ```text
+  project:{tenantId}:{projectId}
+  projects:{tenantId}:status={status}:page={page}
+  ```
+
+  Never share an authorization-sensitive entry across users or tenants unless the cached value is intentionally public and the keying model proves that separation is unnecessary.
+
+  Common strategies include:
+
+  - **Time-based freshness:** treat data as fresh for a known interval, then revalidate.
+  - **Mutation-driven invalidation:** invalidate the affected detail and collection keys after a successful write.
+  - **Tag or dependency invalidation:** associate related entries with a domain tag such as `project:42`.
+  - **Event-driven invalidation:** consume database, queue, or webhook events when changes can originate outside the current process.
+  - **Direct cache update:** merge an authoritative mutation response when the new value is complete and unambiguous.
+  - **Stale while revalidate:** display cached data immediately while refreshing in the background.
+
+  For an optimistic mutation, keep enough information to reconcile success or roll back only that operation’s change. Overlapping operations need unique identities so one failed mutation does not undo a later successful one.
+
+  Define behavior for races: an older revalidation response must not replace a newer mutation result. Version numbers, timestamps from the authority, cancellation, or request identity can establish ordering.
+
+  Distinguish React request memoization, framework data caches, browser HTTP caches, CDN caches, and client server-state caches. They have different lifetimes and invalidation APIs. Document ownership, observe hit rate and staleness, and prefer a simple refetch when correctness matters more than a complex manual merge.
 
 ---
 
@@ -1940,13 +2914,40 @@
   How do React form Actions work?
 
 - answer  
-  Forms can receive an Action function that processes submitted `FormData` and coordinates pending behavior with React and supported frameworks.
+  A React DOM `<form>` can receive a function in its `action` prop. React calls that Action with the submitted `FormData`, coordinates the submission as a Transition, and exposes pending state to descendant controls. Frameworks can connect the same model to Server Functions and progressive enhancement.
 
 - explanation  
-  Actions make submissions part of React's transition-oriented data flow rather than requiring every form to implement manual request state.
+  The browser’s form semantics remain the foundation, while React coordinates asynchronous mutation state, optimistic UI, and returned validation results. This avoids rebuilding every submission around `preventDefault`, loading Booleans, and manually collected input values.
 
 - details  
-  Preserve native semantics, validate on the server, handle errors explicitly, and understand the framework's progressive-enhancement behavior.
+  A client Action receives `FormData` directly:
+
+  ```jsx
+  function RenameProject({ projectId }) {
+    async function rename(formData) {
+      const name = formData.get("name");
+      await updateProject(projectId, { name });
+    }
+
+    return (
+      <form action={rename}>
+        <label>
+          Project name
+          <input name="name" required />
+        </label>
+        <SubmitButton />
+      </form>
+    );
+  }
+  ```
+
+  Inputs still need names because native form submission constructs `FormData` from successful controls. Preserve labels, input types, constraints, Enter-to-submit behavior, and a real submit button rather than treating the form as a generic click container.
+
+  A function Action may be asynchronous. While it runs, `useFormStatus` can expose pending submission data to descendants, `useActionState` can store the Action’s returned result, and `useOptimistic` can derive temporary UI. After a successful Action, React resets uncontrolled form fields; controlled values remain owned by their state.
+
+  In a Server Function integration, JavaScript can enhance a form submission while the framework may preserve useful behavior before hydration. Exact navigation, permalink, error, and cache-revalidation behavior belongs to the framework and deployment model.
+
+  Actions do not replace server guarantees. Parse untrusted `FormData`, authenticate the caller, authorize the resource, handle duplicate submissions, and return safe field or form errors. Use a normal event handler when the operation is not semantically a form submission.
 
 ---
 
@@ -1956,13 +2957,64 @@
   What does `useActionState` solve?
 
 - answer  
-  `useActionState` associates an Action with state derived from its latest result and exposes whether that Action is pending.
+  `useActionState` wraps an Action with state derived from its latest result. It returns the current state, an Action dispatcher, and pending status, making it useful for server validation messages, mutation results, and form submission state that should survive React’s Action flow.
 
 - explanation  
-  It is useful for validation messages, server results, and submission state that belongs to an Action.
+  Unlike an ordinary submit handler plus several state setters, the Action receives the previous result state and submitted arguments, then returns the next result state. React associates pending and returned data with that specific Action.
 
 - details  
-  The Action receives previous state and submitted arguments. Keep returned state serializable when the framework sends it across a server boundary.
+  ```jsx
+  const initialState = {
+    message: "",
+    fieldErrors: {}
+  };
+
+  function ProfileForm() {
+    const [state, submitAction, isPending] = useActionState(
+      saveProfile,
+      initialState
+    );
+
+    return (
+      <form action={submitAction}>
+        <label htmlFor="display-name">Display name</label>
+        <input
+          id="display-name"
+          name="displayName"
+          aria-invalid={Boolean(state.fieldErrors.displayName)}
+          aria-describedby="display-name-error"
+        />
+        <p id="display-name-error">
+          {state.fieldErrors.displayName}
+        </p>
+        <button disabled={isPending}>Save</button>
+        <p role="status">{state.message}</p>
+      </form>
+    );
+  }
+  ```
+
+  The corresponding Action receives `previousState` before the submitted `FormData`:
+
+  ```jsx
+  async function saveProfile(previousState, formData) {
+    const result = validateProfile(formData);
+
+    if (!result.success) {
+      return {
+        message: "Check the highlighted fields.",
+        fieldErrors: result.fieldErrors
+      };
+    }
+
+    await persistProfile(result.data);
+    return { message: "Profile saved.", fieldErrors: {} };
+  }
+  ```
+
+  Pass the returned dispatcher to `form action`, `button formAction`, or call it within an Action context. Do not call it as an arbitrary render-time function. Keep returned state small and serializable when a Server Function or progressive-enhancement transport carries it across the server boundary.
+
+  `useActionState` models the latest Action result; it is not a general cache or a complete concurrent-mutation manager. Overlapping submissions still need domain-specific ordering, idempotency, and reconciliation.
 
 ---
 
@@ -1972,13 +3024,46 @@
   What is the difference between `useOptimistic` and immediately updating ordinary state?
 
 - answer  
-  `useOptimistic` expresses temporary UI derived while an Action is pending and reconciles it with authoritative state afterward.
+  `useOptimistic` derives a temporary view from authoritative state while an Action is in progress. When the Action finishes, React renders from the current authoritative value again. Updating ordinary state changes the source of truth immediately, so the application must manually distinguish provisional and confirmed data and implement rollback.
 
 - explanation  
-  Ordinary state updates require the application to manage temporary values, confirmation, failure, and rollback manually.
+  Optimistic UI is a projection of what the interface expects the server to confirm, not confirmed domain state. `useOptimistic` makes that temporary layer explicit and keeps the base state separate.
 
 - details  
-  Optimistic interfaces must visibly communicate pending state and remain correct under overlapping operations and server rejection.
+  ```jsx
+  function MessageList({ messages, sendMessage }) {
+    const [optimisticMessages, addOptimisticMessage] = useOptimistic(
+      messages,
+      (current, draft) => [
+        ...current,
+        { ...draft, pending: true }
+      ]
+    );
+
+    async function action(formData) {
+      const draft = {
+        clientId: crypto.randomUUID(),
+        text: formData.get("message")
+      };
+
+      addOptimisticMessage(draft);
+      await sendMessage(draft);
+    }
+
+    return (
+      <>
+        <Messages messages={optimisticMessages} />
+        <form action={action}>{/* controls */}</form>
+      </>
+    );
+  }
+  ```
+
+  The update function must be pure. Give optimistic entries stable client-generated identities so pending operations can be rendered and reconciled independently. Show provisional status visually and accessibly rather than making an unconfirmed item indistinguishable from saved data.
+
+  Ordinary state remains appropriate when the update is purely local or should become authoritative immediately. `useOptimistic` is useful when an asynchronous Action has a separate authoritative result and users benefit from seeing the likely outcome early.
+
+  Optimism is a product decision. Avoid it for operations whose failure would be dangerous or confusing, such as final payment confirmation, permission changes, or irreversible deletion without a recovery model.
 
 ---
 
@@ -1988,13 +3073,25 @@
   How should an optimistic update be rolled back after failure?
 
 - answer  
-  Reconcile the optimistic view with the last confirmed server state, show an actionable error, and allow retry when safe.
+  Roll back by returning to the last confirmed server state, removing or marking only the failed optimistic operation, and showing an actionable error. Do not restore one old snapshot over the whole collection when other operations may have succeeded in the meantime.
 
 - explanation  
-  The server remains authoritative; optimistic data is provisional.
+  Optimistic state is provisional and operation-specific. Correct recovery depends on which request failed, what the server accepted, and whether later optimistic changes were based on the failed result.
 
 - details  
-  Track operation identity so one failed request does not undo later successful work. Consider compensating operations and idempotency for critical mutations.
+  Track each mutation with a client operation ID and a status such as `pending`, `confirmed`, or `failed`. On success, reconcile the temporary entity with the authoritative response—often replacing a temporary ID with a server ID. On failure, remove that operation’s projection or keep it visibly failed with Retry and Discard actions.
+
+  Consider three rollback strategies:
+
+  - **Refetch:** invalidate and reload authoritative data. This is simple and reliable when the result is small and connectivity is available.
+  - **Inverse operation:** store enough information to undo exactly the optimistic change, such as restoring a previous field value.
+  - **Failed-item state:** keep the attempted item locally with an error marker so the user can edit and retry without losing input.
+
+  Overlapping mutations make a whole-state snapshot unsafe. If operation A fails after operation B succeeds, restoring the snapshot from before A would erase B. Reconcile by operation identity or use a mutation queue when order is semantically important.
+
+  Retries can duplicate writes after an ambiguous timeout—the server may have committed even though the client did not receive the response. Use idempotency keys for operations such as orders or payments. For irreversible or high-risk actions, prefer confirmed UI, an undo/compensating operation, or a staged workflow over aggressive optimism.
+
+  Announce the failure, preserve user input, and explain whether the interface has reverted or retained a failed draft. Silent rollback makes the UI appear unreliable.
 
 ---
 
@@ -2010,7 +3107,7 @@
   Descendant controls can respond to submission state without manually threading props through the form. The component calling the Hook must be rendered inside the form; calling it in the same component that renders the form does not observe that form.
 
 - details  
-  Put submission UI in a child component:
+  Put submission UI in a descendant component of the form:
 
   ```jsx
   function SubmitButton() {
@@ -2033,7 +3130,18 @@
   }
   ```
 
-  `data` is the submitted `FormData`, `method` is usually `get` or `post`, and `action` identifies the submitted action. Use `pending` for interaction control and pair visual feedback with an accessible status message where needed.
+  The Hook returns:
+
+  - `pending`: whether the parent form is currently submitting.
+  - `data`: the active submission’s `FormData`, or `null` when there is no submission.
+  - `method`: the form method, normally `get` or `post`.
+  - `action`: the submitted function Action, or `null` for unsupported action forms.
+
+  It observes only the nearest parent form. Calling `useFormStatus` in the same component that returns `<form>` does not observe that form, and it does not report a child form’s status.
+
+  Use `data` carefully: it can contain sensitive field values. Do not render passwords, tokens, or private submitted data in status messages or logs. `pending` can prevent accidental duplicate submission and drive progress text, but disabling every form control can make review or cancellation unnecessarily difficult.
+
+  `useActionState` and `useFormStatus` solve different scopes. The former owns the returned state of one Action; the latter lets any descendant control observe its parent form’s current submission.
 
 ---
 
@@ -2043,13 +3151,49 @@
   How do pending, validation, and submission errors affect accessible form design?
 
 - answer  
-  Keep controls labeled, connect errors programmatically, preserve user input, announce meaningful status, and manage focus when submission changes context.
+  Preserve native form semantics, label every control, associate validation errors programmatically, keep user input after failure, expose pending state without removing context, and move focus only when it helps users recover or when submission navigates to a new context.
 
 - explanation  
-  Visual styling alone does not communicate errors or pending state to assistive technologies.
+  Color, spinners, and disabled styling may be invisible or ambiguous to assistive-technology users. Accessible forms communicate relationships and state through labels, descriptions, focus, and restrained status announcements.
 
 - details  
-  Use `aria-invalid`, `aria-describedby`, suitable live regions, clear error summaries, and avoid disabling controls without explaining progress.
+  For field errors, connect the message to the control:
+
+  ```jsx
+  <label htmlFor="email">Email</label>
+  <input
+    id="email"
+    name="email"
+    type="email"
+    aria-invalid={Boolean(errors.email)}
+    aria-describedby={errors.email ? "email-error" : undefined}
+  />
+  {errors.email && (
+    <p id="email-error">{errors.email}</p>
+  )}
+  ```
+
+  On an invalid submission:
+
+  - Preserve entered values whenever safe.
+  - Show a clear error summary for long forms.
+  - Move focus to the summary or first invalid field when users would otherwise need to search for the problem.
+  - Keep field messages next to their controls and avoid relying on placeholders as labels.
+
+  During submission, keep the button’s name understandable and expose progress:
+
+  ```jsx
+  <button disabled={pending}>
+    {pending ? "Saving profile…" : "Save profile"}
+  </button>
+  <p role="status">
+    {pending ? "Saving profile." : statusMessage}
+  </p>
+  ```
+
+  Avoid replacing the entire form with a spinner, which removes the user’s context. Do not use `aria-live="assertive"` for routine progress, and avoid repeatedly announcing every small state change. If the operation takes long enough, explain whether it can be cancelled.
+
+  Distinguish validation, authorization, network, and server errors because they require different recovery. After success, announce the result and move focus only if the page context changed—for example, to a confirmation heading after navigation. Test keyboard submission, error recovery, pending behavior, and screen-reader announcements rather than checking ARIA attributes alone.
 
 ---
 
@@ -2061,13 +3205,42 @@
   What are compound components?
 
 - answer  
-  Compound components are related components that cooperate to form one flexible interface, often through shared Context.
+  Compound components are a family of components that share state and behavior while letting consumers compose the visible structure. A parent usually owns the state and exposes a focused Context to related children, as with tabs, menus, accordions, or select controls.
 
 - explanation  
-  Consumers compose structure directly instead of configuring every variation through one large prop object.
+  The pattern replaces a large configuration object or many layout props with explicit JSX composition. Consumers control arrangement, while the component family preserves one behavioral and accessibility contract.
 
 - details  
-  Examples include tabs, menus, and accordions. Enforce semantic relationships, keyboard behavior, and provider usage with clear errors.
+  ```jsx
+  <Tabs defaultValue="details">
+    <Tabs.List aria-label="Product sections">
+      <Tabs.Trigger value="details">Details</Tabs.Trigger>
+      <Tabs.Trigger value="reviews">Reviews</Tabs.Trigger>
+    </Tabs.List>
+
+    <Tabs.Panel value="details">
+      <ProductDetails />
+    </Tabs.Panel>
+    <Tabs.Panel value="reviews">
+      <Reviews />
+    </Tabs.Panel>
+  </Tabs>
+  ```
+
+  `Tabs` can own the selected value or support a controlled `value` and `onValueChange` pair. Descendants read a narrow internal Context containing the current value, generated IDs, and intentional actions such as `select(value)`.
+
+  A robust implementation should:
+
+  - Throw a useful development error when a compound child is used outside its provider.
+  - Generate stable relationships between triggers and panels.
+  - Implement the expected keyboard pattern, focus movement, roles, and ARIA state.
+  - Keep internal and public Context contracts separate.
+  - Support controlled and uncontrolled state without switching modes unexpectedly.
+  - Avoid rerendering every descendant for unrelated provider-value changes.
+
+  Prefer Context over inspecting or cloning arbitrary `children`; cloning is fragile when children are wrapped, reordered, rendered through portals, or composed by another component. Context also lets related parts be nested inside layout markup.
+
+  The trade-off is hidden coupling: `Tabs.Trigger` only works meaningfully inside `Tabs`. Use compound components when that relationship is part of the public design, not for unrelated components that merely happen to share data.
 
 ---
 
@@ -2077,10 +3250,10 @@
   What is the render-prop pattern?
 
 - answer  
-  A render prop is a function prop that receives state or behavior and returns UI.
+  A render prop is a function passed to a component so the component can provide state or behavior while the caller controls the rendered UI. The function may be named, such as `renderItem`, or supplied as `children`.
 
 - explanation  
-  It separates reusable behavior from rendering decisions.
+  The owner component controls when and with what data the function is called; the consumer controls the resulting elements. This is useful when reuse requires a specific render scope or lifecycle rather than only reusable Hook logic.
 
 - details  
   ```jsx
@@ -2089,7 +3262,34 @@
   </MousePosition>
   ```
 
-  Custom Hooks replace many render-prop use cases with less nesting, but render props remain useful when a component must control where UI is rendered or expose state inside a specific provider or lifecycle boundary. Treat the function as part of the public API, document when it runs, and avoid creating deeply nested “wrapper pyramids.” A new function identity can also defeat memoization when passed through other memoized components.
+  A more practical collection API might expose rendering decisions without exposing its state implementation:
+
+  ```jsx
+  <VirtualList
+    items={messages}
+    estimateSize={48}
+    renderItem={({ item, style, isVisible }) => (
+      <MessageRow
+        message={item}
+        style={style}
+        highlighted={isVisible && item.id === activeId}
+      />
+    )}
+  />
+  ```
+
+  The virtualizer must control which items render and supply positioning information, so a render prop expresses the boundary better than a Hook alone.
+
+  Prefer a custom Hook when consumers only need reusable stateful behavior and can render normally:
+
+  ```jsx
+  const { x, y } = usePointerPosition();
+  return <Cursor x={x} y={y} />;
+  ```
+
+  Render-prop trade-offs include nesting, a larger callback API, and function identities that may affect memoized consumers. Document whether the callback may run many times, whether it must return one element, and which provided values are stable.
+
+  Do not call a render prop outside rendering or treat it like an event handler. It participates in rendering and must remain pure. Use the pattern when the component genuinely owns render timing, placement, or scope—not simply because passing a function feels flexible.
 
 ---
 
@@ -2099,13 +3299,51 @@
   What are higher-order components, and when are they still useful?
 
 - answer  
-  A higher-order component is a function that accepts a component and returns an enhanced component.
+  A higher-order component, or HOC, is a function that accepts a component type and returns a new component type that adds data, behavior, or rendering policy. HOCs remain useful in legacy code and library integrations that must wrap components rather than run inside their implementation.
 
 - explanation  
-  HOCs were widely used for reusable behavior before Hooks and remain common in libraries and legacy code.
+  Hooks usually provide clearer reuse inside function components, but they cannot always replace an API that decorates an unknown component supplied by a consumer. HOCs also appear in routing, state, internationalization, error-reporting, and compatibility layers.
 
 - details  
-  Preserve refs and static metadata when required, avoid prop collisions, give wrappers useful display names, and prefer Hooks for new function-component logic when clearer.
+  ```jsx
+  function withPermission(requiredPermission) {
+    return function wrap(Component) {
+      function WithPermission(props) {
+        const permissions = usePermissions();
+
+        if (!permissions.has(requiredPermission)) {
+          return <Forbidden />;
+        }
+
+        return <Component {...props} />;
+      }
+
+      WithPermission.displayName =
+        `withPermission(${Component.displayName ?? Component.name ?? "Component"})`;
+
+      return WithPermission;
+    };
+  }
+  ```
+
+  Create the enhanced component at module scope:
+
+  ```jsx
+  const ProtectedSettings = withPermission("settings:write")(Settings);
+  ```
+
+  Creating an HOC inside another component’s render produces a new component type each time and can reset the wrapped subtree.
+
+  Important API concerns include:
+
+  - Forward unrelated props without silently overwriting them.
+  - Namespace or document injected props to avoid collisions.
+  - Decide deliberately whether and how refs reach the wrapped component.
+  - Preserve required static metadata when the framework or library reads it.
+  - Give wrappers useful display names for DevTools and errors.
+  - Compose several HOCs carefully; wrapper stacks can obscure data ownership.
+
+  Prefer a custom Hook for new logic when the component can opt into the behavior directly. Use an HOC when component-type transformation is the actual requirement, not merely because the codebase historically used decorators.
 
 ---
 
@@ -2115,13 +3353,42 @@
   How would you design a reusable modal or dialog component?
 
 - answer  
-  Use native dialog semantics where appropriate, a portal, controlled open state, focus management, keyboard dismissal, and focus restoration.
+  Design a dialog as a coordinated accessibility and interaction primitive: controlled open state, correct modal semantics, accessible naming, initial focus, contained keyboard interaction, Escape and outside-interaction policy, background inertness, focus restoration, portal and stacking behavior, and animation-aware mounting.
 
 - explanation  
-  A modal is an interaction and accessibility system, not merely an element with fixed positioning.
+  A fixed overlay may look like a modal while keyboard focus remains behind it, screen readers continue navigating background content, or closing loses the user’s position. The reusable API must own these cross-cutting behaviors consistently.
 
 - details  
-  Handle initial focus, Escape, outside interaction policy, background inertness, accessible naming, nested overlays, scrolling, and animation lifecycle.
+  A composable API can separate the trigger, surface, title, description, and actions:
+
+  ```jsx
+  <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog.Trigger>Edit profile</Dialog.Trigger>
+    <Dialog.Content>
+      <Dialog.Title>Edit profile</Dialog.Title>
+      <Dialog.Description>
+        Changes are visible to your team.
+      </Dialog.Description>
+      <ProfileForm />
+    </Dialog.Content>
+  </Dialog>
+  ```
+
+  The primitive should provide or enforce:
+
+  - `role="dialog"` and `aria-modal="true"`, or correct native `<dialog>` behavior.
+  - An accessible name through a title or explicit label.
+  - Meaningful initial focus—not automatically the first destructive action.
+  - Tab containment while modal, visible focus, and Escape behavior.
+  - An explicit outside-click policy; destructive or multi-step flows may not dismiss on outside interaction.
+  - Background inertness and scroll locking without breaking scrollbar layout.
+  - Restoration to the trigger or a logical successor when the trigger disappeared.
+
+  Use a portal to escape clipping and stacking contexts, but remember that portals do not implement accessibility or focus behavior. Coordinate z-index, nested dialogs and popovers, pointer events, and event propagation through one overlay system.
+
+  Keep content mounted until its exit animation finishes, but prevent hidden exiting content from remaining interactive. Support reduced motion and avoid restoring focus before the closing transition is logically complete.
+
+  Prefer a well-tested platform or headless-dialog primitive over rebuilding focus containment. Test keyboard-only use, screen-reader naming, long content, mobile viewport and virtual keyboard behavior, nested overlays, interrupted animations, and removal of the original trigger.
 
 ---
 
@@ -2131,13 +3398,49 @@
   How would you design a reusable data table?
 
 - answer  
-  Separate data modeling, column definitions, rendering, sorting, filtering, selection, pagination, and virtualization while preserving native table semantics.
+  Build a data table from a generic row model and declarative column definitions, then keep sorting, filtering, selection, pagination, and virtualization as independent controlled capabilities. Preserve native table semantics for genuinely tabular data and let applications own server-driven state.
 
 - explanation  
-  Controlled state lets applications own server-driven behavior; sensible defaults keep simple cases easy.
+  A reusable table should not assume employee-shaped rows or embed one fetching strategy. Columns describe how to identify, render, and optionally sort values; the application decides where rows come from and which state belongs in the URL, server query, or local UI.
 
 - details  
-  Address keyboard access, headers, captions, responsive behavior, loading and empty states, stable row identity, and large-data performance.
+  A useful generic contract is:
+
+  ```ts
+  type ColumnDef<T> = {
+    id: string;
+    header: ReactNode;
+    cell: (row: T) => ReactNode;
+    sortValue?: (row: T) => string | number | Date | null;
+    align?: "start" | "center" | "end";
+  };
+
+  type DataTableProps<T> = {
+    rows: readonly T[];
+    columns: readonly ColumnDef<T>[];
+    getRowId: (row: T) => string;
+    sort?: SortState;
+    onSortChange?: (sort: SortState) => void;
+    selectedIds?: ReadonlySet<string>;
+    onSelectedIdsChange?: (ids: ReadonlySet<string>) => void;
+  };
+  ```
+
+  `getRowId` provides durable identity; never derive selection from an array index. A column separates rendered content from its sortable value so formatted dates, badges, and links do not require parsing DOM text.
+
+  Decide which features are client- or server-owned. A small in-memory table can sort and paginate locally. A large dataset should emit controlled query state so the server can filter, order, and paginate authoritative data. Clearly communicate whether selection applies to visible rows, the current page, or all matching records.
+
+  Accessibility and semantics include:
+
+  - A `<caption>` or another programmatic table name.
+  - Correct `<th scope="col">` and row-header relationships.
+  - Real buttons for sortable headers with current sort direction exposed through `aria-sort`.
+  - Keyboard-operable selection controls with specific accessible names.
+  - Loading, empty, error, and stale states that preserve column context.
+
+  Do not add grid-style arrow-key navigation to an ordinary reading table. Use the more complex ARIA grid interaction model only when cells are truly interactive like a spreadsheet.
+
+  For large collections, consider pagination or virtualization, but test focus retention, sticky headers, responsive overflow, printing, and screen-reader behavior. Keep feature logic modular; one universal table with dozens of interacting Boolean props becomes harder to understand than composable state Hooks and a semantic rendering core.
 
 ---
 
@@ -2147,13 +3450,33 @@
   How do you balance abstraction with duplication?
 
 - answer  
-  Abstract stable repeated concepts, not superficial similarity or speculative future requirements.
+  Accept small duplication until repeated cases reveal a stable concept and change pattern. Abstract when one shared rule, behavior, or policy should change consistently across consumers—not merely because two code blocks currently look similar.
 
 - explanation  
-  A good abstraction reduces knowledge and change cost; a premature one adds indirection and configuration.
+  Duplication costs repeated maintenance, but a wrong abstraction couples unrelated requirements and grows flags, branches, and escape hatches. The goal is minimizing the cost of future change, not minimizing the number of repeated lines.
 
 - details  
-  Wait until requirements reveal the shared invariant, keep escape hatches explicit, and prefer small composition points over one universal component.
+  Evaluate a possible abstraction with these questions:
+
+  - Do the cases share the same domain rule or only similar markup?
+  - Do they change together for the same reasons?
+  - Can the shared contract be named clearly?
+  - Are variations intentional extension points or evidence that the cases differ?
+  - Will consumers understand the abstraction without reading its implementation?
+
+  Three similar implementations often provide enough evidence, but “rule of three” is a heuristic rather than a quota. A security rule, analytics contract, or accessible interaction pattern may deserve centralization immediately because inconsistency is costly. Two small presentational fragments may remain duplicated indefinitely if they evolve independently.
+
+  Warning signs of premature abstraction include:
+
+  - Many Boolean props describing unrelated modes
+  - Callbacks that expose internal implementation steps
+  - Consumers overriding most defaults
+  - Conditional branches named after individual product screens
+  - A shared component changed repeatedly for only one caller
+
+  Prefer the smallest stable layer: a pure utility, focused Hook, primitive component, or shared policy may remove the important knowledge duplication without forcing entire features into one universal abstraction.
+
+  Keep escape hatches deliberate and observable. If every consumer needs arbitrary internal overrides, the abstraction may be at the wrong level. It is acceptable to inline or split a failed abstraction when requirements diverge; maintaining it is not automatically better than restoring some duplication.
 
 ---
 
@@ -2163,13 +3486,47 @@
   How do you prevent a design-system component API from becoming overly complex?
 
 - answer  
-  Define clear primitives, constrained variants, composable slots, consistent conventions, and strong accessibility defaults.
+  Keep design-system APIs small by separating stable primitives from product composition, representing supported variation with constrained variants, exposing a few deliberate slots, forwarding appropriate native attributes, and making accessibility and design tokens defaults rather than optional add-ons.
 
 - explanation  
-  Avoid accumulating Boolean props for every one-off layout or behavior.
+  Every public prop creates a long-term compatibility and testing obligation. One-off Boolean additions quickly allow contradictory combinations and move product-specific policy into a shared primitive.
 
 - details  
-  Document ownership, support native attributes, use semantic tokens, version changes, test supported combinations, and allow composition for exceptional cases.
+  Prefer a constrained model:
+
+  ```tsx
+  <Button
+    variant="danger"
+    size="compact"
+    loading={isDeleting}
+  >
+    Delete project
+  </Button>
+  ```
+
+  over unrelated switches:
+
+  ```tsx
+  <Button red small bold rounded noShadow withSpinner />
+  ```
+
+  `variant` encodes a supported semantic decision; the Boolean collection exposes implementation details and permits combinations the design system may never have tested.
+
+  API guidelines include:
+
+  - Start from a native element and forward compatible attributes and refs.
+  - Use semantic tokens instead of accepting arbitrary internal colors and spacing.
+  - Define controlled and uncontrolled behavior consistently across components.
+  - Keep state props distinct from visual variants.
+  - Expose composition slots for content structure instead of a prop for every possible child.
+  - Avoid polymorphic `as` APIs unless semantics, typing, and ref behavior remain reliable.
+  - Reject or warn about invalid combinations during development when practical.
+
+  Accessibility invariants belong inside the primitive: disabled and pending semantics, keyboard behavior, focus visibility, accessible naming requirements, and reduced-motion behavior should not depend on every product team remembering them.
+
+  Establish an API review process. Require a repeated use case, document ownership, test the supported variant matrix, publish migration guidance, and deprecate before removing. Use product-level wrapper components for local policy instead of adding each screen’s exception to the global primitive.
+
+  An escape hatch such as `className` can be reasonable, but it should not make internal DOM structure a permanent public contract. Track repeated overrides; they are evidence that a missing token, variant, slot, or separate component may be needed.
 
 ---
 
@@ -2179,13 +3536,53 @@
   What belongs in a component, custom Hook, utility, service, or store?
 
 - answer  
-  Components render UI, Hooks compose React behavior, utilities perform framework-independent computation, services integrate external systems, and stores own shared external state.
+  Put code where its lifecycle and dependencies naturally belong: components describe UI, custom Hooks compose React state and synchronization, utilities perform pure framework-independent work, services implement external-system operations, and stores own shared mutable state with a subscription model.
 
 - explanation  
-  Place logic according to its lifecycle and dependencies rather than file-size rules.
+  File length is not an architectural boundary. Separating code by responsibility keeps domain logic testable, React lifecycles explicit, external effects replaceable, and shared state ownership understandable.
 
 - details  
-  Pure domain logic should usually remain outside React. A custom Hook is justified when logic uses Hooks or exposes a React-oriented lifecycle.
+  **Component**
+
+  Use a component when the responsibility is rendering structure and connecting user interaction to application behavior. Components may orchestrate Hooks, but dense domain transformations and transport details should not be buried in JSX.
+
+  **Custom Hook**
+
+  Use a Hook when logic composes React Hooks or exposes a React lifecycle:
+
+  ```jsx
+  function useOnlineStatus() {
+    return useSyncExternalStore(
+      subscribeToOnlineStatus,
+      getOnlineSnapshot,
+      getServerOnlineSnapshot
+    );
+  }
+  ```
+
+  A function does not become a Hook merely because its name starts with `use`. If it needs no React state, Context, Effect, ref, or subscription lifecycle, it may be a utility instead.
+
+  **Utility or domain function**
+
+  Keep parsing, validation, sorting, calculations, and state transitions pure when possible. Pure functions can run on the server, client, worker, or test runner without a React environment.
+
+  **Service**
+
+  A service integrates an external boundary such as HTTP, storage, analytics, or a payment SDK. It should expose domain-oriented operations, accept cancellation and dependencies where relevant, normalize transport errors, and avoid importing component state.
+
+  **Store**
+
+  A store owns shared mutable state outside an individual component and provides subscriptions. Use it when distant consumers need coordinated updates, updates originate outside React, or selector-based subscriptions are important. Do not create a global store merely to avoid passing props.
+
+  A typical flow is:
+
+  ```text
+  Component → custom Hook → service → external system
+                  ↓
+             utility/domain logic
+  ```
+
+  These are responsibilities, not mandatory layers. A small component can call a service through a focused Hook without five wrapper files. Split code when doing so clarifies ownership, enables reuse at the correct level, or isolates effects—not to satisfy an arbitrary folder convention.
 
 ---
 
@@ -2197,13 +3594,43 @@
   What should be mocked in a React test?
 
 - answer  
-  Mock unstable or expensive external boundaries when necessary, while keeping meaningful component collaboration real.
+  Mock at external or nondeterministic boundaries that the test does not intend to exercise—such as network transport, time, randomness, browser APIs, analytics, or a payment SDK. Keep your own components, Hooks, state transitions, and meaningful provider integration real whenever practical.
 
 - explanation  
-  Excessive mocking verifies the test's assumptions instead of actual integrated behavior.
+  A mock replaces production behavior with a second implementation maintained by the test. Mocking internal collaborators can make the test pass even when those collaborators no longer integrate correctly, while boundary mocks give deterministic control without hiding application behavior.
 
 - details  
-  Prefer network-boundary interception over mocking internal Hooks. Mock time, randomness, or platform APIs only when the test needs deterministic control.
+  Prefer intercepting the network boundary over mocking the data Hook:
+
+  ```jsx
+  server.use(
+    http.get("/api/profile", () =>
+      HttpResponse.json({ name: "Ada" })
+    )
+  );
+
+  render(<Profile />);
+  expect(await screen.findByText("Ada")).toBeVisible();
+  ```
+
+  This keeps the component, query layer, loading state, response parsing, and rendering connected while making the server response controllable.
+
+  Good mock candidates include:
+
+  - HTTP responses and transport failures
+  - Current time, timers, and randomness when determinism matters
+  - Unsupported environment APIs such as `ResizeObserver`
+  - Irreversible third-party side effects such as analytics or payment submission
+  - Slow infrastructure outside the scope of a component test
+
+  Avoid mocking:
+
+  - `useState`, `useContext`, or React itself
+  - Your custom Hook merely to force a component branch
+  - Child components whose real interaction is central to the behavior
+  - Internal functions only so the test can assert that they were called
+
+  Use the narrowest faithful substitute and make it fail realistically: status codes, latency control, malformed payloads, cancellation, and retry may matter. Reset mocks between tests and avoid shared mutable fixtures. Keep some integration and end-to-end coverage with real boundaries so contract drift is detected.
 
 ---
 
@@ -2213,13 +3640,40 @@
   Why can testing implementation details make tests fragile?
 
 - answer  
-  Tests tied to internal state, method calls, or component structure fail during harmless refactoring even when user behavior remains correct.
+  Tests become fragile when they assert how a component works—private state, Hook calls, helper invocations, CSS structure, or child composition—instead of what users and external systems can observe. A harmless refactor then breaks tests even though the behavior is unchanged.
 
 - explanation  
-  Behavior-oriented tests give stronger confidence with lower maintenance cost.
+  Public behavior is the stable contract. Testing through roles, labels, user interactions, visible outcomes, navigation, or emitted requests allows the implementation to evolve while still detecting regressions users would notice.
 
 - details  
-  Query by role and accessible name, perform realistic interactions, and assert visible output or external effects.
+  Fragile test:
+
+  ```jsx
+  expect(wrapper.find(UserRow)).toHaveLength(3);
+  expect(setSelectedId).toHaveBeenCalledWith("42");
+  ```
+
+  This assumes a component boundary and state setter. The same feature may later use virtualization, a reducer, or different composition.
+
+  Behavior-oriented test:
+
+  ```jsx
+  render(<UserPicker users={users} />);
+
+  await user.click(
+    screen.getByRole("option", { name: "Ada Lovelace" })
+  );
+
+  expect(
+    screen.getByRole("status")
+  ).toHaveTextContent("Ada Lovelace selected");
+  ```
+
+  Prefer queries in the order users perceive the interface: role and accessible name, label text, visible text, then a test ID only when no meaningful semantic query exists. A test ID is not inherently wrong, but it should represent a stable product contract rather than a DOM path.
+
+  Implementation assertions are appropriate when the implementation itself is the contract—for example, a memoization utility’s cache semantics, an analytics integration event, or a low-level library primitive. Even then, test through the narrowest public API.
+
+  Do not equate “behavior test” with an enormous end-to-end test. A focused component test can still render realistic providers, perform one user workflow, and assert one observable result with a clear failure reason.
 
 ---
 
@@ -2229,13 +3683,46 @@
   How do you test custom Hooks?
 
 - answer  
-  Prefer testing a small component that uses the Hook, or use a Hook testing utility when direct state transitions need focused verification.
+  Test a custom Hook through the smallest realistic React consumer when its value is primarily visible through component behavior. Use a Hook test harness when the Hook itself exposes a reusable public API whose rerenders, returned callbacks, errors, or cleanup require focused verification.
 
 - explanation  
-  Exercise the Hook through React so rendering, cleanup, and dependency behavior remain realistic.
+  Hooks depend on React’s render and commit lifecycle. Calling the Hook as an ordinary function cannot reproduce state retention, Effect cleanup, Context, Strict Mode checks, or rerender behavior.
 
 - details  
-  Test inputs, returned behavior, rerenders, asynchronous transitions, cleanup, and error cases without asserting private implementation details.
+  For a Hook that drives UI, a consumer is often clearest:
+
+  ```jsx
+  function Status() {
+    const online = useOnlineStatus();
+    return <p>{online ? "Online" : "Offline"}</p>;
+  }
+
+  render(<Status />);
+  expect(screen.getByText("Online")).toBeVisible();
+  ```
+
+  For a reusable Hook API, a harness can inspect returned behavior:
+
+  ```jsx
+  const { result, rerender, unmount } = renderHook(
+    ({ delay }) => useDebouncedValue("query", delay),
+    { initialProps: { delay: 300 } }
+  );
+  ```
+
+  Cover the public contract:
+
+  - Initial returned value
+  - Behavior after callbacks or external notifications
+  - New props supplied through rerender
+  - Asynchronous transitions with controlled time or Promises
+  - Subscription and timer cleanup on dependency change and unmount
+  - Error and cancellation behavior
+  - Required providers through a wrapper
+
+  Avoid asserting how many times an internal Effect ran or which private state variables exist unless lifecycle count is the documented contract. In development Strict Mode, setup and cleanup may be stress-tested more than once.
+
+  If a Hook mostly coordinates a service and returns data to a component, one integration-oriented component test may provide more confidence than separately mocking the service, Hook, and consumer in three isolated tests.
 
 ---
 
@@ -2245,13 +3732,39 @@
   How do you test components that use Context?
 
 - answer  
-  Render them with a small provider wrapper containing realistic values and interactions.
+  Render the component under the real Context provider or a faithful test provider and verify behavior through the consumer’s public UI. Supply the smallest realistic value needed by each scenario, and test provider updates when reactivity is part of the contract.
 
 - explanation  
-  The test should verify consumer behavior rather than mocking `useContext` itself.
+  Mocking `useContext` bypasses provider lookup, default behavior, value shape, and rerender propagation. A provider wrapper preserves the integration React actually runs while keeping the test setup concise.
 
 - details  
-  Create reusable render helpers for common providers, but let individual tests override state, permissions, locale, or theme.
+  ```jsx
+  function renderWithPermissions(
+    ui,
+    { permissions = new Set(), ...options } = {}
+  ) {
+    return render(
+      <PermissionsContext value={permissions}>
+        {ui}
+      </PermissionsContext>,
+      options
+    );
+  }
+
+  renderWithPermissions(<ProjectActions />, {
+    permissions: new Set(["project:delete"])
+  });
+
+  expect(
+    screen.getByRole("button", { name: "Delete project" })
+  ).toBeEnabled();
+  ```
+
+  Test meaningful cases: missing provider behavior, default value, permitted and forbidden branches, provider updates, and callbacks that modify provider-owned state. If the production provider contains important reducer or subscription logic, include integration coverage with that provider rather than always replacing it with a static value.
+
+  A shared `renderApp` helper can install router, query, theme, locale, and authentication providers, but keep overrides explicit. An opaque helper with many hidden defaults makes tests pass under a setup that may not resemble the scenario being described.
+
+  Do not put unrelated values into one test Context merely for convenience. Tests should reinforce the same focused provider boundaries expected in production.
 
 ---
 
@@ -2261,20 +3774,43 @@
   How do you test loading, errors, Suspense, and asynchronous updates?
 
 - answer  
-  Control the asynchronous boundary, assert the initial state, resolve or reject it deliberately, and await the final observable UI.
+  Make asynchronous work deterministic: control when the request or Promise resolves, assert the initial loading or retained-content state, resolve or reject it deliberately, and await the final observable result. Test Suspense and Error Boundaries as they are composed in production.
 
 - explanation  
-  Avoid fixed sleeps; wait for meaningful conditions.
+  Fixed delays make tests slow and timing-dependent. Controlling the boundary lets the test prove each state transition and fail because behavior is wrong rather than because a machine was temporarily slower.
 
 - details  
-  Prefer a controllable Promise or network mock over a fixed delay:
+  A reliable happy-path test follows the user-visible sequence:
 
-  1. Render and assert the loading or Suspense fallback.
-  2. Resolve the request and await the expected content.
-  3. In a separate test, reject it and assert the production error boundary.
-  4. Exercise retry, cancellation, or stale-response behavior when it matters.
+  ```jsx
+  render(<ProfilePage />);
 
-  Include the same providers, Suspense boundaries, and Error Boundaries used in production. Use `findByRole` or `waitFor` for observable results rather than calling `act` around arbitrary sleeps. Also verify that pending indicators are named, status changes are announced when necessary, and stale content behaves as intended during a transition.
+  expect(
+    screen.getByRole("status", { name: "Loading profile" })
+  ).toBeVisible();
+
+  expect(
+    await screen.findByRole("heading", { name: "Ada Lovelace" })
+  ).toBeVisible();
+  ```
+
+  Configure the network handler or controllable Promise before rendering. Use `findBy...` when an element should eventually appear and `waitFor` when repeatedly checking a broader observable condition. Do not use `waitFor` to conceal an interaction that was never awaited.
+
+  Test separate scenarios for:
+
+  - Initial loading followed by success
+  - Empty successful data
+  - Rejection handled by the production Error Boundary
+  - Retry that replaces the failure with content
+  - Background refresh that retains stale data
+  - Two requests resolving out of order
+  - Cancellation or unmount cleanup when it is part of the contract
+
+  For Suspense, use a stable controllable Promise or framework test integration. Assert the fallback before resolving, then resolve inside the testing environment’s supported async flow and await the content. Reject in a separate test and verify the nearest Error Boundary, error reporting, and reset behavior.
+
+  Fake timers are useful for debounce, retry delay, or timeout behavior, but advance them deliberately and restore real timers after the test. Timers do not automatically flush Promises, so await both the user-visible interaction and resulting UI.
+
+  Verify accessibility as part of async behavior: loading indicators need names, important completion may need a restrained live-region announcement, and a background Transition should not unnecessarily remove useful content or focus.
 
 ---
 
@@ -2284,13 +3820,35 @@
   What causes React test warnings about updates not being wrapped in `act`?
 
 - answer  
-  The warning means a React update completed outside the test's expected interaction boundary before assertions were synchronized with it.
+  An `act` warning means React observed an update that the test did not include in a completed interaction or async boundary before making assertions or finishing. It usually signals a missing `await`, an unresolved timer or Promise, an external subscription update, or unhandled cleanup—not a need to wrap the entire test in `act`.
 
 - explanation  
-  User-event and async query utilities often handle `act`; unresolved timers or Promises commonly reveal missing awaits.
+  `act` tells React to flush updates and Effects associated with a test operation so assertions observe a settled state. Modern rendering and user-event utilities wrap their own operations, but the test must still await those operations and any observable outcome they trigger.
 
 - details  
-  Await interactions and visible outcomes. Do not wrap arbitrary code merely to suppress the warning without understanding the pending update.
+  Start with the first asynchronous action:
+
+  ```jsx
+  // 🚩 The click starts updates, but the test does not await them.
+  user.click(screen.getByRole("button", { name: "Save" }));
+
+  // ✅ Await the interaction and the resulting UI.
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("Saved")).toBeVisible();
+  ```
+
+  Common causes include:
+
+  - Missing `await` on `user.click`, `user.type`, or another async helper
+  - A request finishing after the test ends
+  - Fake timers advanced outside the supported `act` flow
+  - A subscription emitting after render without a controlled test API
+  - An Effect cleanup or state update occurring during unmount
+  - Asserting only the initial state while a known update remains pending
+
+  Prefer waiting for the visible consequence rather than adding `await act(async () => {})` without a triggering operation. Manual `act` is appropriate when the test directly controls a source outside React testing utilities, such as invoking a custom store emitter or advancing a timer.
+
+  Do not silence console warnings globally. Treat the warning as evidence that the test has not modeled the complete lifecycle, locate the originating update, and make its completion or cleanup explicit.
 
 ---
 
@@ -2300,13 +3858,34 @@
   When are snapshot tests useful, and when are they harmful?
 
 - answer  
-  Snapshots can help review small stable serialized outputs, but large component snapshots are noisy and easy to approve without understanding changes.
+  Snapshot tests are useful for small, stable, intentionally reviewable serialized contracts. They become harmful when a large component tree, volatile markup, generated IDs, or broad page output creates noisy diffs that reviewers update mechanically instead of understanding.
 
 - explanation  
-  Focused behavioral assertions communicate intent more clearly.
+  A snapshot records everything without explaining which details matter. Focused assertions name the expected behavior and produce failures that point directly to the broken contract.
 
 - details  
-  Keep snapshots small, review diffs carefully, and do not treat snapshots as a substitute for interaction, accessibility, or visual-regression tests.
+  Reasonable snapshot targets include:
+
+  - A small compiler or formatter output
+  - A stable accessibility-tree fragment
+  - A compact serialized state migration
+  - A design token or generated configuration contract
+
+  Weak targets include an entire route, a deeply nested component tree, timestamps, random IDs, CSS implementation structure, and output that changes for unrelated reasons.
+
+  Prefer an explicit assertion when the contract is specific:
+
+  ```jsx
+  expect(
+    screen.getByRole("button", { name: "Save" })
+  ).toBeDisabled();
+  ```
+
+  This communicates more intent than a page snapshot containing a disabled attribute somewhere among hundreds of lines.
+
+  Keep snapshots close to the behavior they document, normalize only truly irrelevant nondeterminism, and review every diff as production code. Never update snapshots merely to make CI green.
+
+  DOM snapshots do not prove keyboard behavior, focus order, screen-reader announcements, responsive layout, or visual appearance. Use interaction assertions, accessibility tooling, and visual-regression tests for those distinct risks.
 
 ---
 
@@ -2316,13 +3895,47 @@
   How would you test keyboard and focus behavior?
 
 - answer  
-  Simulate realistic keyboard navigation and assert which element is focused, which controls activate, and whether focus is restored.
+  Exercise the component with realistic keyboard input and assert focus after every meaningful step, along with the resulting selection, expansion, dismissal, or activation state. Test the keyboard pattern appropriate to the widget rather than assuming every interactive element uses Tab for internal navigation.
 
 - explanation  
-  Click-only tests miss essential behavior for keyboard and assistive-technology users.
+  Keyboard accessibility depends on both event handling and focus management. A control can respond to a synthetic key event while still being unreachable in the real tab order, trapping focus, or failing to expose state semantically.
 
 - details  
-  Test Tab order, Enter, Space, Escape, arrow-key patterns, modal focus trapping, initial focus, and return focus.
+  Test through user-level keyboard APIs:
+
+  ```jsx
+  render(<DialogExample />);
+
+  const trigger = screen.getByRole("button", {
+    name: "Edit profile"
+  });
+
+  trigger.focus();
+  await user.keyboard("{Enter}");
+
+  const dialog = screen.getByRole("dialog", {
+    name: "Edit profile"
+  });
+  expect(dialog).toBeVisible();
+  expect(screen.getByLabelText("Display name")).toHaveFocus();
+
+  await user.keyboard("{Escape}");
+  expect(trigger).toHaveFocus();
+  ```
+
+  Cover the relevant interaction contract:
+
+  - Natural Tab and Shift+Tab order
+  - Enter and Space activation differences for native controls
+  - Escape dismissal and focus restoration
+  - Arrow, Home, and End navigation for tabs, menus, listboxes, or grids
+  - Roving `tabIndex` or `aria-activedescendant` behavior
+  - Disabled-item and typeahead behavior where the widget pattern requires it
+  - Focus after insertion, deletion, validation failure, and route changes
+
+  Avoid calling `.focus()` for every step when the purpose is to test reachability; use Tab navigation to prove the element can actually be reached. Direct focus is appropriate for setting the initial precondition.
+
+  DOM test environments do not reproduce every browser focus behavior, layout dependency, Shadow DOM interaction, or screen-reader announcement. Keep browser-level coverage for critical dialogs, menus, command palettes, and other complex widgets, and include representative manual assistive-technology testing.
 
 ---
 
@@ -2334,13 +3947,38 @@
   What are the risks of `dangerouslySetInnerHTML`?
 
 - answer  
-  It inserts a raw HTML string and can create cross-site scripting when the content is untrusted or incorrectly sanitized.
+  `dangerouslySetInnerHTML` asks React to insert an HTML string directly into a DOM element. It bypasses React’s normal text escaping, so untrusted or incorrectly sanitized content can execute script-capable markup, create unsafe links, alter page structure, or enable cross-site scripting.
 
 - explanation  
-  React's normal text rendering escapes values; this API intentionally bypasses that protection.
+  Rendering `{userInput}` creates text, so characters such as `<` do not become markup. Passing the same value through `dangerouslySetInnerHTML` changes the value’s interpretation from text to HTML and transfers responsibility for its safety to the application.
 
 - details  
-  Prefer ordinary JSX and text content. If rich HTML is required, sanitize it with a maintained policy and add defense-in-depth controls such as CSP.
+  Safe ordinary rendering:
+
+  ```jsx
+  <p>{comment.body}</p>
+  ```
+
+  Raw HTML sink:
+
+  ```jsx
+  <article
+    dangerouslySetInnerHTML={{ __html: comment.html }}
+  />
+  ```
+
+  The explicit name is a warning, not protection. Dangerous content is broader than a `<script>` tag. Attackers may use event-handler attributes, unsafe URL schemes, SVG or MathML features, CSS-capable constructs, malformed markup, or browser parsing behavior.
+
+  Other risks include:
+
+  - Replacing React-managed descendants of that element
+  - Hydration differences when server and client sanitization disagree
+  - Unsafe links or embedded resources even when script execution is removed
+  - Future policy regressions when new tags or attributes are allowed
+
+  Prefer structured data rendered through JSX, plain text, or a constrained format whose nodes map to approved React components. If arbitrary rich HTML is a genuine requirement, sanitize it with a maintained parser-based policy before it reaches this sink.
+
+  Content Security Policy and Trusted Types can reduce exploitability and enforce safer sinks, but they are defense in depth. They do not make untrusted HTML intrinsically safe or replace sanitization and output minimization.
 
 ---
 
@@ -2350,15 +3988,46 @@
   How should untrusted HTML be rendered safely?
 
 - answer  
-  Avoid HTML parsing when plain text is sufficient. When rich HTML is required, sanitize it using a context-appropriate, well-maintained sanitizer before rendering.
+  Treat HTML as untrusted until a maintained, parser-based sanitizer transforms it according to a narrow allowlist. Sanitize at a trusted boundary, render only the sanitized result, and avoid accepting arbitrary HTML when plain text or a structured rich-text model can meet the requirement.
 
 - explanation  
-  Input validation alone does not make arbitrary HTML safe.
+  Validation answers whether input matches an expected data shape; sanitization removes or rewrites dangerous markup for a specific output context. Escaping would display HTML as text, while sanitization deliberately retains an approved subset as markup.
 
 - details  
-  Sanitize at a trusted boundary and render only the sanitized result. Configure an allowlist for elements, attributes, and URL schemes; dangerous values can appear in event attributes, CSS, SVG, `data:` URLs, and malformed markup—not only in `<script>` tags.
+  Define a policy from product requirements:
 
-  Do not build a sanitizer with regular expressions. Use a maintained library appropriate to the server or browser environment, keep its rules and dependencies updated, and test representative attack payloads. Content Security Policy and Trusted Types provide defense in depth, but neither replaces contextual sanitization. If the product only needs formatting such as bold text and links, a constrained structured format is safer than accepting arbitrary HTML.
+  - Allow only needed elements such as paragraphs, lists, emphasis, and links.
+  - Allow only needed attributes.
+  - Restrict URL schemes and normalize links.
+  - Decide whether images, embedded media, inline style, SVG, and MathML are necessary.
+  - Add safe link attributes where external navigation requires them.
+
+  ```jsx
+  const safeHtml = sanitizer.sanitize(untrustedHtml, policy);
+
+  return (
+    <article
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
+    />
+  );
+  ```
+
+  Sanitize as close as practical to the trust boundary and avoid mutating the markup afterward. A transformation performed after sanitization can reintroduce unsafe attributes or URLs. If both server and client render the content, use compatible policies and versions to avoid hydration inconsistencies.
+
+  Do not write an HTML sanitizer with regular expressions. HTML parsing, namespaces, entity decoding, and browser correction rules are too complex. Use a security-maintained library appropriate to the runtime, keep it updated, and test known malicious payload categories as well as the allowed formatting contract.
+
+  Consider representing rich text as validated structured nodes:
+
+  ```jsx
+  const renderers = {
+    paragraph: node => <p>{render(node.children)}</p>,
+    strong: node => <strong>{render(node.children)}</strong>
+  };
+  ```
+
+  This makes supported content explicit and avoids exposing a general HTML sink. Still validate URLs and every node type because structured input can contain unsafe values too.
+
+  CSP, Trusted Types, sandboxed iframes for isolated third-party documents, and server-side storage policy are additional layers. Record where sanitized content originated and avoid assuming that “stored” content is trusted merely because it came from your database.
 
 ---
 
@@ -2368,15 +4037,41 @@
   How should focus be managed when opening and closing a modal?
 
 - answer  
-  Move focus into the modal, keep keyboard interaction within it while open, and restore focus to the invoking control when it closes.
+  When a modal opens, save the invoking context and move focus to a deliberate element inside it. While open, keep focus and interaction within the modal and make the background inert. When it closes, restore focus to the trigger or another logical location if that trigger no longer exists.
 
 - explanation  
-  This preserves navigation context and prevents interaction with obscured background content.
+  Visual position does not control keyboard or assistive-technology focus. Without explicit management, users may continue interacting with obscured content, lose their place after closing, or land on a destructive action unexpectedly.
 
 - details  
-  On open, save the trigger and move focus to a meaningful element: often the dialog heading, first invalid field, or least destructive action. Do not always focus the first button if that makes destructive confirmation too easy.
+  **On open**
 
-  While open, prevent interaction with background content using a well-tested dialog primitive or `inert`; implement Tab wrapping only if the platform primitive does not provide it. Support Escape unless the workflow has a documented reason not to, and keep focus visible throughout animations. On close, restore focus to the trigger or a sensible successor if the trigger was removed. A portal and `role="dialog"` alone do not implement these behaviors.
+  Store the element that triggered the modal before moving focus. Choose initial focus according to the task:
+
+  - A heading or container for long informational content
+  - The first invalid field for a correction flow
+  - The primary field for a short input dialog
+  - The least destructive action for a destructive confirmation
+
+  The modal needs an accessible name through a visible title or explicit label. Initial focus should be visible and should not unexpectedly scroll important context out of view.
+
+  **While open**
+
+  A modal interaction model should:
+
+  - Keep Tab and Shift+Tab within the dialog.
+  - Prevent pointer and keyboard interaction with the background.
+  - Support Escape unless the product has a strong documented reason not to.
+  - Define whether outside interaction dismisses the modal.
+  - Preserve focus through validation, loading, and content updates.
+  - Handle nested popovers or dialogs through one coordinated overlay system.
+
+  Use native `<dialog>` behavior or a well-tested accessible primitive when possible. A portal, `role="dialog"`, and `aria-modal="true"` provide structure and semantics, but do not alone implement focus containment or restoration.
+
+  **On close**
+
+  Restore focus to the original trigger when it still exists and remains meaningful. If deleting an item also removes its trigger, move focus to the next item, collection heading, or another predictable successor. Do not send focus to `<body>` and force keyboard users to restart navigation.
+
+  Coordinate focus with exit animations: prevent the closing surface from remaining interactive, but restore focus at a point that does not create visible focus jumps. Test keyboard opening, Tab wrapping, Escape, validation failure, nested overlays, trigger removal, reduced motion, and browser back navigation.
 
 ---
 
@@ -2386,13 +4081,33 @@
   What is the difference between hiding and unmounting content?
 
 - answer  
-  Hidden content remains mounted and may preserve state, DOM, subscriptions, and memory. Unmounted content is removed and its Effects are cleaned up.
+  Unmounting removes a subtree from React and the DOM, runs Effect cleanup, clears refs, and discards its local state. Hiding usually keeps the subtree mounted, but the exact behavior depends on whether it is hidden with CSS, `hidden`, `inert`, or React’s `<Activity>`—these choices differ in accessibility, interaction, and Effect lifecycle.
 
 - explanation  
-  CSS visibility alone does not necessarily remove content from the accessibility tree or stop background behavior.
+  “Not visible” is not one lifecycle state. A visually hidden element may still consume memory, run subscriptions, receive programmatic focus, or remain exposed to assistive technology. Choose a mechanism from the required state and behavior, not appearance alone.
 
 - details  
-  Choose based on state preservation, performance, accessibility, animation, and whether hidden content should continue performing work.
+  | Technique | React state | DOM | Effects | Interaction and accessibility |
+  |---|---|---|---|---|
+  | Conditional unmount | Reset when mounted again | Removed | Cleaned up | Removed |
+  | `display: none` or `hidden` | Preserved | Retained | Continue running | Normally not rendered or exposed |
+  | `visibility: hidden` | Preserved | Retains layout space | Continue running | Not interactive; accessibility behavior should still be verified |
+  | `inert` | Preserved | Retained | Continue running | Removed from normal interaction and focus; may remain visually present |
+  | `<Activity mode="hidden">` | Preserved | React hides the subtree | Effects are cleaned up while hidden | Intended for retained, inactive UI |
+
+  Use unmounting when returning should start a fresh workflow or retaining the subtree wastes resources:
+
+  ```jsx
+  {isOpen && <CheckoutForm />}
+  ```
+
+  Use CSS hiding when the content should remain fully active and immediate reappearance matters, such as a short purely visual transition. Ensure hidden controls cannot remain in the tab order or be announced unexpectedly.
+
+  Use `inert` for content that may remain visible but must not be interactive, commonly the background behind a modal. It does not stop Effects, network work, timers, or store subscriptions.
+
+  Use `<Activity>` when preserving state is valuable but hidden Effects should be torn down. On visibility restoration, React recreates those Effects. This can support inactive routes or prepared content, but retained DOM and state still consume resources.
+
+  Also consider focus. Before hiding or unmounting the currently focused element, move focus to a logical visible target. Animation libraries must keep exiting content long enough to animate without leaving it keyboard-accessible after the interaction has logically closed.
 
 ---
 
@@ -2402,13 +4117,13 @@
   How should asynchronous status updates be announced to assistive technologies?
 
 - answer  
-  Use visible status text and an appropriate live region or status role when an important update occurs without moving focus.
+  When important content changes without moving focus, update visible text inside an appropriate live region so assistive technologies can announce it. Use polite status messaging for routine progress and reserve assertive alerts for urgent information that requires immediate attention.
 
 - explanation  
-  Screen-reader users may otherwise receive no indication that loading, saving, or validation completed.
+  Sighted users may notice a spinner, toast, or changed color elsewhere on the page, while a screen-reader user’s virtual cursor remains unchanged. A live region creates a non-focus-based announcement channel, but excessive announcements become distracting and can interrupt more useful speech.
 
 - details  
-  Keep a persistent live-region node mounted and update its text:
+  Keep the live-region container mounted before the asynchronous update and change its text:
 
   ```jsx
   <p role="status" aria-live="polite">
@@ -2416,7 +4131,21 @@
   </p>
   ```
 
-  `role="status"` is appropriate for non-urgent progress such as “Profile saved.” Use `role="alert"` or assertive announcements sparingly because they interrupt current speech. Do not announce every keystroke or duplicate text already conveyed through focus. Loading indicators also need an accessible name, and long operations should communicate both that work started and how it ended.
+  `role="status"` provides a polite live region suitable for messages such as “Profile saved” or “12 results loaded.” Many screen readers do not announce initial content inserted together with a newly mounted live-region node, so mounting an empty persistent region and updating it later is more reliable.
+
+  Use `role="alert"` for urgent errors or conditions that need immediate attention. It is effectively assertive and can interrupt current speech, so it should not announce routine loading, every validation keystroke, or background refresh.
+
+  Write useful messages:
+
+  - “Saving profile” when a noticeable operation starts
+  - “Profile saved” when it completes
+  - “Could not save profile. Check your connection and try again” on failure
+
+  Avoid messages such as “Done,” repeated percentage changes, or duplicated text that focus already communicates. Debounce rapidly changing search-result counts so announcements do not queue faster than they can be spoken.
+
+  `aria-live` controls urgency, while `aria-atomic` determines whether the whole region or only the changed part is presented. Prefer one concise text update when possible rather than assembling a sentence from several independently changing nodes.
+
+  Moving focus is better than a live region when the user must interact with the new context—for example, focusing an error summary after a failed long-form submission. Use live regions when focus should remain where the user is working. Test with representative screen readers because announcement timing varies across browser and assistive-technology combinations.
 
 ---
 
@@ -2426,15 +4155,43 @@
   How do you make custom interactive components keyboard accessible?
 
 - answer  
-  Prefer native elements. When a custom widget is necessary, implement its expected semantics, focus behavior, keyboard interactions, and state communication.
+  Start with the closest native HTML element. If the design genuinely requires a custom widget, implement the complete established interaction pattern: semantic roles and relationships, keyboard commands, focus management, state exposure, disabled behavior, and visible focus—not only click handling.
 
 - explanation  
-  Adding `role` does not automatically add keyboard behavior.
+  ARIA changes what assistive technology is told; it does not add browser behavior. A `<div role="button">` does not automatically become focusable, activate with Enter and Space, submit forms correctly, or receive native disabled semantics.
 
 - details  
-  Start with the native element whenever possible; a `<button>` already supplies focus, Enter and Space activation, disabled behavior, and semantics. For a composite widget such as tabs, listbox, or menu, follow its established ARIA Authoring Practices pattern rather than inventing keyboard behavior.
+  Prefer:
 
-  Typical responsibilities include roving `tabIndex` or `aria-activedescendant`, required arrow-key navigation, Home and End behavior, Escape handling, visible focus, and state such as `aria-expanded`, `aria-selected`, or `aria-checked`. Do not add `role="button"` to a `<div>` without implementing the full interaction contract. Test with keyboard-only navigation, browser accessibility inspection, and at least representative screen-reader checks.
+  ```jsx
+  <button type="button" onClick={save} disabled={pending}>
+    Save
+  </button>
+  ```
+
+  over recreating button behavior on a generic element. Native controls provide semantics, focusability, keyboard activation, high-contrast behavior, form integration, and platform accessibility APIs.
+
+  For a composite widget, select and follow one established pattern. Tabs typically use:
+
+  - One Tab stop within the tab list
+  - Left and Right Arrow to move between tabs
+  - Home and End for first and last tab
+  - `role="tablist"`, `role="tab"`, and `role="tabpanel"`
+  - `aria-selected` and ID relationships between each tab and panel
+  - Either automatic or manual activation, documented consistently
+
+  Other widgets have different contracts. A menu is for application commands, not ordinary site navigation; a listbox is not a collection of arbitrary interactive cards. Choosing the wrong role creates expectations the implementation cannot meet.
+
+  Composite focus is commonly implemented with:
+
+  - **Roving `tabIndex`:** one item has `tabIndex={0}` and receives DOM focus; other items use `-1`.
+  - **`aria-activedescendant`:** focus stays on a container while an ID identifies the active option.
+
+  The choice affects scrolling, browser focus styling, virtualization, and assistive-technology support. Keep visible focus distinct from selection; moving focus does not always mean committing a value.
+
+  Handle disabled items, dynamic insertion and removal, typeahead, orientation, RTL arrow behavior, focus restoration, and Escape according to the chosen pattern. Avoid positive `tabIndex`, global key handlers, and preventing default browser behavior for keys the widget does not own.
+
+  Validate with semantic queries and automated accessibility checks, then test real Tab order, keyboard commands, zoom, high contrast, and representative screen readers in browsers. Automation can confirm attributes and focus movement but cannot prove that the experience is understandable.
 
 ---
 
@@ -2446,26 +4203,36 @@
   How would you design reusable React component APIs?
 
 - answer  
-  Prefer small composable components with clear responsibilities, predictable controlled and uncontrolled behavior, semantic defaults, and explicit extension points.
-
-  Use composition before adding large collections of configuration props.
+  Design the smallest API that expresses a stable responsibility. Prefer semantic defaults, composition for structure, constrained variants for supported appearance, predictable controlled and uncontrolled state, and a few deliberate extension points. Make common behavior easy and invalid or inaccessible combinations difficult to represent.
 
 - explanation  
-  A component API should make common behavior easy and invalid combinations difficult to express.
+  A reusable API is a long-lived contract, not merely extracted JSX. It must hide implementation details while preserving enough control for real use cases, and every public prop creates compatibility, documentation, accessibility, and testing obligations.
 
 - details  
-  Useful patterns include:
+  Start by defining ownership and invariants:
 
-  - `children` composition
-  - Explicit variants
-  - Controlled and uncontrolled state
-  - Compound components
-  - Render props where actual rendering control is needed
-  - Focused custom Hooks
-  - Context for related compound descendants
-  - Ref exposure for necessary imperative actions
+  - What behavior does the component guarantee?
+  - Which state does it own, and which state may the consumer control?
+  - Which native semantics and keyboard behavior must always be preserved?
+  - Which variations are supported product decisions rather than arbitrary styling?
+  - What must remain private so the implementation can evolve?
 
-  Avoid excessive Boolean props:
+  Use an explicit controlled contract when the application needs coordination:
+
+  ```jsx
+  <Dialog
+    open={isOpen}
+    onOpenChange={setIsOpen}
+  >
+    <Dialog.Content>{children}</Dialog.Content>
+  </Dialog>
+  ```
+
+  Offer `defaultOpen` only when an uncontrolled mode is genuinely useful. Do not switch between controlled and uncontrolled ownership during the component’s lifetime, and keep event naming consistent across the design system.
+
+  Prefer composition over configuration for structure. Compound components or slots let consumers arrange meaningful parts without exposing internal DOM nodes. Use a render prop only when the component must control render timing or provide rendering-specific state; use a custom Hook when consumers only need reusable React behavior.
+
+  Avoid Boolean-prop accumulation:
 
   ```jsx
   <Dialog
@@ -2477,7 +4244,7 @@
   />
   ```
 
-  A clearer API may use a small variant model:
+  These switches permit contradictory combinations and expose styling mechanics. A constrained model is clearer:
 
   ```jsx
   <Dialog
@@ -2486,7 +4253,19 @@
   />
   ```
 
-  Reusable components should preserve native props, semantics, focus behavior, and accessible naming. Flexibility should not require consumers to understand internal implementation details.
+  Strong APIs also:
+
+  - Forward appropriate native attributes and refs.
+  - Use durable data identity rather than array position.
+  - Expose behavioral callbacks, not private state setters or lifecycle steps.
+  - Keep Context focused and validate compound-child provider usage.
+  - Offer a narrow imperative handle only for commands such as `focus()`.
+  - Preserve accessible naming, focus behavior, reduced motion, and disabled semantics.
+  - Define server/client compatibility when the library supports Server Components.
+
+  TypeScript can constrain variants and mutually exclusive modes, but runtime semantics must still be correct. Test the public contract through consumer behavior, keyboard interaction, controlled updates, ref forwarding, and representative composition.
+
+  Add an extension point only after a repeated requirement shows where the stable boundary belongs. If consumers need to understand internal markup or override most defaults, the abstraction is probably at the wrong level.
 
 ---
 
@@ -2497,38 +4276,46 @@
   How should senior engineers test React applications?
 
 - answer  
-  Test observable user behavior and important integration boundaries rather than component implementation details.
-
-  Combine focused unit tests, component or integration tests, and a smaller number of end-to-end tests for critical journeys.
+  Use a risk-based test portfolio. Test pure domain logic directly, React behavior through realistic component integration, external contracts at their boundaries, and a smaller set of critical journeys in a real browser. Prefer observable user and system outcomes over component internals.
 
 - explanation  
-  Prefer queries that reflect how users and assistive technologies find the interface.
-
-  ```jsx
-  const saveButton = screen.getByRole("button", {
-    name: "Save"
-  });
-
-  await user.click(saveButton);
-  ```
+  No single test level provides enough confidence. Small tests localize failures and cover edge cases cheaply; integration tests catch wiring errors; browser tests cover routing, focus, layout-dependent behavior, and deployed boundaries. Senior engineers choose the cheapest level capable of detecting each important risk.
 
 - details  
-  Valuable tests cover:
+  Match tests to risk:
 
-  - Rendering from meaningful inputs
-  - User interaction
-  - Loading, empty, success, and error states
-  - Form validation
-  - Accessibility behavior
-  - Data-boundary integration
-  - Routing
-  - Critical end-to-end workflows
+  - **Unit tests:** parsers, validators, reducers, sorting, state-machine transitions, and other pure domain rules.
+  - **Component tests:** rendering from meaningful inputs, user interaction, forms, providers, loading and error states, and accessible semantics.
+  - **Integration or contract tests:** network adapters, cache behavior, routing, serialization, authentication boundaries, and third-party interfaces.
+  - **End-to-end tests:** a small set of revenue-, security-, or workflow-critical journeys in a real browser.
+  - **Visual tests:** layout, responsive behavior, themes, and component-state appearance.
+  - **Accessibility testing:** semantic automation plus real keyboard and representative assistive-technology checks.
 
-  Avoid overusing snapshots, testing internal state, or asserting that private functions were called when visible behavior provides a stronger test.
+  Test through the interface users perceive:
 
-  Mock external boundaries deliberately. Excessive mocking can create tests that pass even when the integrated application fails.
+  ```jsx
+  render(<ProfileForm />);
 
-  Tests should be deterministic, isolated, readable, and capable of failing for one clear reason.
+  await user.type(
+    screen.getByLabelText("Display name"),
+    "Ada"
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Save profile" })
+  );
+
+  expect(
+    await screen.findByRole("status")
+  ).toHaveTextContent("Profile saved");
+  ```
+
+  Include the failure paths that change product behavior: validation, empty data, permissions, stale responses, retry, optimistic rollback, offline or timeout handling, and interrupted navigation. Do not chase 100% line coverage while important state transitions remain untested; coverage reveals unexecuted code, not whether assertions are meaningful.
+
+  Mock at external boundaries and keep application collaboration real. Network interception is usually stronger than mocking a custom data Hook because it retains parsing, cache, loading, and rendering integration. Maintain some real contract or end-to-end coverage so mocks cannot drift unnoticed.
+
+  Keep tests deterministic without making them unrealistic: control time, random IDs, and request completion explicitly; avoid fixed sleeps; isolate mutable data; and await user interactions and visible outcomes. Treat flaky tests as engineering defects rather than adding retries indefinitely.
+
+  Finally, optimize the suite as a system. Run fast focused checks during development, parallelize reliable tests, collect failure artifacts for browser tests, and assign ownership for unstable or obsolete coverage. A useful test should fail for a comprehensible product reason and help the team diagnose it quickly.
 
 ---
 
@@ -2538,45 +4325,42 @@
   How do you build accessible React components?
 
 - answer  
-  Start with semantic HTML, preserve native keyboard behavior, provide accessible names, manage focus deliberately, and use ARIA only when native HTML cannot express the required behavior.
-
-  Accessibility must be included in component design rather than added only after implementation.
+  Build accessibility into the component contract: start with semantic HTML, preserve native keyboard behavior, provide programmatic names and relationships, manage focus when context changes, support visual accessibility preferences, and use ARIA only to express semantics native HTML cannot provide.
 
 - explanation  
-  Use a native button instead of recreating button behavior with a generic element:
+  Accessibility is behavior across markup, state, focus, input methods, and assistive technology—not a collection of attributes added after visual implementation. Native elements provide a tested platform baseline that custom widgets must otherwise recreate.
+
+- details  
+  Start with native semantics:
 
   ```jsx
-  <button onClick={save}>
+  <button type="button" onClick={save}>
     Save
   </button>
   ```
 
-- details  
-  Senior-level accessibility considerations include:
-
-  - Keyboard navigation
-  - Focus order and focus restoration
-  - Accessible names and descriptions
-  - Form labels and error associations
-  - Live announcements
-  - Modal focus management
-  - Color contrast
-  - Motion preferences
-  - Semantic headings and landmarks
-  - Screen-reader testing
-
-  Avoid:
+  Avoid recreating a button with a generic element:
 
   ```jsx
   <div onClick={save}>Save</div>
   ```
 
-  It lacks native keyboard behavior and button semantics.
+  The `<div>` lacks native focus, Enter and Space activation, disabled behavior, high-contrast adaptation, and button semantics. Adding `role="button"` fixes only part of that contract.
+
+  Design each component across these layers:
+
+  1. **Structure:** semantic headings, landmarks, lists, tables, buttons, links, labels, and fieldsets.
+  2. **Name and relationships:** accessible names, descriptions, error associations, expanded state, selection, and ownership.
+  3. **Keyboard and focus:** logical Tab order, widget-specific keys, visible focus, initial focus, and restoration after overlays or deletion.
+  4. **Dynamic behavior:** loading and result announcements, validation recovery, retained context, and no unexpected focus movement.
+  5. **Visual access:** contrast, zoom and reflow, target size, non-color indicators, forced-colors support, and reduced motion.
 
   Dynamic form errors should be connected to their inputs:
 
   ```jsx
+  <label htmlFor="name">Name</label>
   <input
+    id="name"
     aria-invalid={Boolean(error)}
     aria-describedby={error ? "name-error" : undefined}
   />
@@ -2588,7 +4372,19 @@
   )}
   ```
 
-  Automated accessibility checks are useful but do not replace keyboard and assistive-technology testing.
+  For custom composite widgets such as tabs or listboxes, follow the established ARIA Authoring Practices interaction pattern. Decide whether focus or selection moves, implement roving `tabIndex` or `aria-activedescendant` correctly, and avoid inventing keyboard commands.
+
+  Make accessible behavior part of reusable primitives so product teams receive correct defaults. A dialog primitive should own naming, focus containment, background inertness, Escape behavior, and focus restoration; consumers should not rebuild those rules for every modal.
+
+  Test in layers:
+
+  - Semantic component queries and focused interaction tests
+  - Automated accessibility checks
+  - Keyboard-only browser testing
+  - Zoom, responsive reflow, forced colors, and reduced motion
+  - Representative screen-reader combinations for critical workflows
+
+  Automated tools catch only a subset of problems and cannot determine whether focus order, instructions, announcements, or interaction design make sense. Include disabled users and accessibility specialists in design and usability feedback where possible, document component guarantees, and treat regressions as product defects rather than optional polish.
 
 ---
 

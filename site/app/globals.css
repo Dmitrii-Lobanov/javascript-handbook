@@ -1872,11 +1872,15 @@ button {
   gap: 1.5rem;
   padding: 0 1.4rem 1.4rem 5.4rem;
 }
+.answer-body > * {
+  min-width: 0;
+}
 .answer-body .answer-card-section + .answer-card-section {
   margin-top: 0;
 }
 .answer-details {
   grid-column: 1 / -1;
+  min-width: 0;
   margin-top: 0.25rem;
 }
 .answer-details > summary {
@@ -1928,6 +1932,8 @@ button {
   transform: translateY(2px) rotate(225deg);
 }
 .answer-details-content.answer-card-section {
+  min-width: 0;
+  max-width: 100%;
   margin: 0.85rem 0 0;
   padding: 1rem 1.1rem;
   border: 1px solid var(--line);
@@ -2632,21 +2638,72 @@ button {
   color: #ff7b72;
   background: color-mix(in srgb, #ff7b72 12%, transparent);
 }
-.prose table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 2rem 0;
-  font-size: 0.85em;
-}
-.prose th,
-.prose td {
-  padding: 0.75rem;
+.markdown-table-scroll {
+  position: relative;
+  max-width: 100%;
+  margin: 1.4rem 0;
+  overflow-x: auto;
   border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--teal));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 6%, transparent);
+  scrollbar-color: color-mix(in srgb, var(--teal) 55%, var(--line)) transparent;
+  scrollbar-width: thin;
+  overscroll-behavior-inline: contain;
+}
+.markdown-table-scroll:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+.markdown-table-scroll table {
+  width: 100%;
+  min-width: 620px;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.markdown-table-scroll th,
+.markdown-table-scroll td {
+  padding: 0.8rem 0.95rem;
   text-align: left;
   vertical-align: top;
 }
-.prose th {
-  background: color-mix(in srgb, var(--teal) 10%, var(--surface));
+.markdown-table-scroll th + th,
+.markdown-table-scroll td + td {
+  border-left: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+}
+.markdown-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--teal) 42%, var(--line));
+  background: color-mix(in srgb, var(--teal) 13%, var(--surface));
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.markdown-table-scroll tbody tr + tr td {
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+.markdown-table-scroll tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--teal) 3.5%, transparent);
+}
+.markdown-table-scroll tbody tr:hover {
+  background: color-mix(in srgb, var(--teal) 7%, transparent);
+}
+.markdown-table-scroll tbody td {
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+.markdown-table-scroll tbody td:first-child {
+  color: var(--ink);
+  font-weight: 750;
+}
+.markdown-table-scroll code {
+  white-space: nowrap;
 }
 .prose hr {
   border: 0;
@@ -3118,7 +3175,7 @@ button {
   .answer-body {
     grid-template-columns: 1fr;
     gap: 0;
-    padding: 0 1rem 1rem 4.1rem;
+    padding: 0 1rem 1rem;
   }
   .answer-completion {
     align-items: flex-start;
@@ -3139,9 +3196,13 @@ button {
     margin-right: -0.5rem;
     border-radius: 6px;
   }
-  .prose table {
-    display: block;
-    overflow-x: auto;
+  .markdown-table-scroll {
+    margin-right: -0.25rem;
+    margin-left: -0.25rem;
+    border-radius: 9px;
+  }
+  .markdown-table-scroll table {
+    min-width: 560px;
   }
   .chapter-completion {
     align-items: flex-start;

@@ -12,6 +12,11 @@ export function MarkdownContent({ markdown }: { markdown: string }) {
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, rehypeSlug, [rehypeHighlight, { plainText: ["mermaid"] }]]}
       components={{
+        table: ({ children, ...props }) => (
+          <div className="markdown-table-scroll" tabIndex={0}>
+            <table {...props}>{children}</table>
+          </div>
+        ),
         a: ({ href = "", children, ...props }) => (
           <a
             href={href}
