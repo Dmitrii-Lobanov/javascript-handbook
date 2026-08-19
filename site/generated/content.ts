@@ -4008,7 +4008,7 @@ export const reactQuestionRoadmap: QuestionRoadmapSection[] = [
     ],
   },
   {
-    title: "Hooks and Effects",
+    title: "React Hooks",
     questions: [
       {
         number: 43,
@@ -4043,6 +4043,14 @@ export const reactQuestionRoadmap: QuestionRoadmapSection[] = [
         number: 50,
         title: "When would you use useImperativeHandle?",
       },
+      {
+        number: 57,
+        title: "What do useTransition and useDeferredValue solve?",
+      },
+      {
+        number: 77,
+        title: "What does useActionState solve?",
+      },
     ],
   },
   {
@@ -4071,10 +4079,6 @@ export const reactQuestionRoadmap: QuestionRoadmapSection[] = [
       {
         number: 56,
         title: "How do code splitting and route-based lazy loading differ?",
-      },
-      {
-        number: 57,
-        title: "How does React prioritize urgent and non-urgent updates?",
       },
       {
         number: 58,
@@ -4167,10 +4171,6 @@ export const reactQuestionRoadmap: QuestionRoadmapSection[] = [
       {
         number: 76,
         title: "How do React form Actions work?",
-      },
-      {
-        number: 77,
-        title: "What does useActionState solve?",
       },
       {
         number: 78,
@@ -4867,6 +4867,26 @@ export const reactQuestionAnswers: QuestionAnswer[] = [
       'In React 19, a function component can receive `ref` as a prop and expose a constrained handle:\n\n```jsx\nfunction SearchInput({ ref }) {\n  const inputRef = useRef(null);\n\n  useImperativeHandle(ref, () => ({\n    focus() {\n      inputRef.current?.focus();\n    },\n    select() {\n      inputRef.current?.select();\n    }\n  }), []);\n\n  return \u003cinput ref={inputRef} type="search" />;\n}\n```\n\nThe parent can call `searchRef.current.focus()` but cannot mutate arbitrary properties of the internal input. React versions before 19 commonly use `forwardRef` to receive the ref.\n\nInclude every reactive value used to create the handle in its dependency array. Otherwise methods can close over stale props or state. Keep the API small and behavioral: `focus()` is a better boundary than exposing internal nodes, state setters, or child implementation details.\n\nAvoid using an imperative handle to coordinate ordinary data flow:\n\n- Use props to configure rendering.\n- Use callbacks to report child events.\n- Lift state when parent and child need one source of truth.\n- Use refs only for commands that are genuinely imperative.\n\nAlso consider timing and lifecycle: the handle is available after commit, becomes `null` when the child unmounts, and should normally be used from an event handler or Effect rather than during rendering.',
   },
   {
+    number: 57,
+    question: "What do useTransition and useDeferredValue solve?",
+    answer:
+      "Both APIs let React render non-urgent work in the background so urgent interactions remain responsive. `useTransition` marks state updates that you initiate as non-urgent and exposes pending state. `useDeferredValue` gives a component a deferred version of a value when it cannot control the update that produced that value.",
+    explanation:
+      "React may pause, restart, or discard Transition rendering when a newer urgent update arrives, while the currently committed UI remains interactive. Priority changes when work is shown; it does not make the underlying calculation faster.",
+    details:
+      'Separate the immediate input update from the expensive result update:\n\n```jsx\nconst [query, setQuery] = useState("");\nconst [filter, setFilter] = useState("");\nconst [isPending, startTransition] = useTransition();\n\nfunction handleChange(event) {\n  const nextQuery = event.target.value;\n  setQuery(nextQuery); // urgent: controls the input\n\n  startTransition(() => {\n    setFilter(nextQuery); // non-urgent: updates expensive results\n  });\n}\n```\n\nDo not place the controlled input’s `setQuery` inside the Transition; React-controlled inputs must reflect typing synchronously. Use `isPending` to communicate background work without replacing useful existing content with a global spinner.\n\n`useDeferredValue(query)` is useful when a component receives `query` but does not control the update that produces it. The deferred value initially remains stale while React attempts the background render.\n\nTransition caveats include:\n\n- Transition work can be interrupted and restarted, so rendering must remain pure.\n- Updates after an `await` may need another `startTransition` to retain Transition priority.\n- Multiple concurrent Transitions may currently be batched together.\n- A Transition does not debounce, throttle, cancel network requests, or reduce CPU work.\n- Do not use it when stale UI would be incorrect or unsafe.\n\nIf a calculation itself blocks the main thread for too long, optimize or move that work; scheduling alone cannot make the browser responsive during one uninterrupted JavaScript task.',
+  },
+  {
+    number: 77,
+    question: "What does useActionState solve?",
+    answer:
+      "`useActionState` wraps an Action with state derived from its latest result. It returns the current state, an Action dispatcher, and pending status, making it useful for server validation messages, mutation results, and form submission state that should survive React’s Action flow.",
+    explanation:
+      "Unlike an ordinary submit handler plus several state setters, the Action receives the previous result state and submitted arguments, then returns the next result state. React associates pending and returned data with that specific Action.",
+    details:
+      '```jsx\nconst initialState = {\n  message: "",\n  fieldErrors: {}\n};\n\nfunction ProfileForm() {\n  const [state, submitAction, isPending] = useActionState(\n    saveProfile,\n    initialState\n  );\n\n  return (\n    \u003cform action={submitAction}>\n      \u003clabel htmlFor="display-name">Display name\u003c/label>\n      \u003cinput\n        id="display-name"\n        name="displayName"\n        aria-invalid={Boolean(state.fieldErrors.displayName)}\n        aria-describedby="display-name-error"\n      />\n      \u003cp id="display-name-error">\n        {state.fieldErrors.displayName}\n      \u003c/p>\n      \u003cbutton disabled={isPending}>Save\u003c/button>\n      \u003cp role="status">{state.message}\u003c/p>\n    \u003c/form>\n  );\n}\n```\n\nThe corresponding Action receives `previousState` before the submitted `FormData`:\n\n```jsx\nasync function saveProfile(previousState, formData) {\n  const result = validateProfile(formData);\n\n  if (!result.success) {\n    return {\n      message: "Check the highlighted fields.",\n      fieldErrors: result.fieldErrors\n    };\n  }\n\n  await persistProfile(result.data);\n  return { message: "Profile saved.", fieldErrors: {} };\n}\n```\n\nPass the returned dispatcher to `form action`, `button formAction`, or call it within an Action context. Do not call it as an arbitrary render-time function. Keep returned state small and serializable when a Server Function or progressive-enhancement transport carries it across the server boundary.\n\n`useActionState` models the latest Action result; it is not a general cache or a complete concurrent-mutation manager. Overlapping submissions still need domain-specific ordering, idempotency, and reconciliation.',
+  },
+  {
     number: 51,
     question: "Why does a child component render when its parent renders?",
     answer:
@@ -4925,16 +4945,6 @@ export const reactQuestionAnswers: QuestionAnswer[] = [
       "Splitting lowers the initial JavaScript download, parse, and execution cost, but it moves some work to later navigation. A useful boundary ships less unused code without creating a waterfall of tiny chunks and disruptive loading states.",
     details:
       '`lazy` loads a component module when React first attempts to render it:\n\n```jsx\nconst ReportsPage = lazy(() => import("./ReportsPage.js"));\n\nfunction App() {\n  return (\n    \u003cSuspense fallback={\u003cPageSkeleton />}>\n      \u003cReportsPage />\n    \u003c/Suspense>\n  );\n}\n```\n\nThe import Promise and resolved module are cached. If loading fails, the rejection should reach an Error Boundary that can offer retry or navigation recovery. The basic `lazy` contract expects the module’s `.default` export to be a valid component.\n\nFramework routers usually provide stronger route-level integration: matching routes before rendering, loading code and data in parallel, streaming, prefetching likely destinations, and producing route-specific error UI. Prefer that integration over adding a single Suspense boundary around the whole application.\n\nGood additional split points include rarely opened editors, charts, admin tools, and large optional libraries. Avoid splitting a tiny component used immediately on every page; request overhead and fallback churn may outweigh the saved bytes.\n\nEvaluate:\n\n- Initial and route-specific transferred JavaScript\n- Parse and execution time, not only compressed bundle size\n- Cache stability between deployments\n- Code-and-data waterfalls\n- Loading, error, and offline behavior\n- Whether hover, viewport, or idle prefetching improves navigation\n\nCode splitting improves delivery. It does not reduce the runtime cost of code after that code has loaded.',
-  },
-  {
-    number: 57,
-    question: "How does React prioritize urgent and non-urgent updates?",
-    answer:
-      "Ordinary state updates are urgent by default. A Transition marks selected updates as non-urgent and interruptible, allowing urgent updates such as controlled-input changes to commit without waiting for expensive background rendering. `useDeferredValue` applies similar scheduling to a value received by a subtree.",
-    explanation:
-      "React may pause, restart, or discard Transition rendering when a newer urgent update arrives, while the currently committed UI remains interactive. Priority changes when work is shown; it does not make the underlying calculation faster.",
-    details:
-      'Separate the immediate input update from the expensive result update:\n\n```jsx\nconst [query, setQuery] = useState("");\nconst [filter, setFilter] = useState("");\nconst [isPending, startTransition] = useTransition();\n\nfunction handleChange(event) {\n  const nextQuery = event.target.value;\n  setQuery(nextQuery); // urgent: controls the input\n\n  startTransition(() => {\n    setFilter(nextQuery); // non-urgent: updates expensive results\n  });\n}\n```\n\nDo not place the controlled input’s `setQuery` inside the Transition; React-controlled inputs must reflect typing synchronously. Use `isPending` to communicate background work without replacing useful existing content with a global spinner.\n\n`useDeferredValue(query)` is useful when a component receives `query` but does not control the update that produces it. The deferred value initially remains stale while React attempts the background render.\n\nTransition caveats include:\n\n- Transition work can be interrupted and restarted, so rendering must remain pure.\n- Updates after an `await` may need another `startTransition` to retain Transition priority.\n- Multiple concurrent Transitions may currently be batched together.\n- A Transition does not debounce, throttle, cancel network requests, or reduce CPU work.\n- Do not use it when stale UI would be incorrect or unsafe.\n\nIf a calculation itself blocks the main thread for too long, optimize or move that work; scheduling alone cannot make the browser responsive during one uninterrupted JavaScript task.',
   },
   {
     number: 58,
@@ -5126,16 +5136,6 @@ export const reactQuestionAnswers: QuestionAnswer[] = [
       "The browser’s form semantics remain the foundation, while React coordinates asynchronous mutation state, optimistic UI, and returned validation results. This avoids rebuilding every submission around `preventDefault`, loading Booleans, and manually collected input values.",
     details:
       'A client Action receives `FormData` directly:\n\n```jsx\nfunction RenameProject({ projectId }) {\n  async function rename(formData) {\n    const name = formData.get("name");\n    await updateProject(projectId, { name });\n  }\n\n  return (\n    \u003cform action={rename}>\n      \u003clabel>\n        Project name\n        \u003cinput name="name" required />\n      \u003c/label>\n      \u003cSubmitButton />\n    \u003c/form>\n  );\n}\n```\n\nInputs still need names because native form submission constructs `FormData` from successful controls. Preserve labels, input types, constraints, Enter-to-submit behavior, and a real submit button rather than treating the form as a generic click container.\n\nA function Action may be asynchronous. While it runs, `useFormStatus` can expose pending submission data to descendants, `useActionState` can store the Action’s returned result, and `useOptimistic` can derive temporary UI. After a successful Action, React resets uncontrolled form fields; controlled values remain owned by their state.\n\nIn a Server Function integration, JavaScript can enhance a form submission while the framework may preserve useful behavior before hydration. Exact navigation, permalink, error, and cache-revalidation behavior belongs to the framework and deployment model.\n\nActions do not replace server guarantees. Parse untrusted `FormData`, authenticate the caller, authorize the resource, handle duplicate submissions, and return safe field or form errors. Use a normal event handler when the operation is not semantically a form submission.',
-  },
-  {
-    number: 77,
-    question: "What does useActionState solve?",
-    answer:
-      "`useActionState` wraps an Action with state derived from its latest result. It returns the current state, an Action dispatcher, and pending status, making it useful for server validation messages, mutation results, and form submission state that should survive React’s Action flow.",
-    explanation:
-      "Unlike an ordinary submit handler plus several state setters, the Action receives the previous result state and submitted arguments, then returns the next result state. React associates pending and returned data with that specific Action.",
-    details:
-      '```jsx\nconst initialState = {\n  message: "",\n  fieldErrors: {}\n};\n\nfunction ProfileForm() {\n  const [state, submitAction, isPending] = useActionState(\n    saveProfile,\n    initialState\n  );\n\n  return (\n    \u003cform action={submitAction}>\n      \u003clabel htmlFor="display-name">Display name\u003c/label>\n      \u003cinput\n        id="display-name"\n        name="displayName"\n        aria-invalid={Boolean(state.fieldErrors.displayName)}\n        aria-describedby="display-name-error"\n      />\n      \u003cp id="display-name-error">\n        {state.fieldErrors.displayName}\n      \u003c/p>\n      \u003cbutton disabled={isPending}>Save\u003c/button>\n      \u003cp role="status">{state.message}\u003c/p>\n    \u003c/form>\n  );\n}\n```\n\nThe corresponding Action receives `previousState` before the submitted `FormData`:\n\n```jsx\nasync function saveProfile(previousState, formData) {\n  const result = validateProfile(formData);\n\n  if (!result.success) {\n    return {\n      message: "Check the highlighted fields.",\n      fieldErrors: result.fieldErrors\n    };\n  }\n\n  await persistProfile(result.data);\n  return { message: "Profile saved.", fieldErrors: {} };\n}\n```\n\nPass the returned dispatcher to `form action`, `button formAction`, or call it within an Action context. Do not call it as an arbitrary render-time function. Keep returned state small and serializable when a Server Function or progressive-enhancement transport carries it across the server boundary.\n\n`useActionState` models the latest Action result; it is not a general cache or a complete concurrent-mutation manager. Overlapping submissions still need domain-specific ordering, idempotency, and reconciliation.',
   },
   {
     number: 78,

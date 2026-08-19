@@ -1569,7 +1569,7 @@
 
 ---
 
-## Hooks and Effects
+## React Hooks
 
 ### Card 43
 
@@ -1894,6 +1894,118 @@
 
 ---
 
+### Card 57
+
+- question  
+  What do `useTransition` and `useDeferredValue` solve?
+
+- answer  
+  Both APIs let React render non-urgent work in the background so urgent interactions remain responsive. `useTransition` marks state updates that you initiate as non-urgent and exposes pending state. `useDeferredValue` gives a component a deferred version of a value when it cannot control the update that produced that value.
+
+- explanation  
+  React may pause, restart, or discard Transition rendering when a newer urgent update arrives, while the currently committed UI remains interactive. Priority changes when work is shown; it does not make the underlying calculation faster.
+
+- details  
+  Separate the immediate input update from the expensive result update:
+
+  ```jsx
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(event) {
+    const nextQuery = event.target.value;
+    setQuery(nextQuery); // urgent: controls the input
+
+    startTransition(() => {
+      setFilter(nextQuery); // non-urgent: updates expensive results
+    });
+  }
+  ```
+
+  Do not place the controlled input’s `setQuery` inside the Transition; React-controlled inputs must reflect typing synchronously. Use `isPending` to communicate background work without replacing useful existing content with a global spinner.
+
+  `useDeferredValue(query)` is useful when a component receives `query` but does not control the update that produces it. The deferred value initially remains stale while React attempts the background render.
+
+  Transition caveats include:
+
+  - Transition work can be interrupted and restarted, so rendering must remain pure.
+  - Updates after an `await` may need another `startTransition` to retain Transition priority.
+  - Multiple concurrent Transitions may currently be batched together.
+  - A Transition does not debounce, throttle, cancel network requests, or reduce CPU work.
+  - Do not use it when stale UI would be incorrect or unsafe.
+
+  If a calculation itself blocks the main thread for too long, optimize or move that work; scheduling alone cannot make the browser responsive during one uninterrupted JavaScript task.
+
+---
+
+### Card 77
+
+- question  
+  What does `useActionState` solve?
+
+- answer  
+  `useActionState` wraps an Action with state derived from its latest result. It returns the current state, an Action dispatcher, and pending status, making it useful for server validation messages, mutation results, and form submission state that should survive React’s Action flow.
+
+- explanation  
+  Unlike an ordinary submit handler plus several state setters, the Action receives the previous result state and submitted arguments, then returns the next result state. React associates pending and returned data with that specific Action.
+
+- details  
+  ```jsx
+  const initialState = {
+    message: "",
+    fieldErrors: {}
+  };
+
+  function ProfileForm() {
+    const [state, submitAction, isPending] = useActionState(
+      saveProfile,
+      initialState
+    );
+
+    return (
+      <form action={submitAction}>
+        <label htmlFor="display-name">Display name</label>
+        <input
+          id="display-name"
+          name="displayName"
+          aria-invalid={Boolean(state.fieldErrors.displayName)}
+          aria-describedby="display-name-error"
+        />
+        <p id="display-name-error">
+          {state.fieldErrors.displayName}
+        </p>
+        <button disabled={isPending}>Save</button>
+        <p role="status">{state.message}</p>
+      </form>
+    );
+  }
+  ```
+
+  The corresponding Action receives `previousState` before the submitted `FormData`:
+
+  ```jsx
+  async function saveProfile(previousState, formData) {
+    const result = validateProfile(formData);
+
+    if (!result.success) {
+      return {
+        message: "Check the highlighted fields.",
+        fieldErrors: result.fieldErrors
+      };
+    }
+
+    await persistProfile(result.data);
+    return { message: "Profile saved.", fieldErrors: {} };
+  }
+  ```
+
+  Pass the returned dispatcher to `form action`, `button formAction`, or call it within an Action context. Do not call it as an arbitrary render-time function. Keep returned state small and serializable when a Server Function or progressive-enhancement transport carries it across the server boundary.
+
+  `useActionState` models the latest Action result; it is not a general cache or a complete concurrent-mutation manager. Overlapping submissions still need domain-specific ordering, idempotency, and reconciliation.
+
+---
+
 ## Rendering and performance
 
 ### Card 51
@@ -2128,51 +2240,6 @@
   - Whether hover, viewport, or idle prefetching improves navigation
 
   Code splitting improves delivery. It does not reduce the runtime cost of code after that code has loaded.
-
----
-
-### Card 57
-
-- question  
-  How does React prioritize urgent and non-urgent updates?
-
-- answer  
-  Ordinary state updates are urgent by default. A Transition marks selected updates as non-urgent and interruptible, allowing urgent updates such as controlled-input changes to commit without waiting for expensive background rendering. `useDeferredValue` applies similar scheduling to a value received by a subtree.
-
-- explanation  
-  React may pause, restart, or discard Transition rendering when a newer urgent update arrives, while the currently committed UI remains interactive. Priority changes when work is shown; it does not make the underlying calculation faster.
-
-- details  
-  Separate the immediate input update from the expensive result update:
-
-  ```jsx
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  function handleChange(event) {
-    const nextQuery = event.target.value;
-    setQuery(nextQuery); // urgent: controls the input
-
-    startTransition(() => {
-      setFilter(nextQuery); // non-urgent: updates expensive results
-    });
-  }
-  ```
-
-  Do not place the controlled input’s `setQuery` inside the Transition; React-controlled inputs must reflect typing synchronously. Use `isPending` to communicate background work without replacing useful existing content with a global spinner.
-
-  `useDeferredValue(query)` is useful when a component receives `query` but does not control the update that produces it. The deferred value initially remains stale while React attempts the background render.
-
-  Transition caveats include:
-
-  - Transition work can be interrupted and restarted, so rendering must remain pure.
-  - Updates after an `await` may need another `startTransition` to retain Transition priority.
-  - Multiple concurrent Transitions may currently be batched together.
-  - A Transition does not debounce, throttle, cancel network requests, or reduce CPU work.
-  - Do not use it when stale UI would be incorrect or unsafe.
-
-  If a calculation itself blocks the main thread for too long, optimize or move that work; scheduling alone cannot make the browser responsive during one uninterrupted JavaScript task.
 
 ---
 
@@ -2948,73 +3015,6 @@
   In a Server Function integration, JavaScript can enhance a form submission while the framework may preserve useful behavior before hydration. Exact navigation, permalink, error, and cache-revalidation behavior belongs to the framework and deployment model.
 
   Actions do not replace server guarantees. Parse untrusted `FormData`, authenticate the caller, authorize the resource, handle duplicate submissions, and return safe field or form errors. Use a normal event handler when the operation is not semantically a form submission.
-
----
-
-### Card 77
-
-- question  
-  What does `useActionState` solve?
-
-- answer  
-  `useActionState` wraps an Action with state derived from its latest result. It returns the current state, an Action dispatcher, and pending status, making it useful for server validation messages, mutation results, and form submission state that should survive React’s Action flow.
-
-- explanation  
-  Unlike an ordinary submit handler plus several state setters, the Action receives the previous result state and submitted arguments, then returns the next result state. React associates pending and returned data with that specific Action.
-
-- details  
-  ```jsx
-  const initialState = {
-    message: "",
-    fieldErrors: {}
-  };
-
-  function ProfileForm() {
-    const [state, submitAction, isPending] = useActionState(
-      saveProfile,
-      initialState
-    );
-
-    return (
-      <form action={submitAction}>
-        <label htmlFor="display-name">Display name</label>
-        <input
-          id="display-name"
-          name="displayName"
-          aria-invalid={Boolean(state.fieldErrors.displayName)}
-          aria-describedby="display-name-error"
-        />
-        <p id="display-name-error">
-          {state.fieldErrors.displayName}
-        </p>
-        <button disabled={isPending}>Save</button>
-        <p role="status">{state.message}</p>
-      </form>
-    );
-  }
-  ```
-
-  The corresponding Action receives `previousState` before the submitted `FormData`:
-
-  ```jsx
-  async function saveProfile(previousState, formData) {
-    const result = validateProfile(formData);
-
-    if (!result.success) {
-      return {
-        message: "Check the highlighted fields.",
-        fieldErrors: result.fieldErrors
-      };
-    }
-
-    await persistProfile(result.data);
-    return { message: "Profile saved.", fieldErrors: {} };
-  }
-  ```
-
-  Pass the returned dispatcher to `form action`, `button formAction`, or call it within an Action context. Do not call it as an arbitrary render-time function. Keep returned state small and serializable when a Server Function or progressive-enhancement transport carries it across the server boundary.
-
-  `useActionState` models the latest Action result; it is not a general cache or a complete concurrent-mutation manager. Overlapping submissions still need domain-specific ordering, idempotency, and reconciliation.
 
 ---
 
