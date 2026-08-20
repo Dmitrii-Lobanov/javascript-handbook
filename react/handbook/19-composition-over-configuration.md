@@ -32,6 +32,51 @@ Composition is not automatically better. A small closed set of variants is clear
 
 Prefer elements or components over render callbacks unless the consumer needs internal state to produce its content.
 
+## Choose the smallest flexibility mechanism
+
+```tsx
+// One content region
+<Panel><Report /></Panel>
+
+// A few named regions
+<Page header={<Header />} sidebar={<Filters />} />
+
+// Consumer needs internal state
+<List renderItem={(item, selected) => <Row item={item} active={selected} />} />
+```
+
+Use ordinary children first, named slots for explicit layout regions, render callbacks when internal data must reach custom rendering, and compound components when pieces coordinate behavior.
+
+## Configuration is appropriate for closed choices
+
+Typed variants make supported design choices predictable:
+
+```tsx
+<Alert tone="danger" size="compact" />
+```
+
+Do not require consumers to reconstruct a danger alert through arbitrary slots when the design system already defines that semantic variant.
+
+## Boolean combinations signal a missing model
+
+```tsx
+<Button primary secondary destructive loading />
+```
+
+Replace mutually exclusive booleans with a union such as `variant="primary" | "secondary" | "danger"`. Use composition for independent structural content such as icons or actions.
+
+## Composition needs constraints
+
+Flexibility must not allow invalid DOM or inaccessible relationships. A tabs API may permit custom labels and panels while still owning roles, IDs, focus, and keyboard navigation.
+
+| Requirement | Prefer |
+| --- | --- |
+| Small closed visual variants | Typed props |
+| One arbitrary content area | `children` |
+| Several named layout regions | Element props/slots |
+| Consumer renders using internal data | Render callback |
+| Cooperating flexible pieces | Compound components |
+
 ## Common traps
 
 - Replacing every prop with a compound component.
@@ -43,6 +88,24 @@ Prefer elements or components over render callbacks unless the consumer needs in
 
 I use configuration for a small, stable set of variants and composition when consumers need structural flexibility. Children, named slots, or compound components let callers assemble UI without teaching one component every possible layout. The API should still enforce important semantic and accessibility constraints.
 
+## Follow-up questions
+
+### Is composition always more reusable?
+
+No. Excessive flexibility can make common usage verbose and invalid combinations easy.
+
+### When is a render prop justified?
+
+When custom rendering needs state or data owned by the reusable component.
+
+### What should remain internal in a composable widget?
+
+Behavioral and accessibility invariants that consumers should not have to reconstruct.
+
 ## Check yourself
 
-When is `variant="danger"` clearer than supplying a custom component through a slot?
+1. When is `variant="danger"` clearer than a slot?
+2. What indicates a Boolean-prop explosion?
+3. When are named slots preferable to children?
+4. Why can render callbacks add unnecessary complexity?
+5. Which accessibility rules should composition preserve?
