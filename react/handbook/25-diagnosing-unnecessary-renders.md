@@ -107,11 +107,27 @@ Memoization trades computation for comparisons, retained values, dependency mana
 
 I start from a slow user interaction, reproduce it with representative data, and record a React profile. I identify the expensive commit, the components that consumed time, and why they rendered, while checking whether the real cost is outside React. I first narrow state ownership, remove redundant updates, and reduce the work performed. I add memoization only at an expensive boundary with stable inputs, then profile the same interaction again to verify the improvement.
 
+## Follow-up questions
+
+### Does a child always render when its parent renders?
+
+React normally evaluates the child again when the parent renders. That is not necessarily waste: the calculation may be cheap, and React may commit no DOM changes. A memoized child can bail out when its props compare equal.
+
+### Why can component splitting improve performance without `memo`?
+
+Splitting can move frequently changing state into a smaller owner. React then starts the update from that owner rather than reevaluating an unrelated parent subtree.
+
+### When should you use a transition?
+
+Use a transition when a necessary, non-urgent render competes with urgent feedback such as typing. It improves scheduling; it does not reduce the amount of work.
+
 ## Check yourself
 
 1. Why is a high render count not sufficient evidence of a performance problem?
 2. When can moving state downward outperform wrapping a large subtree in `memo`?
 3. What evidence would justify adding `useCallback`?
+4. How would you distinguish React render cost from layout or paint cost?
+5. Why should the optimized interaction be profiled again?
 
 ## Related chapters
 
