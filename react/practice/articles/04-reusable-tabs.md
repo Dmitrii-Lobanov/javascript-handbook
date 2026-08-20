@@ -322,8 +322,6 @@ In an interview, explain that automatic activation is suitable when panels switc
 ## Complete solution
 
 ```tsx
-"use client";
-
 import { useId, useRef } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 

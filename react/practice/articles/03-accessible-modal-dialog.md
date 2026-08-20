@@ -167,7 +167,7 @@ Extract `usePortalContainer` because temporary DOM-node ownership has a clear se
 
 Do not extract a generic `useModal` Hook merely to make the component shorter. Focus containment, labeling, portal structure, and dismissal are one interaction contract; splitting them prematurely can make it harder to verify that they stay coordinated.
 
-## Step-by-step React solution
+Build the dialog in this order. Finish the controlled semantic version before adding portal and focus-management behavior.
 
 Build one behavior at a time:
 
@@ -187,7 +187,7 @@ Background inertness and scroll lock
 
 Each checkpoint remains explainable if the interview ends early.
 
-### Step 1: build a controlled semantic dialog
+## Step 1 — Build a basic controlled dialog
 
 Start with state ownership and accessible structure:
 
@@ -231,7 +231,19 @@ function ModalDialog({
 
 Do not omit a visible title merely because the visual design has an icon. If a visible heading is genuinely inappropriate, the API still needs an explicit accessible label strategy.
 
-### Step 2: render through a portal
+## First working implementation
+
+Verify the basic dialog before adding global behavior:
+
+1. The parent controls whether it is open.
+2. Closed state renders nothing.
+3. Open state displays arbitrary content above an overlay.
+4. The dialog has a programmatic title and optional description.
+5. The close button requests `onOpenChange(false)`.
+
+This version is intentionally incomplete as a production modal. It does not yet escape clipping, close with Escape, manage focus, make the background inert, or lock scrolling. Each following step adds one of those requirements.
+
+## Step 2 — Render through a portal
 
 A portal lets the overlay escape ancestor clipping and stacking contexts while remaining in the same React tree.
 
@@ -271,7 +283,7 @@ The Effect avoids reading `document` during server rendering. In a production ap
 
 Portal events follow the React tree, not only the DOM tree. A dialog click can still bubble to React ancestors of the component that returned the portal.
 
-### Step 3: add Escape and safe overlay dismissal
+## Step 3 — Add Escape and safe overlay dismissal
 
 Handle Escape only while open and remove the listener during cleanup:
 
@@ -316,7 +328,7 @@ Do not call `stopPropagation` on every event inside the dialog. It can break leg
 
 A production primitive should also decide how pointer-down inside followed by pointer-up outside behaves and how nested overlays coordinate dismissal.
 
-### Step 4: move and restore focus
+## Step 4 — Move and restore focus
 
 When opening, remember the active element, then focus the requested target or the first focusable descendant:
 
@@ -354,7 +366,7 @@ Make the dialog surface programmatically focusable as a fallback:
 
 Initial focus is a product decision. A destructive confirmation should normally focus the least destructive action, while a long informational dialog may focus its heading or container.
 
-### Step 5: contain Tab navigation
+## Step 5 — Contain Tab navigation
 
 Collect currently focusable descendants when Tab is pressed:
 
@@ -407,7 +419,7 @@ Attach this inside the same open-dialog keyboard Effect. Recalculate on each key
 
 This selector is interview-sized, not a complete focus-management engine. Production implementations must account for radio groups, Shadow DOM, iframes, hidden ancestors, disabled fieldsets, and nested overlays.
 
-### Step 6: make the background inert and lock scrolling
+## Step 6 — Make the background inert and lock scrolling
 
 When the dialog opens, make every body child except its portal container inert and preserve the previous values:
 
@@ -446,8 +458,6 @@ Saving prior values is essential. Cleanup must restore the environment it found 
 ## Complete interview-sized implementation
 
 ```tsx
-"use client";
-
 import {
   useEffect,
   useId,
@@ -902,4 +912,3 @@ No. It may be appropriate for lightweight dismissible content, but destructive, 
 ### Why is the focus selector incomplete?
 
 Real tabbability depends on visibility, radio groups, disabled fieldsets, Shadow DOM, iframes, and browser behavior. The interview version covers common controls; production should use a well-tested focus-management utility.
-

@@ -195,7 +195,7 @@ This API makes the data source injectable. The component does not know the endpo
 
 Do not extract `useAutocomplete` merely to show that you know custom Hooks. Extract it when multiple renderers need the behavior or when the component becomes difficult to reason about. A custom Hook shares behavior, not markup or accessibility semantics.
 
-## Step-by-step React solution
+Build the feature in this order. Finish the basic synchronous version before adding asynchronous business logic.
 
 Build one working vertical slice at a time. Every step below has a visible result and introduces only one new source of complexity.
 
@@ -219,7 +219,7 @@ Combobox semantics
 
 If the interview ends early, you still have a working checkpoint and can explain the next step.
 
-### Step 1: build a synchronous generic version
+## Step 1 — Build a basic synchronous autocomplete
 
 Start with caller-supplied local options and the type contract defined above:
 
@@ -277,7 +277,18 @@ export function LocalAutocomplete<T>({
 
 The component assumes nothing about the shape of T. Identity, searchable labels, visible content, and the selected record all come from typed caller props.
 
-### Step 2: replace local options with asynchronous search
+## First working implementation
+
+Stop here briefly and verify the basic user flow:
+
+1. Typing filters the local options.
+2. Matching options render from generic data.
+3. Clicking an option reports the selected item.
+4. Selecting an option updates the input label.
+
+This version is already demonstrable. It intentionally has no network request, debounce, stale-response protection, arrow navigation, or combobox ARIA yet. Add those requirements to this working component one at a time.
+
+## Step 2 — Replace local options with asynchronous search
 
 Use the generic request state from the opening contract:
 
@@ -322,7 +333,7 @@ Render loading, empty, and error states independently from generic option render
 )}
 ```
 
-### Step 3: protect against stale responses
+## Step 3 — Protect against stale responses
 
 Each Effect execution owns one request:
 
@@ -369,7 +380,7 @@ useEffect(() => {
 
 Cancellation reduces work; the ignore guard prevents obsolete results even when a supplied search implementation does not fully honor abort.
 
-### Step 4: debounce the query, not the input
+## Step 4 — Debounce the query, not the input
 
 Extract timing into a reusable value Hook:
 
@@ -396,7 +407,7 @@ const debouncedQuery = useDebounce(
 
 The input still displays inputValue immediately. Only the Effect that starts external work changes from inputValue to debouncedQuery.
 
-### Step 5: add generic keyboard navigation
+## Step 5 — Add keyboard navigation
 
 The active index navigates the current typed result array:
 
@@ -442,7 +453,7 @@ function selectOption(option: T) {
 }
 ```
 
-### Step 6: add generic combobox semantics
+## Step 6 — Add combobox semantics
 
 Caller-provided identity creates stable React keys and active-descendant IDs:
 

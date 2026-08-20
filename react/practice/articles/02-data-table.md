@@ -187,9 +187,9 @@ function compareValues(left: SortValue, right: SortValue) {
 
 The caller owns domain knowledge—how to display a value, which value should be compared, and which text should be searched. The table owns only generic transformations, selection, pagination, and semantics.
 
-## Step-by-step React solution
+Build the table in this order. Finish semantic rendering before adding sorting, filtering, pagination, and selection.
 
-### Step 1: render a semantic table
+## Step 1 — Render a basic semantic table
 
 Start with the generic contract and correct HTML before adding state:
 
@@ -230,7 +230,18 @@ function DataTable<T>({
 
 Use stable IDs for keys. A table already gives assistive technologies relationships between cells and headers; replacing it with a grid of `<div>` elements would require rebuilding those semantics.
 
-### Step 2: add sorting without mutating props
+## First working implementation
+
+Before adding business logic, verify the foundation:
+
+1. The component renders any row type through column definitions.
+2. Every row uses stable domain identity.
+3. Column and row headers use native table semantics.
+4. The caption gives the table an accessible name.
+
+This is a complete read-only table. Sorting, filtering, pagination, and selection are independent requirements that will now be layered onto it.
+
+## Step 2 — Add sorting without mutating props
 
 Put a real button inside each sortable header. The button provides keyboard activation without custom handlers:
 
@@ -279,7 +290,7 @@ Expose the active direction through `aria-sort` on the `<th>`:
 </th>
 ```
 
-### Step 3: debounce the filter query, then derive rows
+## Step 3 — Debounce filtering and derive visible rows
 
 Keep `query` immediate so the controlled input never lags. A reusable Hook produces a delayed value for expensive filtering:
 
@@ -335,7 +346,7 @@ Resetting the page belongs in the filter event because the event changes the res
 
 For a small local collection, filtering on every keystroke is usually fast enough and debounce may be unnecessary. It is included here because interview datasets can be large and the same state model transfers to remote filtering. In production, choose the delay from measured behavior rather than treating `200` milliseconds as universal.
 
-### Step 4: paginate the derived result
+## Step 4 — Paginate the derived result
 
 Calculate the page range after filtering and sorting:
 
@@ -358,7 +369,7 @@ Use `currentPage` rather than setting state during render. It keeps the rendered
 </button>
 ```
 
-### Step 5: add row selection using stable IDs
+## Step 5 — Add row selection with stable IDs
 
 Never mutate the existing `Set`; return a new one so React receives a new state identity:
 
@@ -396,7 +407,7 @@ useEffect(() => {
 
 This is a valid Effect: it synchronizes React state with a DOM property that JSX cannot express declaratively.
 
-### Step 6: finish empty states and announcements
+## Step 6 — Add empty states and announcements
 
 Keep the table structure when there are no matching rows:
 
