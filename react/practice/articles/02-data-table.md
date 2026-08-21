@@ -66,6 +66,196 @@ For this walkthrough:
 - URL synchronization.
 - Persisted selection across unloaded server pages.
 
+## System design before implementation
+
+Use GreatFrontEnd's [RADIO framework](https://www.greatfrontend.com/front-end-system-design-playbook/framework) to organize the design discussion:
+
+```text
+R — Requirements
+A — Architecture
+D — Data model
+I — Interfaces
+O — Optimizations and deep dives
+```
+
+Treat RADIO as a checklist rather than an inflexible script. For a live-coding interview, establish the important decisions quickly and then implement the smallest complete table.
+
+### R — Requirements
+
+The core functional requirements are:
+
+- render arbitrary records using caller-defined columns;
+- filter records by text;
+- sort sortable columns in ascending and descending order;
+- paginate the transformed result;
+- select individual rows and all rows visible on the current page;
+- retain selection when filtering or changing pages;
+- expose semantic table structure and sort state;
+- display useful result counts and empty states.
+
+Important non-functional requirements are:
+
+- **Reusability:** the table must not assume an employee or another record shape.
+- **Correctness:** filtering, sorting, pagination, and selection must compose predictably.
+- **Accessibility:** native table semantics, captions, labels, and sort announcements remain intact.
+- **Performance:** routine input and page changes should remain responsive for the expected dataset.
+- **Immutability:** transformations must never reorder or modify caller-owned rows.
+
+Assume the interview version receives all rows in memory, uses a small fixed page size, performs single-column sorting, and renders a moderate dataset. Server pagination, column management, virtualization, and cross-page server selection are follow-up topics.
+
+### A — Architecture
+
+Separate domain configuration from the reusable transformation and view layer:
+
+```text
+Parent application
+├── owns row data and application actions
+├── defines columns and record projections
+└── DataTable<T>
+    ├── control bar: filter and result summary
+    ├── transformation pipeline
+    │   └── filter → sort → paginate
+    ├── semantic table
+    │   ├── sortable headers
+    │   └── selectable rows
+    └── pagination controls
+```
+
+Responsibilities:
+
+| Boundary | Responsibility |
+| --- | --- |
+| Parent | Supplies records, stable identity, columns, caption, and initial configuration |
+| Column definition | Describes header, cell rendering, searchable text, and sortable value |
+| Table coordinator | Owns query, sort, current page, and selected IDs |
+| Transformation pipeline | Derives filtered, sorted, and paginated rows |
+| Semantic view | Renders headers, cells, selection controls, and announcements |
+
+One component plus pure helper functions is enough for the interview. The logical boundaries do not require a component for every table element.
+
+Use a one-way calculation pipeline:
+
+```text
+rows + debouncedQuery
+  → filteredRows + sort
+  → sortedRows + pageSize + page
+  → visibleRows
+  → selection summary and table markup
+```
+
+Changing an upstream input recalculates the downstream result. No Effect is needed to synchronize transformed collections.
+
+### D — Data model
+
+Separate parent-owned domain data, client interaction state, and derived data:
+
+| Data | Origin | Owner | Stored or derived? |
+| --- | --- | --- | --- |
+| Records `T[]` | Parent or server | Parent | Input prop |
+| Column definitions | Parent/configuration | Parent | Input prop |
+| Query | User | Data table | Stored state |
+| Debounced query | Query | Data table | Derived through debounce Hook |
+| Sort descriptor | User | Data table | Stored state |
+| Selected row IDs | User | Data table | Stored state |
+| Current page | User | Data table | Stored state |
+| Filtered rows | Rows and query | Data table | Derived |
+| Sorted rows | Filtered rows and sort | Data table | Derived |
+| Visible rows | Sorted rows and page | Data table | Derived |
+
+Stable row identity is separate from array position. Selection therefore stores IDs, not row objects or indexes. A refreshed row object with the same ID remains the same logical selection.
+
+The column model contains behavior because generic records have no universal way to render, search, or compare a field. A column may provide:
+
+- `cell(row)` for visual output;
+- `searchValue(row)` for searchable text;
+- `sortValue(row)` for a comparable primitive or date.
+
+Maintain these invariants:
+
+1. Input rows and columns are never mutated.
+2. Sort refers to an existing sortable column or is `null`.
+3. Page remains within the current result's page range.
+4. Selection is keyed by stable row IDs.
+5. Select-all affects only the explicitly defined visible-row scope.
+6. `aria-sort` appears only on the active sorted header.
+
+### I — Interfaces
+
+The primary interface is the generic component API:
+
+```ts
+type DataTableProps<T> = {
+  rows: readonly T[];
+  columns: readonly ColumnDef<T>[];
+  getRowId: (row: T) => string | number;
+  getRowLabel: (row: T) => string;
+  caption: string;
+  initialSort?: SortState;
+  pageSize?: number;
+};
+```
+
+Column definitions form a second interface:
+
+```ts
+type ColumnDef<T> = {
+  id: string;
+  header: string;
+  cell: (row: T) => ReactNode;
+  searchValue?: (row: T) => string;
+  sortValue?: (row: T) => string | number | Date;
+};
+```
+
+These interfaces keep domain rules in the caller and table mechanics in the component. The caller can display a formatted currency while returning the underlying number for sorting.
+
+For large remote datasets, the interface boundary changes. The table emits query intent and receives a server page:
+
+```text
+GET /api/products?q=chair&sort=price&direction=ascending&cursor=...
+→ { rows, nextCursor, totalCount? }
+```
+
+Do not mix local and server modes accidentally. In local mode, the component owns transformations. In server mode, the server owns filtering, sorting, and pagination, while the component owns controls and request state.
+
+### O — Optimizations and deep dives
+
+Focus on trade-offs specific to data tables.
+
+#### Preserve transformation order
+
+Filter before sorting to reduce comparison work, then paginate the sorted result. Paginating first would sort only the current slice and produce incorrect global ordering.
+
+#### Debounce external or expensive filtering
+
+Keep the controlled filter input immediate. Debounce the value used for expensive transformation or server requests. For a tiny local dataset, synchronous filtering may be simpler and faster than managing a debounce.
+
+#### Choose local or server operations from scale
+
+Local operations provide immediate interaction and simpler code but require transferring and retaining the full dataset. Server operations are appropriate when data is large, permission-sensitive, frequently changing, or already paginated. They add request states, caching, cancellation, and ordering concerns.
+
+#### Define selection semantics explicitly
+
+“Select all” can mean visible rows, every filtered row already loaded, or all matching records on the server. The interview version chooses visible rows. A server-wide selection usually needs an exclusion model rather than storing millions of selected IDs.
+
+#### Use memoization only at expensive boundaries
+
+The transformation pipeline may use `useMemo` when datasets and comparisons are meaningfully expensive and inputs are stable. Memoizing every cell or callback adds complexity without guaranteeing improvement. Profile before adding component-level memoization.
+
+#### Plan large-table rendering carefully
+
+Pagination limits rendered rows and is the simplest interview solution. Virtualization can bound DOM size for very large interactive tables, but it complicates semantic row relationships, focus, variable heights, printing, and screen-reader navigation.
+
+#### Preserve accessibility while customizing
+
+Keep native table elements. Put interactive sorting controls inside header cells, expose `aria-sort` on the header, give selection checkboxes useful row labels, and announce result changes without making every render noisy.
+
+#### Avoid contradictory empty states
+
+Distinguish “the input dataset is empty” from “no rows match this filter.” The recovery action differs: one may invite data creation, while the other should clear or change the query.
+
+With the RADIO decisions established, define the exact TypeScript contract and build the transformations one at a time.
+
 ## Type contract
 
 Define the reusable boundary before writing component logic. Every later snippet uses these types:

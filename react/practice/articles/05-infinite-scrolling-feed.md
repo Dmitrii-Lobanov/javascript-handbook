@@ -51,6 +51,221 @@ For this tutorial:
 - a sentinel loads the next page automatically;
 - a Load more button remains available.
 
+## System design before implementation
+
+Use GreatFrontEnd's [RADIO framework](https://www.greatfrontend.com/front-end-system-design-playbook/framework) to structure the feed design:
+
+```text
+R — Requirements
+A — Architecture
+D — Data model
+I — Interfaces
+O — Optimizations and deep dives
+```
+
+For a live-coding interview, use RADIO to expose the important product and API decisions, then implement manual pagination before adding automatic observation.
+
+### R — Requirements
+
+The functional requirements are:
+
+- load and render the first page of arbitrary records;
+- request another page from an opaque continuation cursor;
+- append rather than replace successful earlier pages;
+- load automatically when a sentinel approaches the viewport;
+- retain an explicit Load more fallback;
+- display initial loading, continuation loading, empty, error, and completed states;
+- prevent duplicate requests and duplicate rendered items;
+- cancel obsolete work during cleanup;
+- retry the operation that failed.
+
+Important non-functional requirements are:
+
+- **Correctness:** request timing and overlapping pages must not corrupt the feed.
+- **Responsiveness:** loading another page must not block existing interaction.
+- **Accessibility:** keyboard users retain an explicit continuation control and status changes are announced appropriately.
+- **Reusability:** pagination behavior is independent from post, product, or notification presentation.
+- **Scalability:** the design distinguishes network pagination from DOM-size management.
+- **Recoverability:** later-page failures preserve already useful content.
+
+Assume one feed instance, forward-only cursor pagination, stable item IDs, online use, and a moderate session length. Query changes, cache restoration, bidirectional loading, real-time insertions, virtualization, and SEO pagination are follow-up concerns.
+
+### A — Architecture
+
+Separate the product's data-access boundary from reusable feed coordination:
+
+```text
+Page API
+    ↑ cursor, AbortSignal
+    ↓ Page<T>
+Data-access function
+    ↑ injected as loadPage
+    ↓ Promise<Page<T>>
+InfiniteFeed<T>
+├── page/request coordinator
+├── accumulated item view
+├── status and recovery UI
+├── Load more control
+└── IntersectionObserver sentinel
+    ↓ renderItem(item)
+Product-specific item view
+```
+
+Responsibilities:
+
+| Boundary | Responsibility |
+| --- | --- |
+| Parent/data layer | Owns endpoint, authentication, filters, caching policy, and item rendering |
+| `loadPage` | Converts a cursor into a page and supports cancellation |
+| Feed coordinator | Owns accumulated items, cursor, request lifecycle, and retry intent |
+| Manual control | Invokes the tested continuation operation explicitly |
+| Observer | Detects proximity and invokes that same continuation operation |
+| Item renderer | Displays a domain record without knowing pagination behavior |
+
+One component is enough for the interview version. Extract a pagination Hook when multiple views need identical page coordination or when a server-state library becomes the true cache owner.
+
+The request flow has two deliberate paths:
+
+```text
+mount
+  → loadPage(undefined)
+  → replace items
+  → store next cursor
+
+button click or sentinel intersection
+  → verify cursor and request lock
+  → loadPage(nextCursor)
+  → append deduplicated items
+  → store replacement cursor
+```
+
+Automatic loading is an input to `loadMore`, not a second pagination implementation.
+
+### D — Data model
+
+Separate server-originated page data, ephemeral request state, operational refs, and derived UI:
+
+| Data | Origin | Owner | Representation |
+| --- | --- | --- | --- |
+| Loaded items `T[]` | Page API | Feed/cache | State |
+| `nextCursor` | Page API | Feed/cache | State |
+| Request status | Async lifecycle | Feed | State union |
+| Failure information | Async lifecycle | Feed | Error state |
+| In-flight lock | Client operation | Feed | Ref |
+| Active controller | Client operation | Feed | Ref |
+| Sentinel element | Rendered DOM | Feed | Ref |
+| Empty/end/refresh conditions | Current state | Feed | Derived |
+
+The cursor protocol has three meanings:
+
+- `undefined` requests the initial page;
+- a cursor value requests the next page;
+- `null` means no page remains.
+
+Stable item identity comes from `getItemId(item)`. Deduplication may keep a map or set of IDs while preserving the server's page order. An index is unsuitable because appending and overlapping pages change positions.
+
+Maintain these invariants:
+
+1. First-page loading replaces data; continuation loading appends data.
+2. A continuation failure preserves successful earlier pages.
+3. Stable IDs reconcile overlapping pages.
+4. Obsolete requests cannot commit results.
+5. Loading state renders feedback, while a synchronous lock prevents duplicate calls.
+6. Automatic loading enhances the same manual `loadMore` operation.
+7. A `null` cursor permanently disables continuation until the data source changes.
+8. The parent controls domain rendering through `renderItem`.
+
+### I — Interfaces
+
+The server/data-access interface returns records plus continuation metadata:
+
+```ts
+type Page<T> = {
+  items: readonly T[];
+  nextCursor: string | null;
+};
+
+type LoadPage<T> = (
+  cursor: string | undefined,
+  signal?: AbortSignal,
+) => Promise<Page<T>>;
+```
+
+An HTTP implementation might use:
+
+```text
+GET /api/feed?cursor=<opaque cursor>&limit=20
+→ {
+    items: T[],
+    nextCursor: string | null
+  }
+```
+
+The cursor is opaque to the client. The server owns stable ordering and decides what continuation means when records are inserted or deleted.
+
+The component API supplies data access, stable identity, presentation, and accessibility:
+
+```ts
+type InfiniteFeedProps<T> = {
+  loadPage: LoadPage<T>;
+  getItemId: (item: T) => string;
+  renderItem: (item: T) => ReactNode;
+  ariaLabel: string;
+  emptyMessage?: string;
+};
+```
+
+| Interface category | Props |
+| --- | --- |
+| Data access | `loadPage` |
+| Identity | `getItemId` |
+| Presentation | `renderItem`, `emptyMessage` |
+| Accessibility | `ariaLabel` |
+
+If filters or search terms change, they form part of data-source identity. Prefer a new stable `loadPage` function or an explicit query-key prop with defined reset behavior rather than an artificial reload counter.
+
+### O — Optimizations and deep dives
+
+Focus on behavior unique to incremental feeds.
+
+#### Use cursor pagination for changing collections
+
+Offset pages can shift when records are inserted or removed, producing duplicates or omissions. A cursor tied to deterministic server ordering provides a continuation point, but the server must still define consistency semantics.
+
+#### Prevent duplicate work synchronously
+
+Rendered loading state may not update before a second observer callback or click runs. Use a ref as an immediate in-flight lock while state independently drives visible feedback.
+
+#### Combine cancellation with ownership checks
+
+`AbortController` saves supported work, but abort alone does not prove that later async processing cannot resolve. Associate results with the current request or data-source generation before committing them.
+
+#### Deduplicate without hiding server defects
+
+Deduplicate overlapping pages by stable ID while preserving order. Client deduplication prevents duplicate rendering; it cannot recover items omitted by unstable server ordering.
+
+#### Tune observation deliberately
+
+Use `rootMargin` to start loading shortly before the sentinel appears. Disconnect observers during cleanup, do not observe after `nextCursor` becomes `null`, and keep the request lock because intersection callbacks may fire repeatedly.
+
+#### Preserve user position and recovery
+
+Appending should not move focus automatically. Keep existing items visible during continuation loading and failure. Retry the failed page, and restore loaded pages plus scroll position when users navigate away and return if the product requires it.
+
+#### Keep a manual fallback
+
+The Load more button supports keyboard users, environments where observation is unavailable, explicit recovery, and deterministic testing. Automatic behavior should not remove user control.
+
+#### Separate pagination from virtualization
+
+Pagination controls how much data is requested. Virtualization controls how many DOM nodes are mounted. A long session can still create a huge DOM even when every network page is small; use virtualization only after addressing focus, accessibility, scroll restoration, and measurement complexity.
+
+#### Consider when infinite scrolling is the wrong product
+
+Traditional pagination can be better for goal-oriented search, stable position, sharing, footer access, SEO, and returning to a known result page. Infinite loading is a product choice, not a default optimization.
+
+With RADIO established, define the concrete types and implement manual pagination before observers or production hardening.
+
 ## Define the types first
 
 The feed should work with posts, products, notifications, or any other item type.

@@ -83,6 +83,196 @@ For this article, use the following decisions:
 
 This boundary is important. A live-coding solution should be small enough to complete and rich enough to demonstrate judgment.
 
+## System design before implementation
+
+Use GreatFrontEnd's [RADIO framework](https://www.greatfrontend.com/front-end-system-design-playbook/framework) as a lightweight design checklist:
+
+```text
+R — Requirements
+A — Architecture
+D — Data model
+I — Interfaces
+O — Optimizations and deep dives
+```
+
+RADIO is not a rigid sequence. In an interview, move back when a later decision reveals a missing requirement. For this live-coding task, spend only a few minutes establishing the design, then implement the smallest working version.
+
+### R — Requirements
+
+The clarifying questions and scope above establish the functional requirements:
+
+- the user types a query and receives matching suggestions;
+- suggestions come from an asynchronous source;
+- keyboard and pointer users can navigate and select a suggestion;
+- the popup exposes correct combobox semantics;
+- loading, empty, error, and success outcomes are distinguishable;
+- stale responses never replace results for a newer query.
+
+The most important non-functional requirements are:
+
+- **Responsiveness:** input text must update immediately.
+- **Request efficiency:** search should not run for every intermediate keystroke.
+- **Correctness:** request completion order must not determine visible results.
+- **Accessibility:** focus, labels, roles, active option, and announcements must work together.
+- **Reusability:** behavior must not depend on a `Person` or another fixed record shape.
+
+For the interview version, assume one autocomplete instance, a moderate result count, online use, and an existing search service. Caching across screens, virtualization, international matching, and server infrastructure remain follow-up topics.
+
+### A — Architecture
+
+Treat the server as a search API boundary and focus on responsibilities inside the client:
+
+```text
+Search service
+      ↑ query, AbortSignal
+      ↓ matching records
+Data-access function
+      ↑ injected as searchOptions
+      ↓ Promise<T[]>
+Autocomplete<T>
+├── input and combobox controller
+├── request-state coordinator
+├── keyboard interaction logic
+└── listbox and option views
+      ↓ selected record
+Parent application
+```
+
+Responsibilities are intentionally divided:
+
+| Boundary | Responsibility |
+| --- | --- |
+| Parent application | Supplies the data source and decides what selection means |
+| Data-access function | Converts a query into records and supports cancellation |
+| Autocomplete | Owns input and interaction state and coordinates requests |
+| Input/combobox | Keeps DOM focus and handles typing and navigation keys |
+| Listbox/options | Render current results and expose active and selected semantics |
+
+One React component is sufficient for the interview implementation. These are logical responsibilities, not a requirement to create five files. Extract a data Hook or smaller view only when the code gains a real reuse or testing boundary.
+
+Use unidirectional flow:
+
+```text
+user types
+  → inputValue changes immediately
+  → debounced query changes later
+  → searchOptions(query, signal) starts
+  → request state changes
+  → latest valid results render
+  → user selects an option
+  → parent receives the original record
+```
+
+### D — Data model
+
+Separate server-originated records from ephemeral client interaction state:
+
+| Data | Origin | Owner | Persisted? |
+| --- | --- | --- | --- |
+| Option records `T[]` | Search service | Request state | No local persistence |
+| `inputValue` | User input | Autocomplete | No |
+| Debounced query | Derived from input | Autocomplete | No |
+| Request status and error | Network lifecycle | Autocomplete | No |
+| `activeIndex` | Keyboard interaction | Autocomplete | No |
+| Dismissed state | User interaction | Autocomplete | No |
+| Selected record | User interaction | Parent callback | Application-dependent |
+
+The generic record `T` needs two projections:
+
+- stable identity for React keys and option DOM IDs;
+- a text label for input value and accessible naming.
+
+Visible popup state should be derived from input, results, request state, and dismissal where possible. Do not synchronize a separate `isOpen` boolean if it can contradict those values.
+
+Maintain these invariants:
+
+1. The active index is `-1` or points to a current result.
+2. Rendered results belong to the latest effective query.
+3. DOM focus stays on the input while active-option state moves through the list.
+4. Selecting returns the original record rather than a presentation-only copy.
+5. Escape dismisses without selecting.
+
+### I — Interfaces
+
+There are two relevant interfaces: the server/data-access interface and the component API.
+
+The data-access contract is intentionally transport-independent:
+
+```ts
+type SearchOptions<T> = (
+  query: string,
+  signal: AbortSignal,
+) => Promise<readonly T[]>;
+```
+
+An application may implement it with an HTTP endpoint such as:
+
+```text
+GET /api/search?q=<encoded query>&limit=10
+→ { results: T[] }
+```
+
+The server should validate query length and limit result size. The client should not depend on database or ranking implementation details.
+
+The component interface needs four categories of props:
+
+| Category | Props |
+| --- | --- |
+| Data access | `searchOptions` |
+| Data projection | `getOptionId`, `getOptionLabel` |
+| Presentation | `label`, `renderOption` |
+| Events and behavior | `onSelect`, `debounceDelay` |
+
+Conceptually:
+
+```ts
+type AutocompleteProps<T> = {
+  label: string;
+  searchOptions: SearchOptions<T>;
+  getOptionId: (option: T) => string | number;
+  getOptionLabel: (option: T) => string;
+  renderOption: (option: T) => ReactNode;
+  onSelect: (option: T) => void;
+  debounceDelay?: number;
+};
+```
+
+This API keeps domain knowledge in the caller while centralizing interaction and accessibility rules in the component. The detailed type contract follows this design.
+
+### O — Optimizations and deep dives
+
+Prioritize optimizations unique to autocomplete rather than generic advice.
+
+#### Keep typing urgent
+
+Update `inputValue` synchronously. Debounce only the query that starts external work. Delaying the controlled input makes typing feel broken.
+
+#### Protect request correctness
+
+Abort obsolete requests to save work and also verify request ownership before committing results. Cancellation alone is not a complete stale-response guarantee because later async processing may still resolve.
+
+#### Limit unnecessary traffic
+
+- do not search below a chosen minimum query length;
+- debounce rapid edits;
+- cap response size;
+- cache repeated normalized queries when product usage justifies it;
+- deduplicate identical in-flight queries in a shared data layer if multiple instances exist.
+
+#### Preserve accessible interaction
+
+Use the combobox, listbox, and option pattern; retain DOM focus in the input; communicate the active option with `aria-activedescendant`; expose loading and result changes without noisy repeated announcements; and support pointer use without moving focus before selection completes.
+
+#### Plan for scale only when required
+
+For dozens of suggestions, render the complete list. For thousands, first question the API design: autocomplete should normally return a small ranked set. Virtualization adds complexity to active-option IDs and screen-reader navigation and should follow evidence, not habit.
+
+#### Define failure behavior
+
+An error should not silently look like zero matches. Keep error and empty states distinct, allow a later query to retry naturally, and prevent an obsolete error from replacing newer success.
+
+With RADIO covered, move to the concrete TypeScript boundary and implement one working checkpoint at a time.
+
 ## Type contract
 
 Define the reusable boundary before state or JSX. Every progressive checkpoint and the assembled implementation use the same generic contract:

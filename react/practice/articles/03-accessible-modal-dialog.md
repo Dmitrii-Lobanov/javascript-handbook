@@ -78,6 +78,196 @@ For this walkthrough:
 
 This boundary keeps the exercise achievable while showing that a design-system dialog requires more hardening than an interview implementation.
 
+## System design before implementation
+
+Use GreatFrontEnd's [RADIO framework](https://www.greatfrontend.com/front-end-system-design-playbook/framework) to organize the design before writing DOM behavior:
+
+```text
+R — Requirements
+A — Architecture
+D — Data model
+I — Interfaces
+O — Optimizations and deep dives
+```
+
+RADIO is a checklist, not a reason to delay implementation. For this live-coding task, align on behavior, identify the global side effects, and then build the controlled semantic version first.
+
+### R — Requirements
+
+The functional requirements are:
+
+- render modal content while `open` is true;
+- provide an accessible name and optional description;
+- render above the application through a portal;
+- move focus inside after opening;
+- contain Tab and Shift+Tab navigation;
+- close through an explicit button, Escape, or safe overlay click;
+- restore focus after closing;
+- make the background non-interactive;
+- restore every global DOM change during cleanup.
+
+Important non-functional requirements are:
+
+- **Accessibility:** keyboard and assistive-technology users must perceive and operate the same modal interaction.
+- **Composability:** the caller controls body content instead of using a fixed form schema.
+- **Predictability:** all dismissal paths request the same state transition.
+- **Resilience:** cleanup remains correct after unmounts, prop changes, and development remount checks.
+- **Visual isolation:** portal rendering escapes clipping and stacking contexts where possible.
+
+Assume one modal is open, the document has a portal-capable browser DOM, and no exit animation delays removal. Nested stacks, iframes, Shadow DOM, complex mobile behavior, and production-grade scroll compensation remain follow-ups.
+
+### A — Architecture
+
+Separate controlled application state from the overlay infrastructure:
+
+```text
+Parent application
+├── owns open state
+├── renders the trigger
+└── ModalDialog
+    ├── portal-container lifecycle
+    ├── focus and keyboard coordinator
+    ├── background and scroll coordinator
+    └── portal
+        └── overlay
+            └── dialog surface
+                ├── title and description
+                ├── caller content
+                └── close control
+```
+
+Responsibilities:
+
+| Boundary | Responsibility |
+| --- | --- |
+| Parent | Owns whether the dialog is open and application behavior after close |
+| Modal coordinator | Converts dismissal events into `onOpenChange(false)` |
+| Portal lifecycle | Creates or uses an external container and removes owned resources |
+| Focus coordinator | Captures previous focus, chooses initial focus, traps Tab, and restores focus |
+| Global-effect coordinator | Applies inertness and scroll locking and restores prior values |
+| Dialog surface | Owns dialog semantics while rendering caller-provided content |
+
+The logical responsibilities may stay in one component plus a small portal Hook during the interview. Splitting every responsibility into a custom Hook before the behavior works makes coordination harder to inspect.
+
+The primary event flow is unidirectional:
+
+```text
+trigger click
+  → parent sets open=true
+  → dialog renders and synchronizes portal, focus, and background
+
+close button / Escape / overlay click
+  → dialog calls onOpenChange(false)
+  → parent sets open=false
+  → cleanup restores DOM and focus
+```
+
+### D — Data model
+
+Most modal behavior needs controlled input and refs, not a large state model:
+
+| Value | Origin | Owner | Representation |
+| --- | --- | --- | --- |
+| `open` | Application | Parent | Controlled prop |
+| Title and description | Application | Parent | Content props |
+| Dismissal policy | Configuration | Parent | Boolean props |
+| Dialog element | Rendered DOM | Modal | Ref |
+| Previously focused element | DOM at open time | Modal | Ref |
+| Preferred initial focus | Caller | Parent/modal boundary | Optional ref |
+| Label and description IDs | Component instance | Modal | Stable generated IDs |
+| Focusable descendants | Current DOM | Modal | Derived when needed |
+
+Do not copy `open` into local state. Two open values can disagree about whether the modal should render. Also avoid storing `hasFocus`, focusable elements, or the active DOM node in render state; these values are observed or derived from the DOM during synchronization.
+
+Maintain these invariants:
+
+1. A closed dialog exposes no interactive modal surface.
+2. An open dialog has exactly one accessible name.
+3. Focus is inside the open dialog after initial synchronization.
+4. Tab navigation cannot escape into the inert background.
+5. Clicking inside the surface never counts as an overlay dismissal.
+6. All dismissal paths request the same controlled close operation.
+7. Global mutations restore their previous values, not assumed defaults.
+8. Focus restoration occurs only when the target remains a valid element.
+
+### I — Interfaces
+
+The public component interface combines controlled state, content, behavior configuration, and one focus escape hatch:
+
+```ts
+type ModalDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  children: ReactNode;
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  closeOnEscape?: boolean;
+  closeOnOverlayClick?: boolean;
+};
+```
+
+| Interface category | Props |
+| --- | --- |
+| Controlled state | `open`, `onOpenChange` |
+| Accessible content | `title`, `description` |
+| Composable content | `children` |
+| Focus policy | `initialFocusRef` |
+| Dismissal policy | `closeOnEscape`, `closeOnOverlayClick` |
+
+The component reports a requested state, not a close reason. A larger design-system API might expose `onEscapeKeyDown`, `onPointerDownOutside`, or a structured close reason, but those callbacks must not force consumers to rebuild the core safety behavior.
+
+Internal DOM interfaces are equally important:
+
+```text
+overlay pointer event
+  → close only when event.target === event.currentTarget
+
+document keydown
+  → Escape requests close
+  → Tab wraps among current focusable descendants
+```
+
+The detailed TypeScript contract below formalizes the public boundary.
+
+### O — Optimizations and deep dives
+
+For a modal, correctness and accessibility matter more than computational micro-optimization.
+
+#### Use a portal deliberately
+
+A portal changes DOM placement without changing the React ownership tree. React events still follow the React tree, so dismissal logic must inspect the actual event target rather than assuming DOM ancestry stops event propagation.
+
+#### Coordinate focus timing
+
+Capture the previously focused element before moving focus. Prefer a caller-provided initial target, then the first suitable control, and finally the dialog surface. Restore focus only after the modal has closed and only if the target remains connected and focusable.
+
+#### Contain focus without stale assumptions
+
+Forms can add, remove, disable, or hide controls while open. Query focusable descendants when handling navigation or deliberately maintain an updated model. A list captured only at mount can become stale.
+
+#### Make the background inert
+
+`aria-modal="true"` communicates modality but does not mechanically prevent background interaction. Use platform-supported inertness or a carefully tested fallback. Preserve and restore pre-existing attributes when several systems may touch the same DOM.
+
+#### Treat scroll locking as shared global state
+
+Changing `document.body.style.overflow` is simple for one modal but breaks with nested overlays. A production overlay manager should reference-count locks and restore the previous style only after the final owner releases it.
+
+#### Define nested-overlay policy
+
+If a dialog opens another dialog or menu, only the topmost dismissible layer should normally respond to Escape and outside interaction. A stack manager can coordinate z-index, inertness, focus restoration, and dismissal order.
+
+#### Preserve behavior during animation
+
+An exit animation introduces a separate “closing but still mounted” phase. Keep focus containment and background inertness until the modal is no longer interactive, then restore focus once. Do not add this state to the interview version unless requested.
+
+#### Test beyond ARIA attributes
+
+Roles do not implement focus movement or keyboard behavior. Test actual Tab order, Shift+Tab wrapping, Escape, pointer event ordering, focus restoration, zoom, reduced motion, and representative screen readers.
+
+With the RADIO design established, define the exact prop types and implement the controlled semantic shell before portal and global behavior.
+
 ## Type contract
 
 Define the public contract before implementing DOM behavior:

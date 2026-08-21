@@ -65,6 +65,215 @@ For this walkthrough:
 
 This distinction is important in a live interview: finish the required behavior first, then show senior judgment by identifying production concerns.
 
+## System design before implementation
+
+Use GreatFrontEnd's [RADIO framework](https://www.greatfrontend.com/front-end-system-design-playbook/framework) to structure the design discussion:
+
+```text
+R — Requirements
+A — Architecture
+D — Data model
+I — Interfaces
+O — Optimizations and deep dives
+```
+
+For a focused component exercise, RADIO should take only a few minutes. It ensures that the prop API and keyboard behavior follow explicit product decisions rather than being invented while coding.
+
+### R — Requirements
+
+The functional requirements are:
+
+- render a caller-provided set of tabs and panels;
+- let the parent control the selected tab;
+- select an enabled tab by clicking it;
+- expose linked tab, tablist, and tabpanel semantics;
+- navigate enabled tabs with Left/Right Arrow, Home, and End;
+- use automatic activation, so moving focus also selects;
+- skip disabled tabs;
+- handle an empty list and an invalid selected value deliberately.
+
+Important non-functional requirements are:
+
+- **Accessibility:** roles, accessible names, keyboard behavior, focus, and panel relationships remain coordinated.
+- **Reusability:** labels and panels can contain arbitrary React content.
+- **Predictability:** the parent remains the single source of truth for selection.
+- **Stability:** relationships use logical tab IDs rather than array indexes.
+- **Interview scope:** the basic controlled version must work before adding API variants.
+
+Assume horizontal tabs, left-to-right navigation, automatic activation, one selected tab, and panel content that may unmount when inactive. Vertical orientation, manual activation, RTL behavior, compound APIs, and preserved inactive panels are follow-ups.
+
+### A — Architecture
+
+Use a controlled component for the interview version:
+
+```text
+Parent application
+├── owns selected tab ID
+└── Tabs
+    ├── tab-list coordinator
+    │   ├── derives enabled tabs
+    │   ├── calculates next keyboard target
+    │   └── emits selection changes
+    ├── tab triggers
+    └── selected tab panel
+```
+
+Responsibilities:
+
+| Boundary | Responsibility |
+| --- | --- |
+| Parent | Owns `value` and decides whether selection also updates a route or application state |
+| Tabs coordinator | Derives selected and enabled items and handles keyboard movement |
+| Tab trigger | Exposes selection, disabled state, focusability, and panel relationship |
+| Tab panel | Exposes content and its relationship back to the selected tab |
+
+One `Tabs` component is enough for the interview. Separate `Tab` and `TabPanel` components are optional implementation details, not architectural requirements.
+
+Use unidirectional interaction flow:
+
+```text
+click tab or press navigation key
+  → Tabs finds the target enabled item
+  → Tabs calls onValueChange(targetId)
+  → parent commits value
+  → Tabs derives selected item
+  → matching tab and panel render as selected
+```
+
+For automatic activation, selection and keyboard focus move together. After emitting the new value, focus the target trigger so the DOM behavior does not depend on how quickly the parent rerenders.
+
+### D — Data model
+
+Separate caller-owned data from derived widget state:
+
+| Data | Origin | Owner | Stored or derived? |
+| --- | --- | --- | --- |
+| `items` | Parent configuration | Parent | Input prop |
+| `value` | Application/user | Parent | Controlled prop |
+| Selected item | `items` and `value` | Tabs | Derived |
+| Enabled items | `items` | Tabs | Derived |
+| Current enabled index | Enabled items and `value` | Tabs | Derived |
+| Trigger and panel IDs | Stable tab ID | Tabs | Derived |
+| Focused ID in automatic mode | Same as selection | Parent/Tabs | No separate state |
+
+Each tab record needs:
+
+- a stable logical ID;
+- a renderable label;
+- renderable panel content;
+- optional disabled state.
+
+Do not store the selected tab object or array index. A new `items` array can contain the same logical selected tab, while insertions make a stored index point to a different item.
+
+Maintain these invariants:
+
+1. Tab IDs are unique and stable.
+2. `value` identifies an enabled item or produces a deliberate empty state.
+3. Every tab's `aria-controls` references its panel ID.
+4. Every panel's `aria-labelledby` references its tab ID.
+5. When selection is valid, the selected enabled tab has `tabIndex={0}` and all others have `-1`.
+6. Arrow navigation wraps and skips disabled tabs.
+7. Disabled tabs cannot be selected by pointer or keyboard.
+8. Rendering never mutates or reorders the input array.
+
+### I — Interfaces
+
+The public component interface contains data, controlled state, an event callback, and an accessible label:
+
+```ts
+type TabItem = {
+  id: string;
+  label: ReactNode;
+  content: ReactNode;
+  disabled?: boolean;
+};
+
+type TabsProps = {
+  items: readonly TabItem[];
+  value: string;
+  onValueChange: (value: string) => void;
+  ariaLabel: string;
+};
+```
+
+| Interface category | Props |
+| --- | --- |
+| Data | `items` |
+| Controlled state | `value` |
+| Event | `onValueChange` |
+| Accessibility/configuration | `ariaLabel` |
+
+`onValueChange` reports user intent; the parent may accept it immediately, update a URL, or apply application rules. `Tabs` should still behave coherently if the parent temporarily keeps the previous value.
+
+The DOM interface is also part of the component contract:
+
+```text
+tablist
+├── tab[id=tab-<stable id>, aria-controls=panel-<stable id>]
+└── ...
+
+tabpanel[id=panel-<stable id>, aria-labelledby=tab-<stable id>]
+```
+
+Generate DOM-safe IDs through a consistent encoding or an internal `useId` prefix. Do not place arbitrary raw IDs into selectors without considering spaces or special characters.
+
+### O — Optimizations and deep dives
+
+The most important refinements concern interaction semantics and API scale, not computation.
+
+#### Automatic versus manual activation
+
+Automatic activation selects as focus moves and is appropriate when panels appear immediately. If selecting a tab starts expensive work or navigation, manual activation lets arrow keys move focus while Enter or Space commits selection. That requires focused ID and selected ID to be modeled separately.
+
+#### Preserve or unmount inactive panels
+
+Rendering only the selected panel is simple and avoids hidden work, but switching tabs resets local panel state. Keeping panels mounted preserves forms and scroll positions but increases DOM and rendering cost. Make this an explicit API choice rather than an accidental consequence.
+
+#### Handle dynamic items
+
+If the selected tab is removed or disabled, define recovery: choose the nearest enabled tab, choose the first enabled tab, or ask the parent to resolve the invalid value. Focus must also move to a remaining trigger if the active DOM node disappears.
+
+#### Support orientation and direction
+
+Horizontal tabs normally use Left/Right Arrow; vertical tabs use Up/Down Arrow and `aria-orientation="vertical"`. In right-to-left layouts, product expectations may reverse horizontal movement. Keep orientation and document direction in the navigation calculation rather than duplicating handlers.
+
+#### Avoid premature compound APIs
+
+A compound API can support flexible markup and shared Context:
+
+```tsx
+<Tabs value={value} onValueChange={setValue}>
+  <Tabs.List>...</Tabs.List>
+  <Tabs.Panel>...</Tabs.Panel>
+</Tabs>
+```
+
+It also introduces registration order, Context updates, ID coordination, and more invalid combinations. Use the data-driven API for the interview unless composition is the primary requirement.
+
+#### Keep focus visible and stable
+
+Moving selection is not enough; keyboard focus must move to the corresponding trigger. Use refs keyed by stable IDs, preserve an obvious focus indicator, and do not focus a disabled element.
+
+#### Scale panel work deliberately
+
+The tab list is normally small, so memoization and virtualization are inappropriate. Optimize expensive panels at their own boundaries, lazy-load unusually large optional features when justified, and consider transitions only when unavoidable panel rendering blocks urgent feedback.
+
+#### Test the complete accessibility contract
+
+Verify roles and relationships together with click, Arrow keys, Home, End, wrapping, disabled-tab skipping, Tab exit behavior, and visible focus. ARIA attributes alone do not implement the interaction.
+
+With RADIO covered, implement in this order:
+
+```text
+public data contract
+  → clickable tab list
+  → first working controlled version
+  → linked panel semantics
+  → arrow, Home, and End navigation
+```
+
+Do not begin with compound components, Context, or dual controlled/uncontrolled behavior. Those are API-design extensions after the required interaction works.
+
 ## Step 1 — Define the data and props
 
 Start with the public contract so the component is not tied to one content type:
