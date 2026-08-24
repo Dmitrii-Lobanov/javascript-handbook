@@ -164,12 +164,12 @@ Maintain these invariants:
 1. The input tree remains immutable.
 2. Every ID is globally unique and stable.
 3. Only folder IDs appear in the expanded set.
-3. Selection, focus, and expansion remain independent.
-4. Recursive markup mirrors the nested hierarchy.
-5. A flattened visible-node view supports keyboard navigation.
-6. Collapsed descendants are neither rendered nor navigable.
-7. At most one node is selected.
-8. Exactly one visible node participates in the normal Tab order.
+4. Selection, focus, and expansion remain independent.
+5. Recursive markup mirrors the nested hierarchy.
+6. A flattened visible-node view supports keyboard navigation.
+7. Collapsed descendants are neither rendered nor navigable.
+8. At most one node is selected.
+9. Exactly one visible node participates in the normal Tab order.
 
 ### I — Interfaces
 
@@ -318,136 +318,6 @@ const projectFiles: readonly ExplorerNode[] = [
   { id: "readme", name: "README.md", kind: "file" },
 ];
 ```
-
-## Detailed state and component design
-
-Before coding, describe the smallest architecture that satisfies the interview requirements. This demonstrates that the implementation will follow explicit ownership rules instead of accumulating state inside the recursive component.
-
-### Separate data from interaction state
-
-The parent owns the file-system data:
-
-```text
-nodes: readonly ExplorerNode[]
-```
-
-The explorer owns temporary UI state:
-
-```text
-expandedIds: Set<string>
-selectedId: string | null
-activeId: string | null
-```
-
-These values answer different questions:
-
-| Value | Question it answers |
-| --- | --- |
-| `nodes` | Which files and folders exist? |
-| `expandedIds` | Which folders currently reveal their children? |
-| `selectedId` | Which node has been chosen? |
-| `activeId` | Which visible node receives keyboard focus? |
-
-Do not add `isExpanded`, `isSelected`, or `isFocused` to every node in the server data. Those are view-specific states, and embedding them duplicates the tree whenever another explorer needs different interaction state.
-
-### Choose component boundaries
-
-Use two components initially:
-
-```text
-FileExplorer
-├── owns expansion, selection, and focus
-├── derives visible keyboard order
-└── renders root nodes
-    └── TreeItem
-        ├── renders one file or folder
-        └── recursively renders folder children
-```
-
-`FileExplorer` coordinates the complete widget. `TreeItem` renders one recursive branch and receives behavior through props.
-
-Avoid giving every `TreeItem` its own expansion state. Local expansion can work for a basic demo, but centralized IDs make keyboard navigation, reset behavior, persistence, and data-refresh reconciliation easier to implement.
-
-### Define the data flow
-
-Interaction flows upward; state flows downward:
-
-```text
-click disclosure
-  → TreeItem calls onToggle(id)
-  → FileExplorer creates a new expandedIds Set
-  → updated state flows through the recursive tree
-  → the folder's children become visible
-```
-
-Selection follows the same model:
-
-```text
-click or press Enter on a node
-  → TreeItem passes the complete node to onSelect
-  → FileExplorer stores its stable ID
-  → optional parent callback performs application behavior
-```
-
-The explorer owns which row appears selected. The parent decides what selection means, such as opening a preview, updating a route, or displaying file metadata.
-
-### Identify source and derived state
-
-Store only information that cannot be calculated from current inputs:
-
-| Store as state | Derive during render |
-| --- | --- |
-| Expanded IDs | Whether a particular folder is expanded |
-| Selected ID | Whether a particular node is selected |
-| Active ID | The ordered list of currently visible nodes |
-| — | Icons and disclosure symbols |
-| — | Parent and depth information used for navigation |
-
-The flattened visible-node list is derived from `nodes` and `expandedIds`. Storing it separately would create another source of truth that must be synchronized after every expansion or data change.
-
-### Establish invariants
-
-State the rules the implementation must preserve:
-
-1. Every node ID is globally unique and stable.
-2. Only folder IDs may appear in `expandedIds`.
-3. Collapsed descendants are not rendered or keyboard-navigable.
-4. At most one node is selected.
-5. Exactly one visible node has `tabIndex={0}`.
-6. Focus, selection, and expansion can change independently.
-7. Updating interaction state never mutates the input tree.
-
-These invariants are also the foundation of the testing strategy.
-
-### Choose the rendering and navigation models
-
-Use different representations for different jobs:
-
-- recursive rendering mirrors the nested data and produces nested tree markup;
-- a flattened array of visible nodes makes Arrow Up and Arrow Down navigation straightforward.
-
-This is not duplicated state because the flat array is recalculated from current inputs. It is a derived view of the same tree.
-
-### Define the interview scope
-
-Implement now:
-
-- recursive files and folders;
-- independent expansion;
-- single selection;
-- accessible tree semantics;
-- keyboard navigation.
-
-Discuss but postpone:
-
-- lazy loading;
-- rename, create, move, and delete;
-- server persistence and optimistic updates;
-- drag-and-drop;
-- virtualization;
-- multi-selection.
-
-This ordering keeps the first implementation achievable while leaving clear extension points for senior follow-up questions.
 
 ## Step 1 — Render one node
 
