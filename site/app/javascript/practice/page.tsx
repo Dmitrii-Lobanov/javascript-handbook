@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { javascriptPracticeArticles } from "@/generated/content";
 import { JavaScriptNav } from "../../components/TechnologyNav";
+import { CompletionLabel, SectionProgress } from "../../components/ChapterRoadmapStatus";
 
 export const metadata: Metadata = {
   title: "JavaScript Practice Roadmap",
@@ -102,6 +104,8 @@ const tasks = [
 ] as const;
 
 export default function JavaScriptPracticePage() {
+  const availableSlugs = new Set(javascriptPracticeArticles.map((article) => article.slug));
+
   return (
     <>
       <JavaScriptNav active="practice" />
@@ -165,28 +169,61 @@ export default function JavaScriptPracticePage() {
               orchestration and stateful data structures. Articles will become clickable as they are
               published.
             </p>
+            <SectionProgress
+              itemSlugs={javascriptPracticeArticles.map(
+                (article) => `javascript-practice-${article.slug}`,
+              )}
+              itemLabel="articles"
+            />
           </div>
 
           <div className="react-task-grid">
-            {tasks.map((task, index) => (
-              <article className="react-task-card" key={task.slug}>
-                <div className="react-task-card-top">
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <small>Article planned</small>
-                </div>
-                <h3>{task.title}</h3>
-                <p>{task.description}</p>
-                <ul aria-label={`${task.title} concepts`}>
-                  {task.concepts.map((concept) => (
-                    <li key={concept}>{concept}</li>
-                  ))}
-                </ul>
-                <div className="react-task-card-meta">
-                  <span>{task.difficulty}</span>
-                  <span>{task.duration}</span>
-                </div>
-              </article>
-            ))}
+            {tasks.map((task, index) => {
+              const available = availableSlugs.has(task.slug);
+              const content = (
+                <>
+                  <div className="react-task-card-top">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    {available ? (
+                      <CompletionLabel
+                        className="react-task-status"
+                        slug={`javascript-practice-${task.slug}`}
+                      />
+                    ) : (
+                      <small>Article planned</small>
+                    )}
+                  </div>
+                  <h3>{task.title}</h3>
+                  <p>{task.description}</p>
+                  <ul aria-label={`${task.title} concepts`}>
+                    {task.concepts.map((concept) => (
+                      <li key={concept}>{concept}</li>
+                    ))}
+                  </ul>
+                  <div className="react-task-card-meta">
+                    <span>{task.difficulty}</span>
+                    <span>{task.duration}</span>
+                  </div>
+                  {available && (
+                    <span className="react-task-card-link">Read the walkthrough →</span>
+                  )}
+                </>
+              );
+
+              return available ? (
+                <Link
+                  className="react-task-card available"
+                  href={`/javascript/practice/articles/${task.slug}`}
+                  key={task.slug}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <article className="react-task-card" key={task.slug}>
+                  {content}
+                </article>
+              );
+            })}
           </div>
         </section>
       </main>

@@ -15,15 +15,16 @@ The collection complements JavaScript Q&A:
 Every article should follow the same sequence:
 
 1. Clarify the prompt and scope.
-2. Use RADIO for a short system-design pass when the task has meaningful boundaries.
-3. Define types, public APIs, and invariants.
-4. Build the smallest working implementation.
-5. Add one business requirement at a time.
+2. Define the observable contract and core invariants.
+3. Build the smallest working implementation.
+4. Add one requirement at a time.
+5. Introduce types before the code that uses them.
 6. Assemble a copyable complete solution.
 7. Explain complexity, tests, traps, and production extensions.
 8. Finish with a concise interview-ready explanation.
 
 Do not begin with the most generic or production-complete abstraction. Preserve a visible first checkpoint that a candidate could finish during the interview.
+JavaScript coding articles should not include a frontend system-design or RADIO section; keep that framework for UI and application-level exercises where architecture is part of the interview signal.
 
 ## Roadmap
 
